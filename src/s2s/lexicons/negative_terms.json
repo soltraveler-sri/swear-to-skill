@@ -1,0 +1,160 @@
+{
+  "_origin": {
+    "project": "petergpt/codex-swear-meter",
+    "license": "MIT",
+    "copyright": "Copyright (c) 2026 Peter",
+    "url": "https://github.com/petergpt/codex-swear-meter",
+    "note": "adapted"
+  },
+  "version": 1,
+  "notes": [
+    "This first-pass lexicon is deliberately countable and transparent.",
+    "Terms are grouped by the kind of user dissatisfaction they usually indicate.",
+    "The audit reports matches as leads for review, not as a claim that every matched turn is upset."
+  ],
+  "categories": {
+    "profanity_or_venting": {
+      "description": "Swearing, blunt venting, or expletives that often mark a high-friction turn.",
+      "signal": "high_confidence_upset",
+      "weight": 3,
+      "terms": [
+        "fuck",
+        "fucking",
+        "shit",
+        "bullshit",
+        "crap",
+        "damn",
+        "wtf"
+      ]
+    },
+    "explicit_frustration": {
+      "description": "Direct language for frustration, annoyance, disappointment, or anger.",
+      "signal": "high_confidence_upset",
+      "weight": 3,
+      "terms": [
+        "frustrated",
+        "frustrating",
+        "annoyed",
+        "annoying",
+        "upset",
+        "angry",
+        "mad",
+        "disappointed",
+        "disappointing",
+        "unhappy"
+      ]
+    },
+    "broken_or_failed": {
+      "description": "Signals that the tool, code, run, or output failed or regressed.",
+      "signal": "problem_report",
+      "weight": 2,
+      "terms": [
+        "broken",
+        "broke",
+        "breaks",
+        "failed",
+        "failure",
+        "failing",
+        "not working",
+        "doesn't work",
+        "didn't work",
+        "won't work",
+        "crashed",
+        "crash",
+        "stuck",
+        "blocked",
+        "bug",
+        "bugs",
+        "issue",
+        "issues",
+        "problem",
+        "problems",
+        "regression",
+        "wrong",
+        "error",
+        "errors"
+      ]
+    },
+    "quality_complaint": {
+      "description": "Negative quality judgments about an answer, implementation, or result.",
+      "signal": "quality_critique",
+      "weight": 2,
+      "terms": [
+        "bad",
+        "terrible",
+        "awful",
+        "poor",
+        "worse",
+        "worst",
+        "useless",
+        "garbage",
+        "sloppy",
+        "lazy",
+        "generic",
+        "fake",
+        "hallucinated",
+        "hallucination",
+        "made up",
+        "invented",
+        "nonsense",
+        "not good enough"
+      ]
+    },
+    "correction_or_missed_intent": {
+      "description": "Phrases where the user says the assistant missed, ignored, or contradicted the requested intent.",
+      "signal": "assistant_missed_intent",
+      "weight": 2,
+      "terms": [
+        "you didn't",
+        "you did not",
+        "you haven't",
+        "you have not",
+        "not what I asked",
+        "that's not what",
+        "this isn't what",
+        "i asked you",
+        "i told you",
+        "why did you",
+        "you need to",
+        "you should have",
+        "missed",
+        "ignored",
+        "instead of",
+        "try again",
+        "redo",
+        "actually do",
+        "not just"
+      ]
+    },
+    "trust_or_truth_break": {
+      "description": "Language about the assistant being ungrounded, pretending, or failing to verify reality.",
+      "signal": "trust_break",
+      "weight": 3,
+      "terms": [
+        "hallucinate",
+        "hallucinated",
+        "made it up",
+        "making it up",
+        "made up",
+        "invented",
+        "pretend",
+        "pretending",
+        "not true",
+        "isn't true",
+        "lying",
+        "lie",
+        "not verified",
+        "you didn't verify",
+        "you didn't check",
+        "didn't check",
+        "just assumed",
+        "you assumed",
+        "actually check",
+        "actually read",
+        "actually run",
+        "actually inspect"
+      ]
+    }
+  }
+}
+
