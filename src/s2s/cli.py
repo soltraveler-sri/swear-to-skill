@@ -11,7 +11,6 @@ COMMAND_ISSUES = {
     "meter": 6,
     "status": 6,
     "triage": 8,
-    "review": 9,
     "run": 11,
     "pump": 11,
     "schedule": 11,
@@ -23,7 +22,7 @@ COMMAND_ISSUES = {
     "autonomy": 17,
 }
 
-IMPLEMENTED_COMMANDS = ("init", "backfill")
+IMPLEMENTED_COMMANDS = ("init", "backfill", "review")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -47,6 +46,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.choices["scan"].add_argument("--suggest-terms", action="store_true")
     subparsers.choices["triage"].add_argument("--limit", type=int)
     subparsers.choices["triage"].add_argument("--yes", action="store_true")
+    subparsers.choices["review"].add_argument("--yes", action="store_true")
     subparsers.choices["init"].add_argument("--uninstall", action="store_true")
 
     hook_parser = subparsers.add_parser("hook")
@@ -113,6 +113,24 @@ def _run_triage(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_review(args: argparse.Namespace) -> int:
+    from .curator import run_pass
+    from .ledger import Ledger
+
+    with Ledger() as ledger:
+        result = run_pass(ledger, assume_yes=args.yes)
+    if result.skipped:
+        print("curator: no new, resurfaced, or QC evidence to review")
+        return 0
+    print(
+        f"curator: {result.applied_incident_verdicts} incident verdict(s), "
+        f"{result.applied_cluster_verdicts} cluster verdict(s), "
+        f"{result.rejected_verdicts} rejected/skipped"
+    )
+    print(f"report: {result.report_path}")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Dispatch implemented commands and retain labelled future stubs."""
     parser = build_parser()
@@ -133,6 +151,9 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "triage":
         return _run_triage(args)
+
+    if args.command == "review":
+        return _run_review(args)
 
     if args.command == "init":
         from .initcmd import run_init

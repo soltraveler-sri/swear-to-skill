@@ -55,6 +55,14 @@ class Costs:
 
 
 @dataclass(frozen=True)
+class Curator:
+    """Curator evidence sampling and per-call context governor."""
+
+    qc_sample_size: int = 5
+    context_char_budget: int = 60_000
+
+
+@dataclass(frozen=True)
 class Config:
     """Complete configuration available before any optional features exist."""
 
@@ -63,6 +71,7 @@ class Config:
     notifications: Notifications = Notifications()
     models: Models = Models()
     costs: Costs = Costs()
+    curator: Curator = Curator()
 
 
 def _section(document: dict[str, object], name: str) -> dict[str, object]:
@@ -105,6 +114,7 @@ def load_config(config_path: Path | None = None) -> Config:
     notifications = _section(document, "notifications")
     models = _section(document, "models")
     costs = _section(document, "costs")
+    curator = _section(document, "curator")
     defaults = Config()
 
     return Config(
@@ -168,5 +178,15 @@ def load_config(config_path: Path | None = None) -> Config:
                 "confirm_threshold_usd",
                 defaults.costs.confirm_threshold_usd,
             )
+        ),
+        curator=Curator(
+            qc_sample_size=_int(
+                curator, "qc_sample_size", defaults.curator.qc_sample_size
+            ),
+            context_char_budget=_int(
+                curator,
+                "context_char_budget",
+                defaults.curator.context_char_budget,
+            ),
         ),
     )

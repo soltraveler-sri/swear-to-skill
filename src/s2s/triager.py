@@ -49,7 +49,7 @@ def triage_pending(ledger: Ledger, *, limit: int | None = None, assume_yes: bool
     schema = triage_schema(base_schema)
     outcomes: list[TriageResult] = []
     for incident in incidents:
-        context_pack, pointer = _context_for_incident(incident)
+        context_pack, pointer = context_for_incident(incident)
         response = call(
             render_triage_prompt(template, context_pack),
             schema=schema,
@@ -122,8 +122,12 @@ def _render_taxonomy_menu() -> str:
     return "\n".join(lines)
 
 
-def _context_for_incident(incident: Incident) -> tuple[ContextPack, str]:
-    """Locate the exact archived Claude Code user record for one ledger incident."""
+def context_for_incident(incident: Incident) -> tuple[ContextPack, str]:
+    """Locate the exact archived Claude Code user record for a durable incident.
+
+    Later judgment stages reuse this resolver so archive-path and UUID matching
+    semantics remain centralized in the transcript-owning stage.
+    """
 
     if incident.source != "claude-code":
         raise ContextResolutionError(f"no Stage 2 context adapter is available for {incident.source!r}")
@@ -136,6 +140,10 @@ def _context_for_incident(incident: Incident) -> tuple[ContextPack, str]:
     except ValueError as error:
         raise ContextResolutionError(f"archived transcript is outside S2S_HOME: {transcript}") from error
     return context_pack, f"{archive_pointer}#{target_uuid}"
+
+
+# Kept for compatibility with any callers that used the original private helper.
+_context_for_incident = context_for_incident
 
 
 def _incident_uuid(transcript: Path, incident: Incident) -> str:
