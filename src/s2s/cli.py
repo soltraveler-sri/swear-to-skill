@@ -45,6 +45,8 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.choices["meter"].add_argument("--open", action="store_true")
     subparsers.choices["pump"].add_argument("--background", action="store_true")
     subparsers.choices["scan"].add_argument("--suggest-terms", action="store_true")
+    subparsers.choices["triage"].add_argument("--limit", type=int)
+    subparsers.choices["triage"].add_argument("--yes", action="store_true")
     subparsers.choices["init"].add_argument("--uninstall", action="store_true")
 
     hook_parser = subparsers.add_parser("hook")
@@ -101,6 +103,16 @@ def _run_status() -> int:
     return 0
 
 
+def _run_triage(args: argparse.Namespace) -> int:
+    from .ledger import Ledger
+    from .triager import triage_pending
+
+    with Ledger() as ledger:
+        results = triage_pending(ledger, limit=args.limit, assume_yes=args.yes)
+    print(f"triaged {len(results)} incident(s)")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Dispatch implemented commands and retain labelled future stubs."""
     parser = build_parser()
@@ -118,6 +130,9 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "status":
         return _run_status()
+
+    if args.command == "triage":
+        return _run_triage(args)
 
     if args.command == "init":
         from .initcmd import run_init

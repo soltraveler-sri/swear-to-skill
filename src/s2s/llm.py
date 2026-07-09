@@ -285,6 +285,14 @@ def validate_schema(value: object, schema: Mapping[str, object], path: str = "re
         for index, item in enumerate(value):
             validate_schema(item, item_schema, f"{path}[{index}]")
 
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        minimum = schema.get("minimum")
+        maximum = schema.get("maximum")
+        if isinstance(minimum, (int, float)) and not isinstance(minimum, bool) and value < minimum:
+            raise SchemaValidationError(f"{path} must be at least {minimum}")
+        if isinstance(maximum, (int, float)) and not isinstance(maximum, bool) and value > maximum:
+            raise SchemaValidationError(f"{path} must be at most {maximum}")
+
 
 def _schema_text_and_data(schema: Mapping[str, object] | str) -> tuple[str, dict[str, object]]:
     if isinstance(schema, str):

@@ -9,7 +9,7 @@ from s2s.cli import COMMAND_ISSUES, main
 
 @pytest.mark.parametrize(
     "command, issue",
-    [(c, i) for c, i in COMMAND_ISSUES.items() if c not in {"scan", "meter", "status"}],
+    [(c, i) for c, i in COMMAND_ISSUES.items() if c not in {"scan", "meter", "status", "triage"}],
 )
 def test_each_stub_exits_successfully(command: str, issue: int, capsys: pytest.CaptureFixture[str]) -> None:
     assert main([command]) == 0

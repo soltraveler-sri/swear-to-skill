@@ -154,7 +154,11 @@ def test_every_vendored_lexicon_declares_its_origin() -> None:
         "note": "adapted",
     }
 
-    files = sorted(path for path in LEXICONS_DIR.iterdir() if path.is_file())
+    files = sorted(
+        path
+        for path in LEXICONS_DIR.iterdir()
+        if path.is_file() and not path.name.startswith("taxonomy.")
+    )
     assert files
     assert all(path.suffix == ".json" for path in files)
     assert all(json.loads(path.read_text(encoding="utf-8")).get("_origin") == expected_origin for path in files)

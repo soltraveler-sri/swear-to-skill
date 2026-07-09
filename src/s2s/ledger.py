@@ -553,7 +553,7 @@ class Ledger:
                 raise IncidentNotFoundError(f"incident {incident_id} does not exist")
             self._transition_in_transaction(incident_id, "triaged", reason, timestamp)
             outcome = "dismissed-triage" if dismissed else "open"
-            outcome_reason = "triage dismissed" if dismissed else "triage accepted"
+            outcome_reason = reason if dismissed else "triage accepted"
             self._transition_in_transaction(incident_id, outcome, outcome_reason, timestamp)
 
     def wake_parked_incidents(
