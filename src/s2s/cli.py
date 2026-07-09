@@ -68,8 +68,36 @@ def _run_scan(args: argparse.Namespace) -> int:
 
     with Ledger() as ledger:
         results = scan_pending_queue(ledger)
-        hits = sum(result.incident_count for result in results)
-        print(f"scanned {len(results)} transcript(s); {hits} detection(s) recorded")
+        created = sum(result.incidents_created for result in results)
+        print(f"scanned {len(results)} transcript(s); {created} detection(s) recorded")
+    return 0
+
+
+def _run_meter(args: argparse.Namespace) -> int:
+    """Regenerate the local dashboard and optionally open it in the default browser."""
+
+    from .ledger import Ledger
+    from .meter import write_dashboard
+
+    with Ledger() as ledger:
+        report_path = write_dashboard(ledger)
+    report_uri = report_path.resolve().as_uri()
+    if args.open:
+        import webbrowser
+
+        webbrowser.open(report_uri)
+    print(report_uri)
+    return 0
+
+
+def _run_status() -> int:
+    """Print current substrate and scan health without making any external request."""
+
+    from .ledger import Ledger
+    from .meter import collect_dashboard_data, count_archived_sessions, render_status
+
+    with Ledger() as ledger:
+        print(render_status(collect_dashboard_data(ledger), archived_sessions=count_archived_sessions()))
     return 0
 
 
@@ -84,6 +112,12 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "scan":
         return _run_scan(args)
+
+    if args.command == "meter":
+        return _run_meter(args)
+
+    if args.command == "status":
+        return _run_status()
 
     if args.command == "init":
         from .initcmd import run_init
