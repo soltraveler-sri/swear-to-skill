@@ -18,7 +18,7 @@ import sqlite3
 from .paths import resolve_paths
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 BUSY_TIMEOUT_MS = 5_000
 
 INCIDENT_STATES = (
@@ -140,6 +140,31 @@ class ClusterStats:
     first_seen: str
     last_seen: str
     remedy_ids: tuple[int, ...]
+
+
+@dataclass(frozen=True)
+class CuratorDecision:
+    """One durable Curator judgment over an incident's full evidence."""
+
+    id: int
+    incident_id: int
+    verdict: str
+    reason: str
+    previous_label: str | None
+    reassign_label: str | None
+    singleton: bool
+    created_at: str
+
+
+@dataclass(frozen=True)
+class CuratorClusterDecision:
+    """One durable Curator judgment over a label cluster."""
+
+    id: int
+    label: str
+    verdict: str
+    reason: str
+    created_at: str
 
 
 def _utc_now() -> str:
@@ -297,6 +322,58 @@ def _migration_2(connection: sqlite3.Connection) -> None:
         )
         """
     )
+
+
+def _migration_3(connection: sqlite3.Connection) -> None:
+    """Add Curator pass metadata, provenance, and append-only decisions."""
+
+    connection.execute(
+        """
+        CREATE TABLE meta (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE curator_incident_decision (
+            id INTEGER PRIMARY KEY,
+            incident_id INTEGER NOT NULL REFERENCES incident(id) ON DELETE RESTRICT,
+            verdict TEXT NOT NULL CHECK (
+                verdict IN ('promote', 'park', 'dismiss', 'reassign', 'resurrect')
+            ),
+            reason TEXT NOT NULL,
+            previous_label TEXT,
+            reassign_label TEXT,
+            singleton INTEGER NOT NULL DEFAULT 0 CHECK (singleton IN (0, 1)),
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE curator_cluster_decision (
+            id INTEGER PRIMARY KEY,
+            label TEXT NOT NULL,
+            verdict TEXT NOT NULL CHECK (verdict IN ('synthesize', 'hold', 'unworthy')),
+            reason TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX curator_incident_decision_incident_idx
+        ON curator_incident_decision (incident_id, id)
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX curator_cluster_decision_label_idx
+        ON curator_cluster_decision (label, id)
+        """
+    )
     # A direct user message is the scanner unit of work.  This makes manual
     # re-scans and a retried queue item safe even after a process interruption,
     # without imposing scanner semantics on incidents written by later stages.
@@ -311,6 +388,7 @@ def _migration_2(connection: sqlite3.Connection) -> None:
 MIGRATIONS: dict[int, Callable[[sqlite3.Connection], None]] = {
     1: _migration_1,
     2: _migration_2,
+    3: _migration_3,
 }
 
 
@@ -606,6 +684,48 @@ class Ledger:
 
         return self.incidents_in_state("open")
 
+    def curator_unreviewed_incidents(self) -> list[Incident]:
+        """Return open incidents not yet given any full-context Curator verdict.
+
+        QC resurrection is itself a full-context Curator judgment, so it counts for
+        the pay-once invariant. The resurrected incident remains visible in cluster
+        digests and can move forward through a later cluster verdict. Previously
+        parked incidents are surfaced only by the next-arrival event path.
+        """
+
+        rows = self.connection.execute(
+            """
+            SELECT incident.*
+            FROM incident
+            WHERE incident.state = 'open'
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM curator_incident_decision
+                  WHERE curator_incident_decision.incident_id = incident.id
+              )
+            ORDER BY incident.occurred_at, incident.id
+            """
+        ).fetchall()
+        return [self._incident_from_row(row) for row in rows]
+
+    def curator_qc_candidates(self) -> list[Incident]:
+        """Return recent triage dismissals never before sampled by the Curator."""
+
+        rows = self.connection.execute(
+            """
+            SELECT incident.*
+            FROM incident
+            WHERE incident.state = 'dismissed-triage'
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM curator_incident_decision
+                  WHERE curator_incident_decision.incident_id = incident.id
+              )
+            ORDER BY incident.occurred_at DESC, incident.id DESC
+            """
+        ).fetchall()
+        return [self._incident_from_row(row) for row in rows]
+
     def parked_incidents(self, label: str) -> list[Incident]:
         """Return parked incidents for one label, including all durable metadata."""
 
@@ -614,6 +734,54 @@ class Ledger:
             (label,),
         ).fetchall()
         return [self._incident_from_row(row) for row in rows]
+
+    def active_cluster_members(self) -> list[Incident]:
+        """Return labelled members that still participate in an active cluster."""
+
+        rows = self.connection.execute(
+            """
+            SELECT * FROM incident
+            WHERE label IS NOT NULL
+              AND state IN ('open', 'parked', 'promoted', 'in-proposal', 'remedied')
+            ORDER BY label, occurred_at, id
+            """
+        ).fetchall()
+        return [self._incident_from_row(row) for row in rows]
+
+    def proposal_digest_rows(self) -> list[tuple[int, str, str, str]]:
+        """Return the compact proposal fields needed by the Curator ledger digest."""
+
+        rows = self.connection.execute(
+            """
+            SELECT id, remedy_type, gate_status, drafted_content
+            FROM proposal
+            ORDER BY id
+            """
+        ).fetchall()
+        return [
+            (int(row["id"]), str(row["remedy_type"]), str(row["gate_status"]), str(row["drafted_content"]))
+            for row in rows
+        ]
+
+    def remedy_digest_rows(self) -> list[tuple[int, str, str, str | None]]:
+        """Return the compact installed/rolled-back remedy fields for the digest."""
+
+        rows = self.connection.execute(
+            """
+            SELECT id, artifact_type, artifact_path, rollback_at
+            FROM remedy
+            ORDER BY id
+            """
+        ).fetchall()
+        return [
+            (
+                int(row["id"]),
+                str(row["artifact_type"]),
+                str(row["artifact_path"]),
+                row["rollback_at"],
+            )
+            for row in rows
+        ]
 
     def incidents_in_state(self, state: str) -> list[Incident]:
         """Return all incidents in one state, oldest first."""
@@ -770,6 +938,185 @@ class Ledger:
                 (stage, model, tokens, cost_usd, duration_ms, input_digest, _timestamp(created_at)),
             )
             return int(cursor.lastrowid)
+
+    def get_meta(self, key: str) -> str | None:
+        """Read one small durable pipeline metadata value."""
+
+        row = self.connection.execute("SELECT value FROM meta WHERE key = ?", (key,)).fetchone()
+        return str(row["value"]) if row is not None else None
+
+    def set_meta(self, key: str, value: str) -> None:
+        """Atomically create or replace one small pipeline metadata value."""
+
+        if not key.strip():
+            raise LedgerError("meta key cannot be empty")
+        with self._write_transaction():
+            self.connection.execute(
+                """
+                INSERT INTO meta (key, value) VALUES (?, ?)
+                ON CONFLICT(key) DO UPDATE SET value = excluded.value
+                """,
+                (key, value),
+            )
+
+    def apply_curator_incident_verdict(
+        self,
+        incident_id: int,
+        verdict: str,
+        *,
+        reason: str,
+        reassign_label: str | None = None,
+        singleton: bool = False,
+        timestamp: str | datetime | None = None,
+    ) -> None:
+        """Apply and record one semantically valid Curator verdict atomically."""
+
+        if verdict not in {"promote", "park", "dismiss", "reassign", "resurrect"}:
+            raise LedgerError(f"unknown Curator incident verdict {verdict!r}")
+        if not reason.strip():
+            raise LedgerError("a Curator verdict requires a non-empty reason")
+        if verdict == "reassign" and not (reassign_label and reassign_label.strip()):
+            raise LedgerError("reassign verdict requires reassign_label")
+        if verdict not in {"reassign", "resurrect"} and reassign_label is not None:
+            raise LedgerError(f"{verdict} verdict cannot also reassign a label")
+        if singleton and verdict != "promote":
+            raise LedgerError("singleton provenance is only valid for promotion")
+
+        changed_at = _timestamp(timestamp)
+        with self._write_transaction():
+            row = self.connection.execute(
+                "SELECT state, label FROM incident WHERE id = ?", (incident_id,)
+            ).fetchone()
+            if row is None:
+                raise IncidentNotFoundError(f"incident {incident_id} does not exist")
+            state = str(row["state"])
+            previous_label = row["label"]
+
+            if state == "open":
+                if verdict == "promote":
+                    self._transition_in_transaction(incident_id, "promoted", reason, changed_at)
+                elif verdict == "park":
+                    self._transition_in_transaction(incident_id, "parked", reason, changed_at)
+                elif verdict == "dismiss":
+                    self._transition_in_transaction(
+                        incident_id, "dismissed-reviewed", reason, changed_at
+                    )
+                elif verdict == "reassign":
+                    self.connection.execute(
+                        "UPDATE incident SET label = ? WHERE id = ?",
+                        (reassign_label, incident_id),
+                    )
+                else:
+                    raise IllegalTransitionError(incident_id, state, "open")
+            elif state == "dismissed-triage":
+                if verdict == "resurrect":
+                    if reassign_label is not None:
+                        self.connection.execute(
+                            "UPDATE incident SET label = ? WHERE id = ?",
+                            (reassign_label, incident_id),
+                        )
+                    self._transition_in_transaction(incident_id, "open", reason, changed_at)
+                elif verdict != "dismiss":
+                    target = {
+                        "promote": "promoted",
+                        "park": "parked",
+                        "reassign": state,
+                    }.get(verdict, state)
+                    raise IllegalTransitionError(incident_id, state, target)
+                # ``dismiss`` upholds the existing triage dismissal without a state change.
+            else:
+                target = {
+                    "promote": "promoted",
+                    "park": "parked",
+                    "dismiss": "dismissed-reviewed",
+                    "reassign": state,
+                    "resurrect": "open",
+                }[verdict]
+                raise IllegalTransitionError(incident_id, state, target)
+
+            self.connection.execute(
+                """
+                INSERT INTO curator_incident_decision (
+                    incident_id, verdict, reason, previous_label, reassign_label,
+                    singleton, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    incident_id,
+                    verdict,
+                    reason,
+                    previous_label,
+                    reassign_label,
+                    int(singleton),
+                    changed_at,
+                ),
+            )
+
+    def record_curator_cluster_verdict(
+        self,
+        label: str,
+        verdict: str,
+        *,
+        reason: str,
+        timestamp: str | datetime | None = None,
+    ) -> None:
+        """Append a cluster judgment, including durable unworthy/hold reasons."""
+
+        if verdict not in {"synthesize", "hold", "unworthy"}:
+            raise LedgerError(f"unknown Curator cluster verdict {verdict!r}")
+        if not label.strip() or not reason.strip():
+            raise LedgerError("a cluster verdict requires a label and reason")
+        with self._write_transaction():
+            self.connection.execute(
+                """
+                INSERT INTO curator_cluster_decision (label, verdict, reason, created_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (label, verdict, reason, _timestamp(timestamp)),
+            )
+
+    def curator_decisions(self, incident_id: int | None = None) -> list[CuratorDecision]:
+        """Return append-only incident decisions, optionally for one incident."""
+
+        if incident_id is None:
+            rows = self.connection.execute(
+                "SELECT * FROM curator_incident_decision ORDER BY id"
+            ).fetchall()
+        else:
+            rows = self.connection.execute(
+                "SELECT * FROM curator_incident_decision WHERE incident_id = ? ORDER BY id",
+                (incident_id,),
+            ).fetchall()
+        return [
+            CuratorDecision(
+                id=int(row["id"]),
+                incident_id=int(row["incident_id"]),
+                verdict=str(row["verdict"]),
+                reason=str(row["reason"]),
+                previous_label=row["previous_label"],
+                reassign_label=row["reassign_label"],
+                singleton=bool(row["singleton"]),
+                created_at=str(row["created_at"]),
+            )
+            for row in rows
+        ]
+
+    def curator_cluster_decisions(self) -> list[CuratorClusterDecision]:
+        """Return all append-only cluster decisions."""
+
+        rows = self.connection.execute(
+            "SELECT * FROM curator_cluster_decision ORDER BY id"
+        ).fetchall()
+        return [
+            CuratorClusterDecision(
+                id=int(row["id"]),
+                label=str(row["label"]),
+                verdict=str(row["verdict"]),
+                reason=str(row["reason"]),
+                created_at=str(row["created_at"]),
+            )
+            for row in rows
+        ]
 
     def create_proposal(
         self,

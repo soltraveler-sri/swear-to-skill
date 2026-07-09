@@ -9,6 +9,12 @@ triage_max_age_hours = 24
 curator_unreviewed_count = 10
 curator_max_age_days = 7
 
+[curator]
+# Review a bounded, never-before-sampled set of recent triage dismissals.
+qc_sample_size = 5
+# Full context is chunked by label cluster above this per-call character budget.
+context_char_budget = 60000
+
 [autonomy]
 # Human review is the default gate policy. "autonomous" is opt-in.
 mode = "review"

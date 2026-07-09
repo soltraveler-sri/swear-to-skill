@@ -39,6 +39,8 @@ def test_missing_config_returns_documented_defaults(monkeypatch, tmp_path) -> No
     assert config.models.synthesize == "sonnet"
     assert config.models.parallelism == 2
     assert config.costs.confirm_threshold_usd == 1.0
+    assert config.curator.qc_sample_size == 5
+    assert config.curator.context_char_budget == 60_000
 
 
 def test_config_is_loaded_from_the_overridden_s2s_home(monkeypatch, tmp_path) -> None:
