@@ -2,9 +2,18 @@
 __pycache__/
 *.py[cod]
 .venv/
+node_modules/
+.next/
 dist/
 build/
+target/
 *.egg-info/
+*.whl
+*.gguf
+*.bin
+*.safetensors
+*.dylib
+*.node
 
 # Tooling / OS
 .DS_Store

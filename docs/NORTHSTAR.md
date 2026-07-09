@@ -474,7 +474,7 @@ target-agnostic by design.
 
 ## 11. Tech stack & repo layout
 
-- **Python ≥3.10, stdlib-only core** (argparse, sqlite3, re, json, pathlib) —
+- **Python ≥3.11, stdlib-only core** (argparse, sqlite3, re, json, pathlib) —
   upstream proved this is enough; zero-dep install (`uvx swear-to-skill` / `pipx`).
   LLM access is exclusively via subprocess to the user's `claude` CLI — no SDK
   dependency, no API key, works on any Claude subscription.
