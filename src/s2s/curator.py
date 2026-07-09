@@ -15,12 +15,14 @@ from .config import Config, load_config
 from .ledger import Incident, Ledger, LedgerError
 from .llm import call, estimate_and_confirm, load_prompt
 from .paths import resolve_paths
-from .taxonomy import label_names, list_labels
+from .taxonomy import apply_merge, apply_new_label, label_names, list_labels
 from .triager import context_for_incident
 
 
 PROMPT_NAME = "curate"
 PROMPT_VERSION = 1
+GARDEN_PROMPT_NAME = "garden"
+GARDEN_PROMPT_VERSION = 1
 LAST_PASS_META_KEY = "curator.last_pass_at"
 MEMBER_ONE_LINER_LIMIT = 180
 PROPOSAL_TEXT_LIMIT = 180
@@ -124,14 +126,16 @@ def run_pass(ledger: Ledger, *, assume_yes: bool = False) -> CuratorPassResult:
             seen_ids.add(incident.id)
             selected.append((incident, origin))
 
-    if not selected:
+    garden_initially_needed = gardening_needed(ledger)
+    if not selected and not garden_initially_needed:
         return CuratorPassResult(None, 0, (), 0, 0, 0, skipped=True)
 
     entries = tuple(_build_pack_entry(incident, origin) for incident, origin in selected)
     digest = render_ledger_digest(ledger)
-    chunks = _chunk_entries(entries, max(1, config.curator.context_char_budget))
+    chunks = _chunk_entries(entries, max(1, config.curator.context_char_budget)) if entries else ()
     model = config.models.curate
-    if not estimate_and_confirm(len(chunks), model, assume_yes=assume_yes):
+    planned_calls = len(chunks) + int(garden_initially_needed)
+    if not estimate_and_confirm(planned_calls, model, assume_yes=assume_yes):
         return CuratorPassResult(
             None,
             0,
@@ -142,8 +146,8 @@ def run_pass(ledger: Ledger, *, assume_yes: bool = False) -> CuratorPassResult:
             skipped=True,
         )
 
-    template, base_schema = load_prompt(PROMPT_NAME, PROMPT_VERSION)
-    schema = curator_schema(base_schema)
+    template, base_schema = load_prompt(PROMPT_NAME, PROMPT_VERSION) if chunks else ("", {})
+    schema = curator_schema(base_schema) if chunks else {}
     records: list[_ReportVerdict] = []
     applied_incident = 0
     applied_cluster = 0
@@ -171,12 +175,15 @@ def run_pass(ledger: Ledger, *, assume_yes: bool = False) -> CuratorPassResult:
         applied_cluster += cluster_count
         rejected += rejection_count
 
+    garden_records, garden_calls = _run_gardening(ledger, model=model)
+    records.extend(garden_records)
+
     completed_at = datetime.now(timezone.utc)
     report_path = _write_report(completed_at, digest, entries, records)
     ledger.set_meta(LAST_PASS_META_KEY, completed_at.isoformat())
     return CuratorPassResult(
         report_path=report_path,
-        calls=len(chunks),
+        calls=len(chunks) + garden_calls,
         full_context_incident_ids=tuple(entry.incident.id for entry in entries),
         applied_incident_verdicts=applied_incident,
         applied_cluster_verdicts=applied_cluster,
@@ -203,6 +210,59 @@ def curator_schema(base_schema: dict[str, object] | None = None) -> dict[str, ob
     reassign["enum"] = labels
     cluster_label["enum"] = labels
     return schema
+
+
+def garden_schema(base_schema: dict[str, object] | None = None) -> dict[str, object]:
+    """Inject current mergeable labels into the gardening schema at call time."""
+
+    if base_schema is None:
+        _, base_schema = load_prompt(GARDEN_PROMPT_NAME, GARDEN_PROMPT_VERSION)
+    schema = deepcopy(base_schema)
+    properties = schema.get("properties")
+    if not isinstance(properties, dict):
+        raise ValueError("garden schema must define properties")
+    merges = _array_item_properties(properties, "merge_labels")
+    labels = [name for name in label_names() if name != "other"]
+    for name in ("survivor", "absorbed"):
+        field = merges.get(name)
+        if not isinstance(field, dict):
+            raise ValueError(f"garden schema must define merge {name}")
+        field["enum"] = labels
+    return schema
+
+
+def gardening_needed(ledger: Ledger) -> bool:
+    """Return whether active escape-hatch evidence or fragmentation merits judgment."""
+
+    return bool(ledger.other_nonterminal_incidents()) or _distribution_anomaly(ledger)
+
+
+def render_garden_prompt(template: str, ledger: Ledger) -> str:
+    """Render the complete active ``other`` set and distribution health facts."""
+
+    other = ledger.other_nonterminal_incidents()
+    other_lines = [
+        f"- incident_id={incident.id} | one_liner={_truncate(incident.one_liner or incident.message, MEMBER_ONE_LINER_LIMIT)}"
+        for incident in other
+    ] or ["- (none)"]
+    stats = ledger.cluster_stats()
+    total = sum(item.incident_count for item in stats)
+    distribution = [
+        f"- {item.label}: count={item.incident_count} share={item.incident_count / total:.1%}"
+        for item in stats
+    ] if total else ["- (no labelled incidents)"]
+    distribution.extend(
+        (
+            f"- active_cluster_count={ledger.active_cluster_count()}",
+            f"- singleton_ratio={ledger.singleton_ratio():.1%}",
+            f"- other_share_open={ledger.other_share():.1%}",
+        )
+    )
+    rendered = template.replace("{{OTHER_INCIDENTS}}", "\n".join(other_lines))
+    rendered = rendered.replace("{{LABEL_DISTRIBUTION}}", "\n".join(distribution))
+    if "{{" in rendered or "}}" in rendered:
+        raise ValueError("garden prompt template contains an unknown placeholder")
+    return rendered
 
 
 def render_curator_prompt(template: str, digest: str, chunk: _Chunk) -> str:
@@ -275,6 +335,100 @@ def render_ledger_digest(ledger: Ledger) -> str:
             f"- remedy #{remedy_id} | type={artifact_type} | status={status} | path={artifact_path}"
         )
     return "\n".join(lines)
+
+
+def _run_gardening(ledger: Ledger, *, model: str) -> tuple[list[_ReportVerdict], int]:
+    """Apply the capable-model's strictly limited taxonomy maintenance authority."""
+
+    if not gardening_needed(ledger):
+        return [], 0
+    template, base_schema = load_prompt(GARDEN_PROMPT_NAME, GARDEN_PROMPT_VERSION)
+    response = call(
+        render_garden_prompt(template, ledger),
+        schema=garden_schema(base_schema),
+        model=model,
+        stage="curate",
+    )
+    records: list[_ReportVerdict] = []
+    other_ids = {incident.id for incident in ledger.other_nonterminal_incidents()}
+    raw_merges = response.get("merge_labels", [])
+    assert isinstance(raw_merges, list)
+    for raw_merge in raw_merges:
+        if not isinstance(raw_merge, dict):
+            records.append(_ReportVerdict("garden merge", "unknown", "merge", "invalid response", "rejected"))
+            continue
+        survivor = raw_merge.get("survivor")
+        absorbed = raw_merge.get("absorbed")
+        reason = raw_merge.get("reason")
+        subject = f"{absorbed} -> {survivor}"
+        if not all(isinstance(value, str) and value.strip() for value in (survivor, absorbed, reason)):
+            records.append(_ReportVerdict("garden merge", subject, "merge", str(reason), "rejected: invalid fields"))
+            continue
+        try:
+            apply_merge(survivor=survivor, absorbed=absorbed, reason=reason)
+            changed = ledger.relabel_label(absorbed, survivor)
+        except (ValueError, FileExistsError, LedgerError) as error:
+            records.append(_ReportVerdict("garden merge", subject, "merge", reason, f"rejected: {error}"))
+            continue
+        records.append(
+            _ReportVerdict("garden merge", subject, "merge", reason, f"applied: relabelled {changed} incident(s)")
+        )
+
+    proposal = response.get("propose_label")
+    if proposal is None:
+        return records, 1
+    if not isinstance(proposal, dict):
+        records.append(_ReportVerdict("garden label", "unknown", "add", "invalid response", "rejected"))
+        return records, 1
+    name = proposal.get("name")
+    gist = proposal.get("gist")
+    examples = proposal.get("examples")
+    evidence = proposal.get("evidence_incident_ids")
+    subject = str(name)
+    if (
+        not isinstance(name, str)
+        or not isinstance(gist, str)
+        or not isinstance(examples, list)
+        or not isinstance(evidence, list)
+    ):
+        records.append(_ReportVerdict("garden label", subject, "add", str(gist), "rejected: invalid fields"))
+        return records, 1
+    if len(evidence) < 3 or len(set(evidence)) != len(evidence) or not all(
+        isinstance(item, int) and not isinstance(item, bool) and item in other_ids for item in evidence
+    ):
+        records.append(
+            _ReportVerdict(
+                "garden label",
+                subject,
+                "add",
+                gist,
+                "rejected: requires three unique active other evidence incident IDs",
+            )
+        )
+        return records, 1
+    try:
+        apply_new_label(
+            name=name,
+            gist=gist,
+            examples=examples,
+            evidence_incident_ids=evidence,
+        )
+        changed = ledger.relabel_incidents(evidence, name)
+    except (ValueError, FileExistsError, LedgerError) as error:
+        records.append(_ReportVerdict("garden label", subject, "add", gist, f"rejected: {error}"))
+        return records, 1
+    records.append(
+        _ReportVerdict(
+            "garden label", subject, "add", gist, f"applied: relabelled {changed} evidence incident(s)"
+        )
+    )
+    return records, 1
+
+
+def _distribution_anomaly(ledger: Ledger) -> bool:
+    return (
+        ledger.active_cluster_count() >= 10 and ledger.singleton_ratio() > 0.9
+    ) or ledger.other_share() > 0.3
 
 
 def _build_pack_entry(incident: Incident, origin: str) -> _PackEntry:

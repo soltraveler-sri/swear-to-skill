@@ -748,6 +748,47 @@ class Ledger:
         ).fetchall()
         return [self._incident_from_row(row) for row in rows]
 
+    def other_nonterminal_incidents(self) -> list[Incident]:
+        """Return the gardener's complete active ``other`` evidence set."""
+
+        rows = self.connection.execute(
+            """
+            SELECT * FROM incident
+            WHERE label = 'other'
+              AND state NOT IN ('dismissed-triage', 'dismissed-reviewed', 'remedied')
+            ORDER BY occurred_at, id
+            """
+        ).fetchall()
+        return [self._incident_from_row(row) for row in rows]
+
+    def relabel_incidents(self, incident_ids: list[int] | tuple[int, ...], label: str) -> int:
+        """Bulk-update labels without changing the incident state machine history."""
+
+        ids = tuple(incident_ids)
+        if not ids or not label.strip():
+            raise LedgerError("relabeling requires incident IDs and a non-empty label")
+        if len(set(ids)) != len(ids) or not all(isinstance(item, int) and item > 0 for item in ids):
+            raise LedgerError("relabeling requires unique positive incident IDs")
+        marks = ", ".join("?" for _ in ids)
+        with self._write_transaction():
+            result = self.connection.execute(
+                f"UPDATE incident SET label = ? WHERE id IN ({marks})", (label, *ids)
+            )
+            if result.rowcount != len(ids):
+                raise IncidentNotFoundError("one or more incidents do not exist")
+            return result.rowcount
+
+    def relabel_label(self, absorbed: str, survivor: str) -> int:
+        """Merge an entire label cluster without altering incident states/history."""
+
+        if not absorbed.strip() or not survivor.strip():
+            raise LedgerError("label merges require non-empty labels")
+        with self._write_transaction():
+            result = self.connection.execute(
+                "UPDATE incident SET label = ? WHERE label = ?", (survivor, absorbed)
+            )
+            return result.rowcount
+
     def proposal_digest_rows(self) -> list[tuple[int, str, str, str]]:
         """Return the compact proposal fields needed by the Curator ledger digest."""
 
@@ -1233,6 +1274,11 @@ class Ledger:
             return 0.0
         return sum(cluster.incident_count == 1 for cluster in clusters) / len(clusters)
 
+    def active_cluster_count(self) -> int:
+        """Return the number of labelled clusters participating in the pipeline."""
+
+        return len(self.cluster_stats())
+
     def other_share(self) -> float:
         """Return the fraction of labelled incidents assigned to the ``other`` escape hatch."""
 
@@ -1245,9 +1291,8 @@ class Ledger:
             """
         ).fetchone()
         labelled_count = int(row["labelled_count"])
-        if labelled_count == 0:
-            return 0.0
-        return int(row["other_count"]) / labelled_count
+        other_count = int(row["other_count"] or 0)
+        return other_count / labelled_count if labelled_count else 0.0
 
     @staticmethod
     def _incident_from_row(row: sqlite3.Row) -> Incident:

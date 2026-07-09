@@ -6,7 +6,7 @@ import pytest
 
 from s2s.cli import main
 from s2s.ledger import Ledger
-from s2s.meter import collect_dashboard_data, friendly_model_name, render_status, write_dashboard
+from s2s.meter import collect_dashboard_data, friendly_model_name, render_dashboard, render_status, write_dashboard
 
 
 @pytest.fixture
@@ -188,6 +188,39 @@ def test_dashboard_is_self_contained_and_contains_fixture_values(ledger: Ledger)
     assert 'id="remedy-outcomes"' in document
     assert "http://" not in document
     assert "https://" not in document
+
+
+def test_dashboard_interprets_fragmentation_and_taxonomy_gap_thresholds(ledger: Ledger) -> None:
+    for index in range(10):
+        _record_detection(
+            ledger,
+            source="claude-code",
+            session_id=f"singleton-{index}",
+            project="alpha",
+            occurred_at=f"2026-02-{index + 1:02d}T09:00:00+00:00",
+            message=f"singleton {index}",
+            label=f"bucket-{index}",
+        )
+    for index in range(5):
+        _record_detection(
+            ledger,
+            source="claude-code",
+            session_id=f"other-{index}",
+            project="alpha",
+            occurred_at=f"2026-03-{index + 1:02d}T09:00:00+00:00",
+            message=f"other {index}",
+            label="other",
+        )
+
+    data = collect_dashboard_data(ledger)
+    dashboard = render_dashboard(data)
+
+    assert data.singleton_ratio > 0.9 and data.active_cluster_count >= 10
+    assert data.other_share > 0.3
+    assert "fragmentation death pattern — the pipeline is not clustering; inspect taxonomy fit" in dashboard
+    assert "taxonomy gap — gardening should be creating labels" in dashboard
+    status = render_status(data, archived_sessions=0)
+    assert "singleton ratio:" in status and "other share:" in status
 
 
 def test_dashboard_empty_state_is_friendly_and_writes_without_data(ledger: Ledger) -> None:

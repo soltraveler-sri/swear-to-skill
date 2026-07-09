@@ -65,6 +65,7 @@ class DashboardData:
     categories: tuple[tuple[str, int], ...]
     incident_states: tuple[tuple[str, int], ...]
     queue_depth: int
+    active_cluster_count: int
     singleton_ratio: float
     other_share: float
     date_start: date | None
@@ -159,6 +160,7 @@ def collect_dashboard_data(ledger: Ledger) -> DashboardData:
             if state_counts[state]
         ),
         queue_depth=len(ledger.pending_queue_items()),
+        active_cluster_count=ledger.active_cluster_count(),
         singleton_ratio=ledger.singleton_ratio(),
         other_share=ledger.other_share(),
         date_start=min(dates) if dates else None,
@@ -402,6 +404,25 @@ def _metric_card(label: str, value: str) -> str:
     return f'<div class="card"><span class="number">{escape(value)}</span><span class="label">{escape(label)}</span></div>'
 
 
+def _health_metric_card(label: str, value: str, interpretation: str) -> str:
+    return (
+        f'<div class="card"><span class="number">{escape(value)}</span>'
+        f'<span class="label">{escape(label)}</span><p class="muted">{escape(interpretation)}</p></div>'
+    )
+
+
+def _singleton_interpretation(data: DashboardData) -> str:
+    if data.singleton_ratio > 0.9 and data.active_cluster_count >= 10:
+        return "fragmentation death pattern — the pipeline is not clustering; inspect taxonomy fit"
+    return f"{data.active_cluster_count} active cluster(s); lower is healthier when incidents recur."
+
+
+def _other_interpretation(data: DashboardData) -> str:
+    if data.other_share > 0.3:
+        return "taxonomy gap — gardening should be creating labels"
+    return "The escape hatch is within the expected range."
+
+
 def _render_chart(weeks: tuple[WeeklyRate, ...]) -> str:
     if not weeks:
         return '<div class="empty">No dated sessions are available for a weekly chart yet.</div>'
@@ -483,8 +504,8 @@ def _render_health(data: DashboardData) -> str:
     return f"""
 <div class="health-grid">
   {_metric_card('Queue depth', str(data.queue_depth))}
-  {_metric_card('Singleton ratio', _percentage(data.singleton_ratio * 100))}
-  {_metric_card('Other share', _percentage(data.other_share * 100))}
+  {_health_metric_card('Singleton ratio', _percentage(data.singleton_ratio * 100), _singleton_interpretation(data))}
+  {_health_metric_card('Other share', _percentage(data.other_share * 100), _other_interpretation(data))}
   <div class="table-card"><h3>Incidents by state</h3><table><thead><tr><th>State</th><th>Count</th></tr></thead><tbody>{state_rows}</tbody></table></div>
 </div>
 <div class="split">
