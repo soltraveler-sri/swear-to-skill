@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+dist/
+build/
+*.egg-info/
+
+# Tooling / OS
+.DS_Store
+*.log
+.pytest_cache/
+.ruff_cache/
+
+# Local outputs (meter reports, scratch analyses) — never commit transcript-derived data
+outputs/
