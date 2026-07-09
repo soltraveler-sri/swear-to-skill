@@ -208,3 +208,28 @@ def test_estimate_refusal_in_noninteractive_bulk_run_leaves_work_queued(
     assert triage_pending(ledger) == []
     assert mock_claude.invocations() == []
     assert ledger.get_incident(incident_id).state == "detected"  # type: ignore[union-attr]
+
+
+def test_context_resolution_survives_archive_filename_differing_from_session_id(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Regression: archives key by source filename; sessions key by internal id."""
+    from s2s.archiver import archive_transcript
+    from s2s.ledger import Ledger
+    from s2s.scanner import scan_pending_queue
+    from s2s.triager import context_for_incident
+
+    monkeypatch.setenv("S2S_HOME", str(tmp_path / "home"))
+    fixture = Path(__file__).parent / "fixtures" / "claude_code" / "synthetic-session.jsonl"
+    source = tmp_path / "projects" / "-demo-project" / "renamed-not-the-session-id.jsonl"
+    source.parent.mkdir(parents=True)
+    source.write_text(fixture.read_text())
+    archive_transcript(source)
+
+    with Ledger() as ledger:
+        results = scan_pending_queue(ledger)
+        assert sum(result.incidents_created for result in results) == 1
+        incident = ledger.incidents_in_state("detected")[0]
+        context_pack, pointer = context_for_incident(incident)
+        assert context_pack.frustrated_message == "This is not what I asked; please fix it."
+        assert "renamed-not-the-session-id.jsonl" in pointer
