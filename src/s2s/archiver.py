@@ -20,6 +20,7 @@ from typing import Literal, TextIO
 from .adapters.claude_code import iter_sessions
 from .ledger import Ledger
 from .paths import resolve_paths
+from .pump import spawn_background_pump
 
 
 LOGGER = logging.getLogger(__name__)
@@ -175,6 +176,9 @@ def handle_session_end(payload_stream: TextIO | None = None) -> int:
         if not isinstance(transcript_path, str) or not transcript_path.strip():
             raise ValueError("SessionEnd hook payload is missing transcript_path")
         archive_transcript(transcript_path)
+        # The hook is deliberately limited to durable archive work plus this
+        # detached spawn.  The pump owns scan/LLM work outside hook latency.
+        spawn_background_pump()
     except BaseException as error:
         _log_hook_failure(error)
     return 0

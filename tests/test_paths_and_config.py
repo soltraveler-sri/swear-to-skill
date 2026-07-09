@@ -26,6 +26,7 @@ def test_missing_config_returns_documented_defaults(monkeypatch, tmp_path) -> No
 
     assert config.thresholds.triage_untriaged_count == 10
     assert config.thresholds.triage_max_age_hours == 24
+    assert config.thresholds.triage_per_run_cap == 25
     assert config.thresholds.curator_unreviewed_count == 10
     assert config.thresholds.curator_max_age_days == 7
     assert config.autonomy.mode == "review"
@@ -56,6 +57,7 @@ def test_config_is_loaded_from_the_overridden_s2s_home(monkeypatch, tmp_path) ->
     config = load_config()
 
     assert config.thresholds.curator_unreviewed_count == 4
+    assert config.thresholds.triage_per_run_cap == 25
     assert config.autonomy.mode == "autonomous"
     assert config.notifications.desktop is True
     assert config.models.triage == "custom-haiku"

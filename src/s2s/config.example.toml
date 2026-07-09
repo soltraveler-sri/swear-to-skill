@@ -5,6 +5,8 @@
 # Pump triage after this many untriaged detections, or after the max age below.
 triage_untriaged_count = 10
 triage_max_age_hours = 24
+# Never allow an unattended pump to make more than this many triage calls.
+triage_per_run_cap = 25
 # Curator review runs after this many unreviewed incidents, or after this age.
 curator_unreviewed_count = 10
 curator_max_age_days = 7

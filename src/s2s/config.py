@@ -15,6 +15,7 @@ class Thresholds:
 
     triage_untriaged_count: int = 10
     triage_max_age_hours: int = 24
+    triage_per_run_cap: int = 25
     curator_unreviewed_count: int = 10
     curator_max_age_days: int = 7
 
@@ -128,6 +129,11 @@ def load_config(config_path: Path | None = None) -> Config:
                 thresholds,
                 "triage_max_age_hours",
                 defaults.thresholds.triage_max_age_hours,
+            ),
+            triage_per_run_cap=_int(
+                thresholds,
+                "triage_per_run_cap",
+                defaults.thresholds.triage_per_run_cap,
             ),
             curator_unreviewed_count=_int(
                 thresholds,
