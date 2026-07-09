@@ -25,7 +25,7 @@ package-dir = { "" = "src" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-s2s = ["lexicons/*.json"]
+s2s = ["lexicons/*.json", "config.example.toml"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

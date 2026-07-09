@@ -1,8 +1,4 @@
-"""Command-line interface for swear-to-skill.
-
-Issue #1 intentionally exposes only ownership-labelled command stubs. Each
-subcommand has a later issue responsible for its behavior.
-"""
+"""Command-line interface for swear-to-skill."""
 
 from __future__ import annotations
 
@@ -11,8 +7,6 @@ from collections.abc import Sequence
 
 
 COMMAND_ISSUES = {
-    "init": 4,
-    "backfill": 4,
     "scan": 5,
     "meter": 6,
     "status": 6,
@@ -29,13 +23,15 @@ COMMAND_ISSUES = {
     "autonomy": 17,
 }
 
+IMPLEMENTED_COMMANDS = ("init", "backfill")
+
 
 def build_parser() -> argparse.ArgumentParser:
     """Build the zero-dependency command parser."""
     parser = argparse.ArgumentParser(prog="s2s", description="swear-to-skill")
     subparsers = parser.add_subparsers(dest="command", metavar="COMMAND")
 
-    for command in COMMAND_ISSUES:
+    for command in (*IMPLEMENTED_COMMANDS, *COMMAND_ISSUES):
         subparsers.add_parser(command)
 
     subparsers.choices["schedule"].add_argument(
@@ -49,6 +45,11 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.choices["meter"].add_argument("--open", action="store_true")
     subparsers.choices["pump"].add_argument("--background", action="store_true")
     subparsers.choices["scan"].add_argument("--suggest-terms", action="store_true")
+    subparsers.choices["init"].add_argument("--uninstall", action="store_true")
+
+    hook_parser = subparsers.add_parser("hook")
+    hook_subparsers = hook_parser.add_subparsers(dest="hook_event")
+    hook_subparsers.add_parser("session-end")
 
     return parser
 
@@ -73,7 +74,7 @@ def _run_scan(args: argparse.Namespace) -> int:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run a command stub and return a shell-compatible exit status."""
+    """Dispatch implemented commands and retain labelled future stubs."""
     parser = build_parser()
     args = parser.parse_args(argv)
 
@@ -83,6 +84,24 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "scan":
         return _run_scan(args)
+
+    if args.command == "init":
+        from .initcmd import run_init
+
+        return run_init(uninstall_mode=args.uninstall)
+
+    if args.command == "backfill":
+        from .archiver import backfill
+
+        result = backfill()
+        return 1 if result.failed else 0
+
+    if args.command == "hook":
+        if args.hook_event == "session-end":
+            from .archiver import handle_session_end
+
+            return handle_session_end()
+        parser.error("hook requires an event")
 
     issue = COMMAND_ISSUES[args.command]
     print(f"{args.command}: not implemented yet (issue #{issue})")
