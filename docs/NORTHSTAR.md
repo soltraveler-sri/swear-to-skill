@@ -34,7 +34,7 @@ Gostev), which established the core insight — that rudeness toward a coding ag
 measurable, local-first benchmark signal — and proved the extraction mechanics over
 Codex session logs. swear-to-skill extends that idea from *benchmark* to *remediation
 pipeline*, and centers Claude Code. We reuse its MIT-licensed seed lexicons and several
-of its extraction disciplines (see §12).
+of its extraction disciplines (see §13).
 
 ---
 
@@ -393,7 +393,64 @@ autonomy mode exists (explicit project requirement).
 
 ---
 
-## 9. Adapters
+## 9. Runtime & UX: scheduling, notifications, dashboard
+
+### 9.1 Scheduling: durable queue, opportunistic pump
+
+All pipeline work is queue-backed in the ledger (SQLite). **Triggers never create
+work; they only pump the queue** — so if the machine is off, `claude` is
+unavailable, or a run is interrupted, items simply wait. Nothing is ever skipped,
+only deferred.
+
+- **Default trigger — opportunistic pump:** the SessionEnd hook, after its
+  inline archive+scan (milliseconds, no LLM), spawns a detached background
+  process (`s2s pump --background`) that checks accumulation thresholds
+  (triage: ≥K untriaged or ≥24h since last run; curate: ≥10 unreviewed or ≥7
+  days) and runs whichever stages are due. Rationale: this ties compute to
+  actual usage — new data exists exactly when sessions end, the machine is
+  necessarily on, and the `claude` CLI auth is warm. Zero configuration, no
+  daemon.
+- **Concurrency safety:** a lockfile makes pumps mutually exclusive; every
+  stage is idempotent and resumable mid-batch (state transitions are per-item).
+- **Optional fixed cadence:** `s2s schedule install` sets up a launchd agent
+  (macOS) / systemd user timer (Linux) invoking `s2s pump`. Strictly additive —
+  the opportunistic path remains the backbone.
+- **Manual:** `s2s run` (pump now), `s2s review` (force a Curator pass).
+
+### 9.2 Human-in-the-loop notification (layered)
+
+- **Layer 0 — on demand (always):** `s2s status`, `s2s proposals`.
+- **Layer 1 — default:** a **SessionStart digest line** injected by hook. It
+  reads a precomputed status file (written by the pump — no LLM, no latency,
+  no DB query at session start): e.g. *"s2s: 2 remedy proposals awaiting
+  review — `s2s proposals` or `/s2s`."* Silent when there is nothing to say.
+- **Layer 2 — opt-in (config):** desktop notification (macOS `osascript` /
+  Linux `notify-send`) and a **generic webhook** (JSON POST, Slack/Discord
+  compatible) fired when a proposal enters the queue or an autonomous action
+  occurs. No email, no cloud service in v1.
+
+### 9.3 Dashboard & in-session surface
+
+- **Primary: self-contained local HTML** (upstream's proven approach, and the
+  P6-correct one): a single static file with the meter charts (weekly
+  frustration rate, per-model, per-project), pipeline health (queue depths,
+  singleton ratio, `other` share, cost log), and the current proposals digest.
+  `s2s meter --open` regenerates and opens it; the `file://` path is clickable
+  from terminals and inside Claude Code.
+- **Companion Claude Code skill `/s2s`** (vendored in this repo under
+  `skill/`, installed to `~/.claude/skills/s2s/` by `s2s init`): surfaces
+  status inline, links the dashboard, and enables **conversational proposal
+  review** — Claude presents each pending proposal with its evidence and runs
+  `s2s approve <id>` / `s2s reject <id>` on the user's word. The human gate
+  thus lives natively inside the Claude Code workflow.
+- **Claude Artifacts:** not a default surface — artifacts are uploaded to
+  claude.ai hosting, and P6 says transcript-derived data stays local unless
+  the user chooses otherwise. Documented as an optional, user-initiated way to
+  share the dashboard; never automatic.
+
+---
+
+## 10. Adapters
 
 A thin adapter per CLI normalizes transcripts into (direct-user-message stream +
 context-pack builder). Everything from Stage 1 onward is adapter-agnostic.
@@ -415,16 +472,17 @@ target-agnostic by design.
 
 ---
 
-## 10. Tech stack & repo layout
+## 11. Tech stack & repo layout
 
 - **Python ≥3.10, stdlib-only core** (argparse, sqlite3, re, json, pathlib) —
   upstream proved this is enough; zero-dep install (`uvx swear-to-skill` / `pipx`).
   LLM access is exclusively via subprocess to the user's `claude` CLI — no SDK
   dependency, no API key, works on any Claude subscription.
 - **One console entry point:** `s2s` (alias `swear-to-skill`) with subcommands:
-  `init` (installs hooks, archives config), `backfill`, `scan`, `triage`,
-  `review`, `proposals`, `approve/reject`, `meter` (HTML dashboard), `status`,
-  `log`, `rollback`, `autonomy on|off`.
+  `init` (installs hooks, /s2s skill, config), `backfill`, `scan`, `triage`,
+  `review`, `run`, `pump`, `schedule install|remove`, `proposals`,
+  `approve/reject`, `meter` (HTML dashboard), `status`, `log`, `rollback`,
+  `autonomy on|off`.
 - Layout:
 
 ```
@@ -439,7 +497,9 @@ swear-to-skill/
 │   ├── lexicons/              # seed JSON (vendored, notice-preserved) + user overrides
 │   ├── scanner.py  triager.py  curator.py  synthesist.py
 │   ├── gate.py  auditor.py  ledger.py  llm.py  meter.py  cli.py
+│   ├── pump.py  notify.py
 │   └── prompts/               # versioned prompt + json-schema files
+├── skill/                     # vendored /s2s Claude Code companion skill
 └── tests/                     # fixture transcripts, mock-LLM pipeline tests
 ```
 
@@ -449,7 +509,7 @@ swear-to-skill/
 
 ---
 
-## 11. Risks & mitigations
+## 12. Risks & mitigations
 
 | Risk | Mitigation |
 |---|---|
@@ -465,7 +525,7 @@ swear-to-skill/
 
 ---
 
-## 12. Licensing & attribution
+## 13. Licensing & attribution
 
 - This project: **MIT**.
 - Upstream: [codex-swear-meter](https://github.com/petergpt/codex-swear-meter),
@@ -479,7 +539,7 @@ swear-to-skill/
 
 ---
 
-## 13. Non-goals (v1)
+## 14. Non-goals (v1)
 
 - Not a sentiment analyzer or psychological profile — matches are review leads
   (upstream's framing, kept).
@@ -490,16 +550,18 @@ swear-to-skill/
 
 ---
 
-## 14. Build order (preview for implementation planning)
+## 15. Build order
 
 1. **Sprint 1 — Substrate:** repo scaffold, ledger, Claude Code adapter +
    defensive parser, archiver + SessionEnd hook, backfill, scanner + vendored
    lexicons, meter v0 (stats + HTML). *System is already useful here (the meter).*
 2. **Sprint 2 — Judgment:** `llm.py` (claude -p wrapper + schemas + run log),
-   Triager, Curator (incl. gardening + telemetry), context-pack builder.
-3. **Sprint 3 — Remedies:** Synthesist + remedy routing, dedup, Gate (`review`
-   policy), install/rollback substrate, proposals UX.
+   Triager, Curator (core pass, then gardening + fragmentation telemetry),
+   pump & scheduling.
+3. **Sprint 3 — Remedies:** Synthesist + remedy routing, Gate (`review`
+   policy) + install/rollback substrate, notifications, `/s2s` companion skill.
 4. **Sprint 4 — The loop:** Auditor, revise/retire, autonomy policy + guardrails,
-   Codex adapter, docs/README polish, public release hygiene.
+   Codex adapter, docs/README/CI/packaging, public release hygiene.
 
-Each sprint decomposes into PR-scoped GitHub issues in the next planning step.
+The sprint milestones and PR-scoped issues in the GitHub tracker are the
+authoritative decomposition of this build order.
