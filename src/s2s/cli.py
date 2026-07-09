@@ -48,8 +48,28 @@ def build_parser() -> argparse.ArgumentParser:
         subparsers.choices[command].add_argument("remedy_id", nargs="?")
     subparsers.choices["meter"].add_argument("--open", action="store_true")
     subparsers.choices["pump"].add_argument("--background", action="store_true")
+    subparsers.choices["scan"].add_argument("--suggest-terms", action="store_true")
 
     return parser
+
+
+def _run_scan(args: argparse.Namespace) -> int:
+    from .ledger import Ledger
+    from .scanner import scan_pending_queue, write_candidate_phrase_report
+
+    if args.suggest_terms:
+        report = write_candidate_phrase_report()
+        print(
+            f"candidate phrases written to {report.path} "
+            f"({report.candidate_count} candidates from {report.messages_considered} messages)"
+        )
+        return 0
+
+    with Ledger() as ledger:
+        results = scan_pending_queue(ledger)
+        hits = sum(result.incident_count for result in results)
+        print(f"scanned {len(results)} transcript(s); {hits} detection(s) recorded")
+    return 0
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -60,6 +80,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command is None:
         parser.print_help()
         return 0
+
+    if args.command == "scan":
+        return _run_scan(args)
 
     issue = COMMAND_ISSUES[args.command]
     print(f"{args.command}: not implemented yet (issue #{issue})")

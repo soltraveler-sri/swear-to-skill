@@ -18,7 +18,7 @@ import sqlite3
 from .paths import resolve_paths
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 BUSY_TIMEOUT_MS = 5_000
 
 INCIDENT_STATES = (
@@ -113,6 +113,21 @@ class QueueItem:
     source: str
     enqueued_at: str
     processed_at: str | None
+
+
+@dataclass(frozen=True)
+class SessionStats:
+    """Deterministic Stage 1 totals for one transcript session."""
+
+    source: str
+    session_id: str
+    project: str
+    dominant_model: str | None
+    direct_message_count: int
+    hit_count: int
+    first_timestamp: str | None
+    last_timestamp: str | None
+    scanned_at: str
 
 
 @dataclass(frozen=True)
@@ -252,7 +267,51 @@ def _migration_1(connection: sqlite3.Connection) -> None:
     connection.execute("CREATE INDEX queue_pending_idx ON queue(processed_at, id)")
 
 
-MIGRATIONS: dict[int, Callable[[sqlite3.Connection], None]] = {1: _migration_1}
+def _migration_2(connection: sqlite3.Connection) -> None:
+    """Add deterministic scanner totals and its transcript-level idempotency key."""
+
+    connection.execute(
+        """
+        CREATE TABLE session_stats (
+            source TEXT NOT NULL CHECK (source IN ('claude-code', 'codex')),
+            session_id TEXT NOT NULL,
+            project TEXT NOT NULL,
+            dominant_model TEXT,
+            direct_message_count INTEGER NOT NULL CHECK (direct_message_count >= 0),
+            hit_count INTEGER NOT NULL CHECK (hit_count >= 0),
+            first_timestamp TEXT,
+            last_timestamp TEXT,
+            scanned_at TEXT NOT NULL,
+            PRIMARY KEY (source, session_id)
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE scan_dedup (
+            id INTEGER PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            timestamp TEXT NOT NULL,
+            message TEXT NOT NULL,
+            incident_id INTEGER NOT NULL UNIQUE REFERENCES incident(id) ON DELETE RESTRICT
+        )
+        """
+    )
+    # A direct user message is the scanner unit of work.  This makes manual
+    # re-scans and a retried queue item safe even after a process interruption,
+    # without imposing scanner semantics on incidents written by later stages.
+    connection.execute(
+        """
+        CREATE UNIQUE INDEX scan_dedup_key_idx
+        ON scan_dedup (session_id, timestamp, message)
+        """
+    )
+
+
+MIGRATIONS: dict[int, Callable[[sqlite3.Connection], None]] = {
+    1: _migration_1,
+    2: _migration_2,
+}
 
 
 def migrate(connection: sqlite3.Connection) -> None:
@@ -377,6 +436,46 @@ class Ledger:
             )
         return incident_id
 
+    def create_scanned_incident(
+        self,
+        *,
+        source: str,
+        session_id: str,
+        project: str,
+        message: str,
+        occurred_at: str,
+        created_at: str | datetime | None = None,
+    ) -> int:
+        """Create one Stage 1 incident and atomically reserve its scan identity."""
+
+        created = _timestamp(created_at)
+        with self._write_transaction():
+            cursor = self.connection.execute(
+                """
+                INSERT INTO incident (
+                    source, session_id, project, occurred_at, created_at, message,
+                    context_pack_pointer, label, one_liner, severity, confidence, state
+                ) VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, 'detected')
+                """,
+                (source, session_id, project, occurred_at, created, message),
+            )
+            incident_id = int(cursor.lastrowid)
+            self.connection.execute(
+                """
+                INSERT INTO state_history (incident_id, from_state, to_state, reason, timestamp)
+                VALUES (?, NULL, 'detected', ?, ?)
+                """,
+                (incident_id, "incident detected", created),
+            )
+            self.connection.execute(
+                """
+                INSERT INTO scan_dedup (session_id, timestamp, message, incident_id)
+                VALUES (?, ?, ?, ?)
+                """,
+                (session_id, occurred_at, message, incident_id),
+            )
+        return incident_id
+
     def transition_incident(
         self,
         incident_id: int,
@@ -484,6 +583,19 @@ class Ledger:
         row = self.connection.execute("SELECT * FROM incident WHERE id = ?", (incident_id,)).fetchone()
         return self._incident_from_row(row) if row is not None else None
 
+    def has_incident_scan_key(self, *, session_id: str, occurred_at: str, message: str) -> bool:
+        """Return whether a scanner detection already owns this message identity."""
+
+        row = self.connection.execute(
+            """
+            SELECT 1 FROM scan_dedup
+            WHERE session_id = ? AND timestamp = ? AND message = ?
+            LIMIT 1
+            """,
+            (session_id, occurred_at, message),
+        ).fetchone()
+        return row is not None
+
     def untriaged_incidents(self) -> list[Incident]:
         """Return detected incidents awaiting the triager."""
 
@@ -574,6 +686,67 @@ class Ledger:
                 if row is None:
                     raise LedgerError(f"queue item {item_id} does not exist")
                 raise LedgerError(f"queue item {item_id} is already marked processed")
+
+    def upsert_session_stats(
+        self,
+        *,
+        source: str,
+        session_id: str,
+        project: str,
+        dominant_model: str | None,
+        direct_message_count: int,
+        hit_count: int,
+        first_timestamp: str | None,
+        last_timestamp: str | None,
+        scanned_at: str | datetime | None = None,
+    ) -> None:
+        """Store the latest complete deterministic totals for one session."""
+
+        if direct_message_count < 0 or hit_count < 0:
+            raise LedgerError("session statistics counts cannot be negative")
+        with self._write_transaction():
+            self.connection.execute(
+                """
+                INSERT INTO session_stats (
+                    source, session_id, project, dominant_model, direct_message_count,
+                    hit_count, first_timestamp, last_timestamp, scanned_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(source, session_id) DO UPDATE SET
+                    project = excluded.project,
+                    dominant_model = excluded.dominant_model,
+                    direct_message_count = excluded.direct_message_count,
+                    hit_count = excluded.hit_count,
+                    first_timestamp = excluded.first_timestamp,
+                    last_timestamp = excluded.last_timestamp,
+                    scanned_at = excluded.scanned_at
+                """,
+                (
+                    source,
+                    session_id,
+                    project,
+                    dominant_model,
+                    direct_message_count,
+                    hit_count,
+                    first_timestamp,
+                    last_timestamp,
+                    _timestamp(scanned_at),
+                ),
+            )
+
+    record_session_stats = upsert_session_stats
+
+    def session_stats(self, session_id: str | None = None) -> list[SessionStats]:
+        """Return deterministic scan totals, optionally for one source session id."""
+
+        if session_id is None:
+            rows = self.connection.execute(
+                "SELECT * FROM session_stats ORDER BY first_timestamp, source, session_id"
+            ).fetchall()
+        else:
+            rows = self.connection.execute(
+                "SELECT * FROM session_stats WHERE session_id = ? ORDER BY source", (session_id,)
+            ).fetchall()
+        return [self._session_stats_from_row(row) for row in rows]
 
     def log_run(
         self,
@@ -756,6 +929,20 @@ class Ledger:
             source=str(row["source"]),
             enqueued_at=str(row["enqueued_at"]),
             processed_at=row["processed_at"],
+        )
+
+    @staticmethod
+    def _session_stats_from_row(row: sqlite3.Row) -> SessionStats:
+        return SessionStats(
+            source=str(row["source"]),
+            session_id=str(row["session_id"]),
+            project=str(row["project"]),
+            dominant_model=row["dominant_model"],
+            direct_message_count=int(row["direct_message_count"]),
+            hit_count=int(row["hit_count"]),
+            first_timestamp=row["first_timestamp"],
+            last_timestamp=row["last_timestamp"],
+            scanned_at=str(row["scanned_at"]),
         )
 
 
