@@ -1,0 +1,24 @@
+# Copy this file to ~/.s2s/config.toml (or $S2S_HOME/config.toml) to override
+# scaffold defaults. All values below are the defaults when the file is absent.
+
+[thresholds]
+# Pump triage after this many untriaged detections, or after the max age below.
+triage_untriaged_count = 10
+triage_max_age_hours = 24
+# Curator review runs after this many unreviewed incidents, or after this age.
+curator_unreviewed_count = 10
+curator_max_age_days = 7
+
+[autonomy]
+# Human review is the default gate policy. "autonomous" is opt-in.
+mode = "review"
+# North Star §8 guardrails for autonomous installations.
+max_auto_remedies_per_week = 3
+max_active_auto_skills = 15
+
+[notifications]
+# The SessionStart digest is on by default; desktop and webhook notifications
+# are opt-in. An empty webhook URL disables webhook delivery.
+session_start_digest = true
+desktop = false
+webhook_url = ""
