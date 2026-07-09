@@ -22,3 +22,12 @@ max_active_auto_skills = 15
 session_start_digest = true
 desktop = false
 webhook_url = ""
+
+[models]
+triage = "haiku"
+curate = "sonnet"
+synthesize = "sonnet"
+parallelism = 2
+
+[costs]
+confirm_threshold_usd = 1.0

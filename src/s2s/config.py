@@ -38,12 +38,31 @@ class Notifications:
 
 
 @dataclass(frozen=True)
+class Models:
+    """LLM policy defaults from North Star §§4 and 7."""
+
+    triage: str = "haiku"
+    curate: str = "sonnet"
+    synthesize: str = "sonnet"
+    parallelism: int = 2
+
+
+@dataclass(frozen=True)
+class Costs:
+    """User-confirmation policy for bulk LLM work."""
+
+    confirm_threshold_usd: float = 1.0
+
+
+@dataclass(frozen=True)
 class Config:
     """Complete configuration available before any optional features exist."""
 
     thresholds: Thresholds = Thresholds()
     autonomy: Autonomy = Autonomy()
     notifications: Notifications = Notifications()
+    models: Models = Models()
+    costs: Costs = Costs()
 
 
 def _section(document: dict[str, object], name: str) -> dict[str, object]:
@@ -66,6 +85,11 @@ def _bool(section: dict[str, object], name: str, default: bool) -> bool:
     return value if isinstance(value, bool) else default
 
 
+def _float(section: dict[str, object], name: str, default: float) -> float:
+    value = section.get(name, default)
+    return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else default
+
+
 def load_config(config_path: Path | None = None) -> Config:
     """Load a config file, returning pure documented defaults when it is absent."""
 
@@ -79,6 +103,8 @@ def load_config(config_path: Path | None = None) -> Config:
     thresholds = _section(document, "thresholds")
     autonomy = _section(document, "autonomy")
     notifications = _section(document, "notifications")
+    models = _section(document, "models")
+    costs = _section(document, "costs")
     defaults = Config()
 
     return Config(
@@ -129,5 +155,18 @@ def load_config(config_path: Path | None = None) -> Config:
                 "webhook_url",
                 defaults.notifications.webhook_url,
             ),
+        ),
+        models=Models(
+            triage=_str(models, "triage", defaults.models.triage),
+            curate=_str(models, "curate", defaults.models.curate),
+            synthesize=_str(models, "synthesize", defaults.models.synthesize),
+            parallelism=_int(models, "parallelism", defaults.models.parallelism),
+        ),
+        costs=Costs(
+            confirm_threshold_usd=_float(
+                costs,
+                "confirm_threshold_usd",
+                defaults.costs.confirm_threshold_usd,
+            )
         ),
     )

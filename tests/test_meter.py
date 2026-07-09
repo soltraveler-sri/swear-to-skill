@@ -6,7 +6,7 @@ import pytest
 
 from s2s.cli import main
 from s2s.ledger import Ledger
-from s2s.meter import collect_dashboard_data, friendly_model_name, write_dashboard
+from s2s.meter import collect_dashboard_data, friendly_model_name, render_status, write_dashboard
 
 
 @pytest.fixture
@@ -194,6 +194,36 @@ def test_dashboard_empty_state_is_friendly_and_writes_without_data(ledger: Ledge
     report = write_dashboard(ledger)
 
     assert "no data yet — run: s2s backfill && s2s scan" in report.read_text(encoding="utf-8")
+
+
+def test_cost_log_is_aggregated_in_dashboard_and_status(ledger: Ledger) -> None:
+    ledger.log_run(
+        stage="triage",
+        model="haiku",
+        tokens=5,
+        cost_usd=0.01,
+        duration_ms=10,
+        input_digest="a" * 16,
+    )
+    ledger.log_run(
+        stage="triage",
+        model="haiku",
+        tokens=7,
+        cost_usd=0.02,
+        duration_ms=12,
+        input_digest="b" * 16,
+    )
+
+    data = collect_dashboard_data(ledger)
+    assert [(row.stage, row.model, row.calls, row.tokens, row.cost_usd) for row in data.cost_totals] == [
+        ("triage", "haiku", 2, 12, pytest.approx(0.03))
+    ]
+    document = write_dashboard(ledger).read_text(encoding="utf-8")
+    assert 'id="cost-log"' in document
+    assert "triage" in document and "haiku" in document and "$0.0300" in document
+    status = render_status(data, archived_sessions=0)
+    assert "LLM costs: $0.0300 across 2 call(s)" in status
+    assert "triage/haiku: 2 call(s), 12 token(s), $0.0300" in status
 
 
 def test_dashboard_renders_a_single_dated_session(ledger: Ledger) -> None:
