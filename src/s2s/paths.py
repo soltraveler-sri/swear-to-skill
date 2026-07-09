@@ -36,6 +36,12 @@ def s2s_home() -> Path:
     return Path.home() / ".s2s"
 
 
+def claude_projects_dir() -> Path:
+    """Return Claude Code's transcript root without creating or reading it."""
+
+    return Path.home() / ".claude" / "projects"
+
+
 def resolve_paths() -> S2SPaths:
     """Resolve every owned path from the current ``S2S_HOME`` environment."""
 
