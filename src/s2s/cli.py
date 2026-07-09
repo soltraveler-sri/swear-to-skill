@@ -34,7 +34,7 @@ def build_parser() -> argparse.ArgumentParser:
         subparsers.add_parser(command)
 
     subparsers.choices["schedule"].add_argument(
-        "action", nargs="?", choices=("install", "remove")
+        "action", nargs="?", choices=("install", "remove", "status"), default="status"
     )
     subparsers.choices["autonomy"].add_argument(
         "mode", nargs="?", choices=("on", "off")
@@ -154,6 +154,30 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "review":
         return _run_review(args)
+
+    if args.command in {"run", "pump"}:
+        from .pump import run_pump
+
+        result = run_pump(background=getattr(args, "background", False))
+        if result.background:
+            print("pump: started in background")
+        elif result.locked:
+            print("pump: already running")
+        else:
+            print(
+                f"pump: scanned {result.scanned}; triaged {result.triaged}; "
+                f"curator calls {result.curator_calls}"
+            )
+        return 0
+
+    if args.command == "schedule":
+        from .pump import schedule
+
+        installed, last_run = schedule(args.action)
+        state = "installed" if installed else "not installed"
+        suffix = f"; last pump {last_run}" if last_run else "; no pump has run yet"
+        print(f"schedule: {state}{suffix}")
+        return 0
 
     if args.command == "init":
         from .initcmd import run_init
