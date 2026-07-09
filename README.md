@@ -1,6 +1,6 @@
 # swear-to-skill
 
-> Directly inspired by [**codex-swear-meter**](https://github.com/petergpt/codex-swear-meter) by [Peter Gostev (@petergpt)](https://github.com/petergpt), whose local-first "swear meter" over Codex session logs established the core insight this project builds on. swear-to-skill extends that benchmark into a remediation pipeline, and reuses its MIT-licensed seed lexicons (see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)).
+> Directly inspired by [**codex-swear-meter**](https://github.com/petergpt/codex-swear-meter) by [Peter Gostev (@petergpt)](https://github.com/petergpt), whose local-first "swear meter" over Codex session logs established the core insight this project builds on. swear-to-skill aims to extend the usefulness of swear-meter, from a benchmark, into an automated remediation pipeline, improving future behavior from past mistakes, and reuses its MIT-licensed seed lexicons.
 
 Every time you get frustrated with your coding agent, you emit a high-signal label on a
 real failure mode — in your own words, at the exact moment it happened, with full
