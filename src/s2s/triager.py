@@ -6,7 +6,12 @@ from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 
-from .adapters.claude_code import ContextPack, build_context_pack, extract_user_messages
+from .adapters.claude_code import (
+    ContextPack,
+    build_context_pack,
+    extract_session_metadata,
+    extract_user_messages,
+)
 from .config import load_config
 from .ledger import Incident, Ledger
 from .llm import call, estimate_and_confirm, load_prompt
@@ -132,7 +137,7 @@ def context_for_incident(incident: Incident) -> tuple[ContextPack, str]:
     if incident.source != "claude-code":
         raise ContextResolutionError(f"no Stage 2 context adapter is available for {incident.source!r}")
     paths = resolve_paths()
-    transcript = paths.archive_dir / incident.project / f"{incident.session_id}.jsonl"
+    transcript = _archived_transcript_for(paths.archive_dir, incident)
     target_uuid = _incident_uuid(transcript, incident)
     context_pack = build_context_pack(transcript, target_uuid)
     try:
@@ -144,6 +149,29 @@ def context_for_incident(incident: Incident) -> tuple[ContextPack, str]:
 
 # Kept for compatibility with any callers that used the original private helper.
 _context_for_incident = context_for_incident
+
+
+def _archived_transcript_for(archive_dir: Path, incident: Incident) -> Path:
+    """Locate the archived transcript holding this incident's session.
+
+    Claude Code names transcripts by session UUID, so the direct path almost
+    always exists — but the archive keys by source filename, which is not
+    guaranteed to match the transcript's internal sessionId (e.g. copied or
+    renamed files). Fall back to matching on the internal session id.
+    """
+
+    direct = archive_dir / incident.project / f"{incident.session_id}.jsonl"
+    if direct.is_file():
+        return direct
+    project_dir = archive_dir / incident.project
+    if project_dir.is_dir():
+        for candidate in sorted(project_dir.glob("*.jsonl")):
+            metadata = extract_session_metadata(candidate)
+            if metadata.session_id == incident.session_id:
+                return candidate
+    raise ContextResolutionError(
+        f"no archived transcript for session {incident.session_id!r} under {project_dir}"
+    )
 
 
 def _incident_uuid(transcript: Path, incident: Incident) -> str:
