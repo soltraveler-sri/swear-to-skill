@@ -12,7 +12,7 @@ import re
 from .config import load_config
 from .ledger import Incident, Ledger, Remedy
 from .notify import emit
-from .llm import call, estimate_and_confirm, load_prompt
+from .llm import MalformedOutputError, call, estimate_and_confirm, load_prompt
 from .taxonomy import list_labels
 from .triager import context_for_incident
 
@@ -34,6 +34,7 @@ class SynthesisResult:
     label: str
     incident_ids: tuple[int, ...]
     proposal_ids: tuple[int, ...]
+    error: str | None = None
 
 
 @dataclass(frozen=True)
@@ -87,14 +88,29 @@ def synthesize_pending(
             project_claude_md_paths=default_project_paths,
             reference_root=surface_reference_root,
         )
-        response = _call_validated(
-            render_synthesis_prompt(template, label, incidents, surface),
-            schema=schema,
-            model=model,
-            effort=config.models.synthesize_effort,
-            incident_ids={incident.id for incident in incidents},
-            surface_references=set(surface.references),
-        )
+        try:
+            response = _call_validated(
+                render_synthesis_prompt(template, label, incidents, surface),
+                schema=schema,
+                model=model,
+                effort=config.models.synthesize_effort,
+                incident_ids={incident.id for incident in incidents},
+                surface_references=set(surface.references),
+            )
+        except (SynthesisValidationError, MalformedOutputError) as error:
+            # A group whose response stays invalid after the corrective retry
+            # is a data point (evals score it; the pump retries next cycle
+            # since its incidents remain 'promoted') — never a reason to
+            # abandon the remaining groups.
+            results.append(
+                SynthesisResult(
+                    label,
+                    tuple(incident.id for incident in incidents),
+                    (),
+                    error=f"{type(error).__name__}: {error}",
+                )
+            )
+            continue
         normalized = _normalize_response(response, singleton=_singleton_group(ledger, incidents))
         proposal_ids = ledger.create_synthesis_proposals(
             normalized,
@@ -346,6 +362,7 @@ def _validate_proposal(
     if not isinstance(evidence, list) or not evidence:
         raise SynthesisValidationError("proposal requires evidence")
     ids: set[int] = set()
+    normalized_evidence: list[Mapping[str, object]] = []
     for item in evidence:
         if not isinstance(item, Mapping):
             raise SynthesisValidationError("evidence entries must be objects")
@@ -355,8 +372,14 @@ def _validate_proposal(
         if not isinstance(quote, str) or not quote.strip() or len(quote.splitlines()) > 2:
             raise SynthesisValidationError("evidence quotes must be non-empty and at most two lines")
         if incident_id in ids:
-            raise SynthesisValidationError("proposal repeats an evidence incident")
+            # Real models occasionally cite the same incident twice. A repeat
+            # is harmless redundancy, not a correctness problem — normalize by
+            # keeping the first citation instead of failing the proposal.
+            continue
         ids.add(incident_id)
+        normalized_evidence.append(item)
+    if isinstance(proposal, dict):
+        proposal["evidence"] = normalized_evidence
     content = proposal.get("remedy_content")
     if not isinstance(content, Mapping):
         raise SynthesisValidationError("remedy_content must be an object")

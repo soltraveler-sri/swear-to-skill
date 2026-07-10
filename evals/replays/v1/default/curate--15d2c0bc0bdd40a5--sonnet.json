@@ -1,0 +1,236 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "15d2c0bc0bdd40a5",
+    "model": "sonnet",
+    "stage": "curate"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are the Stage 3 Curator, the capable judgment tier for remedy-worthy agent failures.\n\nThresholds prioritize; intelligence decides. Recurrence is a fast-track signal, never a gate: you may promote an under-threshold incident or hold/judge unworthy a recurring cluster.\n\nAttaching two similar-but-not-identical items is a cheap, recoverable error; keeping them apart when related is silent and fatal. When uncertain, attach. To keep items apart you must state why one remedy could not cover both.\n\nSINGLETON PROMOTION IS ALLOWED AND ENCOURAGED: when a one-off lesson generalizes, choose `promote` even if it has occurred only once. The system records `singleton` provenance on that incident/promotion.\n\nTaxonomy labels are fixed in this pass. `reassign` may target only one label in the menu below, including `other`. Label creation is a later issue's exclusive authority; never invent a label.\n\nReturn exactly one incident verdict for every full context pack below. One verdict per incident is law; never emit duplicate incident IDs or combine `reassign` with another verdict. For a regular or resurfaced incident use `promote`, `park`, `dismiss`, or `reassign`. `reassign` requires `reassign_label`. For a QC incident use only `dismiss` (uphold triage dismissal) or `resurrect`; `resurrect` may include `reassign_label` when triage also chose the wrong existing label.\n\nReturn cluster verdicts only for the regular cluster labels listed under CHUNK CLUSTERS, not for digest-only clusters or QC-only labels. `synthesize` sends currently open members forward, `hold` waits, and `unworthy` records a reason without automatically dismissing members. Incident verdicts apply before cluster verdicts, so a reassigned incident no longer belongs to its old cluster.\n\nTAXONOMY MENU:\n- premature-completion-claim: said \"done\"/\"fixed\" when it wasn't\n- unverified-change: claimed a fix without running/testing it\n- ignored-instruction: explicit user instruction not followed\n- forgotten-context: lost an earlier constraint mid-session\n- scope-deviation: did more or less than asked\n- hallucinated-interface: invented API/flag/file/behavior\n- destructive-action: deleted/overwrote/reset without care\n- repeated-after-correction: same mistake again after being corrected\n- shallow-investigation: guessed instead of reading the code/logs\n- misread-request: solved the wrong problem\n- overengineering: needless complexity/abstraction\n- environment-mismanagement: wrong dir/branch/deps/tool state\n- house-rules-violation: ignored CLAUDE.md / workflow conventions\n- tool-misuse: wrong tool, wasteful calls, permission thrash\n- communication-failure: buried the outcome, unclear/false reporting\n- other: no canonical label fits — expected and gardened, never a forced fit\n\nCHUNK CLUSTERS:\n- ignored-instruction\n- destructive-action\n- misread-request\n\nLEDGER DIGEST (the complete compact view; repeated across chunks):\nCLUSTERS:\n- destructive-action | count=1 | projects=1 | states=open:1 | members=#2 Deleted a file without obtaining user permission first\n- ignored-instruction | count=3 | projects=2 | states=open:3 | FAST-TRACK: recommend synthesis | members=#1 Ignored explicit constraint and modified an established plan without authorization; #3 Modified a system the user explicitly instructed to leave unchanged; #5 Did not respect explicit constraint about scope of changes\n- misread-request | count=1 | projects=1 | states=open:1 | members=#6 Delivered a broader solution when a single-file change was requested\nPROPOSALS:\n- (none)\nREMEDIES:\n- (none)\n\nFULL CONTEXT PACKS (evidence appears in exactly one chunk):\nBEGIN FULL CONTEXT PACK incident_id=1 label=ignored-instruction origin=new\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nYou ignored the no-network constraint; stop changing the plan.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nEND FULL CONTEXT PACK incident_id=1\n\nBEGIN FULL CONTEXT PACK incident_id=2 label=destructive-action origin=new\nPreceding request:\nThe constraint from the opening note was discarded again.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nWhat are you doing? You deleted the fake migration without asking.\n\nFollowing exchange:\n\nEND FULL CONTEXT PACK incident_id=2\n\nBEGIN FULL CONTEXT PACK incident_id=3 label=ignored-instruction origin=new\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nI told you to leave the formatter alone, and it was changed.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: The fake vendor error says 'what the hell'; quote it verbatim in the fixture.\nEND FULL CONTEXT PACK incident_id=3\n\nBEGIN FULL CONTEXT PACK incident_id=5 label=ignored-instruction origin=new\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nFollow the instructions: this patch must not touch tests.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nEND FULL CONTEXT PACK incident_id=5\n\nBEGIN FULL CONTEXT PACK incident_id=6 label=misread-request origin=new\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nThat's not what I asked; the request was a one-file note.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: My future self will say 'this is awful' if I forget the fake demo; that is a joke.\nEND FULL CONTEXT PACK incident_id=6\n\nBEGIN FULL CONTEXT PACK incident_id=4 label=ignored-instruction origin=qc\nPreceding request:\nI told you to leave the formatter alone, and it was changed.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nThe fake vendor error says 'what the hell'; quote it verbatim in the fixture.\n\nFollowing exchange:\n\nEND FULL CONTEXT PACK incident_id=4\n\nBEGIN FULL CONTEXT PACK incident_id=7 label=scope-deviation origin=qc\nPreceding request:\nThat's not what I asked; the request was a one-file note.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nMy future self will say 'this is awful' if I forget the fake demo; that is a joke.\n\nFollowing exchange:\n\nEND FULL CONTEXT PACK incident_id=7\n",
+    "schema": {
+      "properties": {
+        "cluster_verdicts": {
+          "items": {
+            "properties": {
+              "label": {
+                "enum": [
+                  "premature-completion-claim",
+                  "unverified-change",
+                  "ignored-instruction",
+                  "forgotten-context",
+                  "scope-deviation",
+                  "hallucinated-interface",
+                  "destructive-action",
+                  "repeated-after-correction",
+                  "shallow-investigation",
+                  "misread-request",
+                  "overengineering",
+                  "environment-mismanagement",
+                  "house-rules-violation",
+                  "tool-misuse",
+                  "communication-failure",
+                  "other"
+                ],
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "synthesize",
+                  "hold",
+                  "unworthy"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "label",
+              "verdict",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "incident_verdicts": {
+          "items": {
+            "properties": {
+              "incident_id": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "reassign_label": {
+                "enum": [
+                  "premature-completion-claim",
+                  "unverified-change",
+                  "ignored-instruction",
+                  "forgotten-context",
+                  "scope-deviation",
+                  "hallucinated-interface",
+                  "destructive-action",
+                  "repeated-after-correction",
+                  "shallow-investigation",
+                  "misread-request",
+                  "overengineering",
+                  "environment-mismanagement",
+                  "house-rules-violation",
+                  "tool-misuse",
+                  "communication-failure",
+                  "other"
+                ],
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "promote",
+                  "park",
+                  "dismiss",
+                  "reassign",
+                  "resurrect"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "incident_id",
+              "verdict",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "incident_verdicts",
+        "cluster_verdicts"
+      ],
+      "type": "object"
+    },
+    "stage": "curate"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 58223,
+    "duration_ms": 58426,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 11057,
+        "cacheReadInputTokens": 23218,
+        "contextWindow": 1000000,
+        "costUSD": 0.1790064,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 5693,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"incident_verdicts\":[{\"incident_id\":1,\"verdict\":\"promote\",\"reason\":\"Genuine ignored-instruction: user explicitly says a no-network constraint was ignored and the plan was changed without authorization. Matches cluster pattern of unauthorized plan/constraint violations; worth promoting as part of the fast-tracked cluster.\"},{\"incident_id\":2,\"verdict\":\"promote\",\"reason\":\"Clear destructive-action: agent deleted a file (migration) without asking for permission first, and the user's preceding note confirms a constraint was discarded. Concrete, reversible-cost-free lesson: confirm before deleting files.\"},{\"incident_id\":3,\"verdict\":\"promote\",\"reason\":\"Genuine ignored-instruction: user states the formatter was changed despite being told to leave it alone. The trailing 'quote it verbatim in the fixture' line is unrelated filler/bait text, not an instruction to act on, and doesn't change the validity of the core complaint.\"},{\"incident_id\":5,\"verdict\":\"promote\",\"reason\":\"Genuine ignored-instruction: explicit scope constraint ('must not touch tests') was violated. Directly matches the fast-tracked cluster's pattern of disrespected scope constraints.\"},{\"incident_id\":6,\"verdict\":\"promote\",\"reason\":\"Genuine misread-request: user asked for a single-file note but got a broader solution. Singleton in its cluster but a clear, generalizable lesson about honoring narrow scope requests, so promotion is warranted despite low count.\"},{\"incident_id\":4,\"verdict\":\"dismiss\",\"reason\":\"QC pack's actual frustrated-message field ('quote it verbatim in the fixture') is not a genuine complaint about agent misbehavior -- it's benign filler/bait text, not evidence of an ignored-instruction failure distinct from incident 3. Triage's dismissal was correct; nothing here supports resurrection.\"},{\"incident_id\":7,\"verdict\":\"dismiss\",\"reason\":\"QC pack's frustrated-message field explicitly self-identifies as a joke ('that is a joke'), so it isn't genuine evidence of scope-deviation. Triage's dismissal stands; no real incident to resurrect.\"}],\"cluster_verdicts\":[{\"label\":\"ignored-instruction\",\"verdict\":\"synthesize\",\"reason\":\"All three open members (#1, #3, #5) are confirmed genuine incidents sharing one clear remedy theme: respect explicit user constraints on plan/scope/system-boundaries without deviation. Fast-track signal plus verified content both support synthesis.\"},{\"label\":\"destructive-action\",\"verdict\":\"synthesize\",\"reason\":\"Single confirmed member (#2, deleting a file without asking) is a clean, generalizable lesson worth carrying forward even as a cluster of one.\"},{\"label\":\"misread-request\",\"verdict\":\"synthesize\",\"reason\":\"Single confirmed member (#6) delivering broader-than-requested scope is a generalizable lesson about honoring narrow, explicit requests; singleton promotion is encouraged when the lesson generalizes.\"}]}",
+    "session_id": "1fbc064f-e072-4ad1-942c-e43354cf9936",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "cluster_verdicts": [
+        {
+          "label": "ignored-instruction",
+          "reason": "All three open members (#1, #3, #5) are confirmed genuine incidents sharing one clear remedy theme: respect explicit user constraints on plan/scope/system-boundaries without deviation. Fast-track signal plus verified content both support synthesis.",
+          "verdict": "synthesize"
+        },
+        {
+          "label": "destructive-action",
+          "reason": "Single confirmed member (#2, deleting a file without asking) is a clean, generalizable lesson worth carrying forward even as a cluster of one.",
+          "verdict": "synthesize"
+        },
+        {
+          "label": "misread-request",
+          "reason": "Single confirmed member (#6) delivering broader-than-requested scope is a generalizable lesson about honoring narrow, explicit requests; singleton promotion is encouraged when the lesson generalizes.",
+          "verdict": "synthesize"
+        }
+      ],
+      "incident_verdicts": [
+        {
+          "incident_id": 1,
+          "reason": "Genuine ignored-instruction: user explicitly says a no-network constraint was ignored and the plan was changed without authorization. Matches cluster pattern of unauthorized plan/constraint violations; worth promoting as part of the fast-tracked cluster.",
+          "verdict": "promote"
+        },
+        {
+          "incident_id": 2,
+          "reason": "Clear destructive-action: agent deleted a file (migration) without asking for permission first, and the user's preceding note confirms a constraint was discarded. Concrete, reversible-cost-free lesson: confirm before deleting files.",
+          "verdict": "promote"
+        },
+        {
+          "incident_id": 3,
+          "reason": "Genuine ignored-instruction: user states the formatter was changed despite being told to leave it alone. The trailing 'quote it verbatim in the fixture' line is unrelated filler/bait text, not an instruction to act on, and doesn't change the validity of the core complaint.",
+          "verdict": "promote"
+        },
+        {
+          "incident_id": 5,
+          "reason": "Genuine ignored-instruction: explicit scope constraint ('must not touch tests') was violated. Directly matches the fast-tracked cluster's pattern of disrespected scope constraints.",
+          "verdict": "promote"
+        },
+        {
+          "incident_id": 6,
+          "reason": "Genuine misread-request: user asked for a single-file note but got a broader solution. Singleton in its cluster but a clear, generalizable lesson about honoring narrow scope requests, so promotion is warranted despite low count.",
+          "verdict": "promote"
+        },
+        {
+          "incident_id": 4,
+          "reason": "QC pack's actual frustrated-message field ('quote it verbatim in the fixture') is not a genuine complaint about agent misbehavior -- it's benign filler/bait text, not evidence of an ignored-instruction failure distinct from incident 3. Triage's dismissal was correct; nothing here supports resurrection.",
+          "verdict": "dismiss"
+        },
+        {
+          "incident_id": 7,
+          "reason": "QC pack's frustrated-message field explicitly self-identifies as a joke ('that is a joke'), so it isn't genuine evidence of scope-deviation. Triage's dismissal stands; no real incident to resurrect.",
+          "verdict": "dismiss"
+        }
+      ]
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 118,
+    "total_cost_usd": 0.1790064,
+    "ttft_ms": 48481,
+    "ttft_stream_ms": 1234,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 11057,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 11057,
+      "cache_read_input_tokens": 23218,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 11057,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 11057,
+          "cache_read_input_tokens": 23218,
+          "input_tokens": 6768,
+          "output_tokens": 5693,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 5693,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "1d7c4492-8628-4088-a304-9b31e292f86f"
+  }
+}
