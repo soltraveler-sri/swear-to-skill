@@ -11,6 +11,7 @@ import re
 
 from .config import load_config
 from .ledger import Incident, Ledger
+from .notify import emit
 from .llm import call, estimate_and_confirm, load_prompt
 from .taxonomy import list_labels
 from .triager import context_for_incident
@@ -98,6 +99,10 @@ def synthesize_pending(
         results.append(
             SynthesisResult(label, tuple(incident.id for incident in incidents), tuple(proposal_ids))
         )
+        if proposal_ids:
+            # Emit only after the ledger commit so a notification never
+            # claims work that was rolled back.
+            emit("proposal_pending", proposal_count=len(proposal_ids))
     return results
 
 
