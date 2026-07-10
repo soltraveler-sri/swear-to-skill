@@ -21,6 +21,7 @@ from typing import Literal
 from unittest.mock import patch
 
 from . import llm
+from . import evaljudge
 from .adapters import claude_code, codex
 from .archiver import archive_transcript, backfill
 from .config import load_config
@@ -28,7 +29,7 @@ from .curator import render_ledger_digest, run_pass
 from .ledger import Ledger, Proposal
 from .scanner import ScanResult, scan_pending_queue
 from .synthesist import synthesize_pending
-from .triager import triage_pending
+from .triager import context_for_incident, triage_pending
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -87,6 +88,8 @@ class EvalRunConfig:
     triage: EvalStageConfig = EvalStageConfig("haiku")
     curate: EvalStageConfig = EvalStageConfig("sonnet")
     synthesize: EvalStageConfig = EvalStageConfig("sonnet")
+    judge: EvalStageConfig = EvalStageConfig("sonnet")
+    judge_repeat: int = 1
     replay_root: Path = DEFAULT_REPLAY_ROOT
     output_root: Path = DEFAULT_OUTPUT_ROOT
 
@@ -94,17 +97,19 @@ class EvalRunConfig:
     def production_defaults(cls, **overrides: object) -> EvalRunConfig:
         """Build a profile shell whose model choices match production config."""
 
-        models = load_config().models
+        loaded = load_config()
+        models = loaded.models
         values: dict[str, object] = {
             "triage": EvalStageConfig(models.triage),
             "curate": EvalStageConfig(models.curate),
             "synthesize": EvalStageConfig(models.synthesize),
+            "judge": EvalStageConfig(loaded.eval.judge.model, effort=loaded.eval.judge.effort),
         }
         values.update(overrides)
         return cls(**values)  # type: ignore[arg-type]
 
     def stage(self, name: str) -> EvalStageConfig:
-        if name not in {"triage", "curate", "synthesize"}:
+        if name not in {"triage", "curate", "synthesize", "judge"}:
             raise ValueError(f"unknown LLM eval stage {name!r}")
         return getattr(self, name)
 
@@ -114,10 +119,11 @@ class EvalCallEstimate:
     triage: int
     curate: int
     synthesize: int
+    judge: int = 0
 
     @property
     def total(self) -> int:
-        return self.triage + self.curate + self.synthesize
+        return self.triage + self.curate + self.synthesize + self.judge
 
 
 @dataclass(frozen=True)
@@ -137,6 +143,7 @@ class ReplayKey:
 @dataclass(frozen=True)
 class EvalRunResult:
     record_path: Path
+    judge_results_path: Path
     mode: str
     sandbox_path: Path | None
     detections: int
@@ -251,12 +258,25 @@ class MockProvider:
             result = {"propose_label": None, "merge_labels": []}
         elif request.stage == "synthesize":
             result = self._synthesize(request.prompt)
+        elif request.stage == "judge":
+            result = self._judge(request.prompt)
         else:
             raise EvalRunError(f"mock provider has no canned stage {request.stage!r}")
         return {
             "result": result,
             "usage": {"input_tokens": 0, "output_tokens": 0},
             "total_cost_usd": 0.0,
+        }
+
+    def _judge(self, prompt: str) -> dict[str, object]:
+        if "INCIDENT CONTEXT PACK:" in prompt:
+            return {"verdict": "prevented", "reasoning": "The proposed rule directly addresses the recorded failure."}
+        low_quality = "Be better and avoid mistakes." in prompt or "aurora-branch-fix" in prompt
+        score = 1 if low_quality else 4
+        justification = "The remedy is concrete and appropriately scoped." if not low_quality else "The remedy is vague or tied to evidence-specific details."
+        return {
+            dimension: {"score": score, "justification": justification}
+            for dimension in evaljudge.RUBRIC_DIMENSIONS
         }
 
     def _annotation_for_message(self, message: str) -> _Annotation:
@@ -425,11 +445,12 @@ def estimate_call_counts(
     selected_ids: Sequence[str] | None = None,
     *,
     curator_chunk: int = CURATOR_ESTIMATE_CHUNK,
+    judge_repeat: int = 1,
 ) -> EvalCallEstimate:
     """Estimate triage detections, Curator chunks, and cluster/singleton synthesis."""
 
     incidents = manifest.get("incidents")
-    if not isinstance(incidents, list) or curator_chunk < 1:
+    if not isinstance(incidents, list) or curator_chunk < 1 or judge_repeat < 1:
         raise ValueError("estimate requires manifest incidents and a positive curator chunk")
     selected = set(selected_ids) if selected_ids is not None else None
     rows = [
@@ -451,10 +472,19 @@ def estimate_call_counts(
         and item.get("remedy_worthy") is True
         for item in detections
     )
+    synthesized_evidence = sum(
+        item.get("authentic") is True
+        and item.get("remedy_worthy") is True
+        and item.get("cluster_id") != "decoy"
+        for item in detections
+    )
+    judge_proposals = len(named_clusters) + worthy_singletons
+    calibration_count = len(evaljudge.load_calibration())
     return EvalCallEstimate(
         triage=len(detections),
         curate=math.ceil(len(detections) / curator_chunk) if detections else 0,
-        synthesize=len(named_clusters) + worthy_singletons,
+        synthesize=judge_proposals,
+        judge=calibration_count + judge_repeat * (judge_proposals + synthesized_evidence),
     )
 
 
@@ -476,14 +506,15 @@ def run_eval(
         raise EvalRunError("--record is valid only with --mode live")
     selected_ids = quick_subset(manifest) if config.quick else None
     if mode == "live":
-        estimate = estimate_call_counts(manifest, selected_ids)
+        estimate = estimate_call_counts(manifest, selected_ids, judge_repeat=config.judge_repeat)
         has_calls = False
         for stage_name, calls in (
             ("triage", estimate.triage),
             ("curate", estimate.curate),
             ("synthesize", estimate.synthesize),
+            ("judge", estimate.judge if "synthesize" in stages else len(evaljudge.load_calibration())),
         ):
-            if stage_name not in stages or not calls:
+            if (stage_name != "judge" and stage_name not in stages) or not calls:
                 continue
             has_calls = True
             # Reuse the production estimator for each configured model, but keep
@@ -510,7 +541,7 @@ def run_eval(
         "quick": config.quick,
         "stages_requested": list(stages),
         "stage_config": {
-            name: asdict(config.stage(name)) for name in ("triage", "curate", "synthesize")
+            name: asdict(config.stage(name)) for name in ("triage", "curate", "synthesize", "judge")
         },
         "started_at": started_at,
         "completed_at": None,
@@ -526,6 +557,7 @@ def run_eval(
         "triage_verdicts": [],
         "curator": {"passes": [], "incident_verdicts": [], "cluster_verdicts": []},
         "proposals": [],
+        "context_packs": {},
         "llm_run_log": [],
         "timings": {},
     }
@@ -556,6 +588,26 @@ def run_eval(
                         record,
                         deterministic=mode in {"mock", "replay"},
                     )
+                    # The pipeline artifact is complete before the independent
+                    # judge phase consumes it; a judge failure still marks the
+                    # enclosing eval record failed in the outer handler.
+                    record["status"] = "complete"
+                    judge_results_path = output_dir / "judge-results.json"
+                    judge_result = evaljudge.run_judge(
+                        record,
+                        judge_results_path,
+                        config=evaljudge.JudgeConfig(
+                            model=config.judge.model,
+                            effort=config.judge.effort,
+                            prompt_version=config.judge.prompt_version,
+                            repeat=config.judge_repeat,
+                        ),
+                    )
+                    record["judge_results"] = {
+                        "path": judge_results_path.name,
+                        "status": judge_result["status"],
+                    }
+                    _capture_run_log(record)
             record["status"] = "complete"
             record["completed_at"] = _utc_now()
             _write_record(record_path, record)
@@ -572,6 +624,7 @@ def run_eval(
     assert isinstance(detections, list) and isinstance(triage, list) and isinstance(proposals, list)
     return EvalRunResult(
         record_path=record_path,
+        judge_results_path=output_dir / "judge-results.json",
         mode=mode,
         sandbox_path=sandbox_path,
         detections=len(detections),
@@ -727,7 +780,24 @@ def _drive_pipeline(
                 rows = ledger.connection.execute("SELECT id FROM proposal ORDER BY id").fetchall()
                 proposals = [ledger.get_proposal(int(row["id"])) for row in rows]
                 record["proposals"] = [_proposal_record(item) for item in proposals if item]
+                context_packs: dict[str, object] = {}
+                for proposal in proposals:
+                    if proposal is None:
+                        continue
+                    for incident_id in proposal.evidence_incident_ids:
+                        incident = ledger.get_incident(incident_id)
+                        if incident is None:
+                            raise EvalRunError(f"proposal references missing incident {incident_id}")
+                        pack, _ = context_for_incident(incident)
+                        context_packs[str(incident_id)] = _context_pack_record(pack)
+                record["context_packs"] = context_packs
                 timings["synthesize"]["input_digest"] = _digest_json(promoted)  # type: ignore[index]
+
+    _capture_run_log(record)
+
+
+def _capture_run_log(record: dict[str, object]) -> None:
+    """Snapshot all pipeline and judge calls after the active phase completes."""
 
     with Ledger() as ledger:
         rows = ledger.connection.execute("SELECT * FROM run_log ORDER BY id").fetchall()
@@ -961,6 +1031,28 @@ def _proposal_record(proposal: Proposal) -> dict[str, object]:
         "singleton": proposal.singleton,
         "proposal_kind": proposal.proposal_kind,
         "artifact": artifact,
+    }
+
+
+def _context_pack_record(pack: object) -> dict[str, object]:
+    """Serialize the standard bounded pack so counterfactual judging is replayable."""
+
+    for field in (
+        "preceding_request",
+        "agent_activity_digest",
+        "frustrated_message",
+        "following_exchange",
+        "metadata",
+    ):
+        if not hasattr(pack, field):
+            raise EvalRunError("context resolver returned an invalid context pack")
+    metadata = getattr(pack, "metadata")
+    return {
+        "preceding_request": getattr(pack, "preceding_request"),
+        "agent_activity_digest": getattr(pack, "agent_activity_digest"),
+        "frustrated_message": getattr(pack, "frustrated_message"),
+        "following_exchange": getattr(pack, "following_exchange"),
+        "metadata": asdict(metadata),
     }
 
 

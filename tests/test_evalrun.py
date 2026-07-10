@@ -60,17 +60,20 @@ def test_cli_exposes_all_eval_controls() -> None:
             "--stages",
             "scan,triage",
             "--keep",
+            "--repeat",
+            "3",
             "--corpus",
             str(CORPUS),
         ]
     )
-    assert (args.mode, args.record, args.yes, args.quick, args.stages, args.keep) == (
+    assert (args.mode, args.record, args.yes, args.quick, args.stages, args.keep, args.repeat) == (
         "live",
         True,
         True,
         True,
         "scan,triage",
         True,
+        3,
     )
     assert args.corpus == CORPUS
 
@@ -127,7 +130,7 @@ def test_record_then_two_replays_are_deterministic_modulo_timestamps(tmp_path: P
 
     assert recorded.proposals == replay_one.proposals == replay_two.proposals == 6
     # Two identical gardening requests intentionally share one content-addressed key.
-    assert len(list((tmp_path / "replays" / "v1" / "default").glob("*.json"))) == 45
+    assert len(list((tmp_path / "replays" / "v1" / "default").glob("*.json"))) == 82
     assert _without_timestamps(_record(replay_one.record_path)) == _without_timestamps(
         _record(replay_two.record_path)
     )
@@ -223,8 +226,8 @@ def test_estimate_math_and_quick_subset_are_stable() -> None:
         "c03-u2",
         "c05-u2",
     )
-    assert evalrun.estimate_call_counts(manifest) == evalrun.EvalCallEstimate(36, 4, 7)
-    assert evalrun.estimate_call_counts(manifest, first) == evalrun.EvalCallEstimate(7, 1, 2)
+    assert evalrun.estimate_call_counts(manifest) == evalrun.EvalCallEstimate(36, 4, 7, 38)
+    assert evalrun.estimate_call_counts(manifest, first) == evalrun.EvalCallEstimate(7, 1, 2, 13)
 
 
 def test_quick_run_copies_only_the_documented_subset(tmp_path: Path) -> None:
@@ -263,6 +266,7 @@ def test_eval_stage_models_are_honored_and_record_is_scorer_ready(tmp_path: Path
         "triage": {"model": "custom-haiku", "effort": "reserved", "prompt_version": 1},
         "curate": {"model": "custom-sonnet", "effort": None, "prompt_version": 1},
         "synthesize": {"model": "custom-synth-sonnet", "effort": None, "prompt_version": 1},
+        "judge": {"model": "sonnet", "effort": None, "prompt_version": 1},
     }
     assert set(record) >= {
         "corpus_version",

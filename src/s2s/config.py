@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import json
 import os
@@ -110,6 +110,15 @@ class EvalSettings:
     """Eval transport default; ``auto`` prefers replay only when cache exists."""
 
     mode: str = "auto"
+    judge: EvalJudgeSettings = field(default_factory=lambda: EvalJudgeSettings())
+
+
+@dataclass(frozen=True)
+class EvalJudgeSettings:
+    """Independent model arm for eval-only remedy judging."""
+
+    model: str = "sonnet"
+    effort: str | None = None
 
 
 @dataclass(frozen=True)
@@ -178,6 +187,7 @@ def load_config(config_path: Path | None = None) -> Config:
     sources = _section(document, "sources")
     auditor = _section(document, "auditor")
     eval_section = _section(document, "eval")
+    eval_judge = _section(eval_section, "judge")
     defaults = Config()
     # Codex is opt-out when its normal rollout root exists; otherwise preserve a
     # quiet default for machines that have never used Codex.
@@ -300,7 +310,16 @@ def load_config(config_path: Path | None = None) -> Config:
                 if (configured_mode := _str(eval_section, "mode", defaults.eval.mode))
                 in {"auto", "mock", "replay"}
                 else defaults.eval.mode
-            )
+            ),
+            judge=EvalJudgeSettings(
+                model=_str(eval_judge, "model", defaults.eval.judge.model),
+                effort=(
+                    configured_effort
+                    if (configured_effort := eval_judge.get("effort")) is None
+                    or isinstance(configured_effort, str)
+                    else defaults.eval.judge.effort
+                ),
+            ),
         ),
     )
 

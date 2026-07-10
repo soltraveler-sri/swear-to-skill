@@ -62,3 +62,9 @@ confirm_threshold_usd = 1.0
 # "auto" selects replay when this corpus/profile has recordings, otherwise mock.
 # Live mode is intentionally CLI-only so it can never become an implicit spend.
 mode = "auto"
+
+[eval.judge]
+# Use a model distinct from [models].synthesize where possible. Matching it emits
+# a self-grading-bias warning in judge-results.json.
+model = "sonnet"
+# effort = "high"
