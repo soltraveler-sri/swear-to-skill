@@ -3,7 +3,7 @@ description = "Placeholder only: model strings must be supplied by the user's ow
 
 [triage]
 model = "codex-user-triage"
-prompt_version = "v1"
+prompt_version = "v2"
 
 [curate]
 model = "codex-user-curate"

@@ -80,7 +80,7 @@ class Models:
 class Prompts:
     """Published prompt versions used by each judgment surface."""
 
-    triage: str = "v1"
+    triage: str = "v2"
     curate: str = "v2"
     garden: str = "v1"
     synthesize: str = "v2"
