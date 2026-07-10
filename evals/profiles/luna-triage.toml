@@ -1,0 +1,18 @@
+[profile]
+description = "Opt-in Luna triage arm; requires an installed and authenticated OpenAI Codex CLI, and live cost reporting remains unavailable."
+
+[triage]
+model = "codex:gpt-5.6-luna"
+prompt_version = "v2"
+
+[curate]
+model = "sonnet"
+prompt_version = "v2"
+
+[synthesize]
+model = "sonnet"
+prompt_version = "v2"
+
+[judge]
+model = "sonnet"
+prompt_version = "v1"

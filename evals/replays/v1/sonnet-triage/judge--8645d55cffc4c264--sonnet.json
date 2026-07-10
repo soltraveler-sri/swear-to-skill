@@ -1,0 +1,219 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "8645d55cffc4c264",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Grade the proposed remedy, not the\nwriting style of this prompt. A good remedy changes a concrete future behavior,\nis broad enough to cover the failure mode without becoming a platitude, uses a\nreal `Use when ...` trigger when it is a skill, leaks no evidence-specific\nproject nouns into the remedy text, and uses the cheapest adequate remedy type.\n\nScore every dimension from 1 (poor) to 5 (excellent). Give exactly one concise\nsentence of justification for each score. Do not infer facts that are absent.\n\nPROPOSAL:\n{\n  \"failure_statement\": \"Explicit task constraints were lost during implementation.\",\n  \"remedy_content\": {\n    \"target\": \"global\",\n    \"text\": \"Before making changes, restate and preserve every explicit scope, file, and tool constraint from the request.\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"A standing one-line instruction is cheaper than a procedural skill.\"\n}\n",
+    "schema": {
+      "properties": {
+        "actionability": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "generality_without_vagueness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "leakage": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "routing_fitness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "trigger_quality": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "actionability",
+        "generality_without_vagueness",
+        "trigger_quality",
+        "leakage",
+        "routing_fitness"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 20020,
+    "duration_ms": 20218,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 3637,
+        "cacheReadInputTokens": 28513,
+        "contextWindow": 1000000,
+        "costUSD": 0.07899990000000001,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 1888,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"actionability\":{\"score\":2,\"justification\":\"\\\"Restate and preserve\\\" gives no concrete mechanism (e.g., a checklist to output, a point to verify against) so compliance can't be checked and behavior change is unclear.\"},\"generality_without_vagueness\":{\"score\":2,\"justification\":\"Covers the broad failure class but is phrased as a generic maxim (\\\"every explicit scope, file, and tool constraint\\\") with no concrete criteria, tipping into platitude territory.\"},\"trigger_quality\":{\"score\":2,\"justification\":\"As a global always-on claude-md line it has no scoping trigger (e.g., long/multi-step tasks, delegation, late-context edits) to target when constraint-loss actually occurs, risking dilution among other standing instructions.\"},\"leakage\":{\"score\":5,\"justification\":\"Text is fully generic with no project-specific nouns, file names, or tool names leaked from the evidence.\"},\"routing_fitness\":{\"score\":3,\"justification\":\"claude-md is the cheapest plausible vehicle for a standing reminder, but the vague failure_statement gives little basis to confirm this generic instruction actually addresses the real root cause rather than just restating the symptom.\"}}",
+    "session_id": "50ab6070-e073-43bd-8a89-cf6ebaec1ffb",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "actionability": {
+        "justification": "\"Restate and preserve\" gives no concrete mechanism (e.g., a checklist to output, a point to verify against) so compliance can't be checked and behavior change is unclear.",
+        "score": 2
+      },
+      "generality_without_vagueness": {
+        "justification": "Covers the broad failure class but is phrased as a generic maxim (\"every explicit scope, file, and tool constraint\") with no concrete criteria, tipping into platitude territory.",
+        "score": 2
+      },
+      "leakage": {
+        "justification": "Text is fully generic with no project-specific nouns, file names, or tool names leaked from the evidence.",
+        "score": 5
+      },
+      "routing_fitness": {
+        "justification": "claude-md is the cheapest plausible vehicle for a standing reminder, but the vague failure_statement gives little basis to confirm this generic instruction actually addresses the real root cause rather than just restating the symptom.",
+        "score": 3
+      },
+      "trigger_quality": {
+        "justification": "As a global always-on claude-md line it has no scoping trigger (e.g., long/multi-step tasks, delegation, late-context edits) to target when constraint-loss actually occurs, risking dilution among other standing instructions.",
+        "score": 2
+      }
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 110,
+    "total_cost_usd": 0.07899990000000001,
+    "ttft_ms": 15688,
+    "ttft_stream_ms": 1185,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 3637,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 3637,
+      "cache_read_input_tokens": 28513,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 3637,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 3637,
+          "cache_read_input_tokens": 28513,
+          "input_tokens": 6768,
+          "output_tokens": 1888,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 1888,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "d3a4ee52-b8b6-4731-9ada-3362337a5f16"
+  }
+}

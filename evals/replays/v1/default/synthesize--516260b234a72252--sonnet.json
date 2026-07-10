@@ -1,0 +1,223 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "516260b234a72252",
+    "model": "sonnet",
+    "stage": "synthesize"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are the Stage 4 Synthesist. Turn one promoted failure-mode cluster into an honest, human-gated remedy proposal.\n\nMost frustrations do not deserve a skill. Route in this strict preference order: (1) `claude-md`, a one/two-line standing rule; (2) `hook`, or an equivalent mechanical setting, when enforcement is possible; (3) `skill`, only for a genuinely procedural or multi-step remedy; (4) `benchmark-only` when the failure is model-level and no instruction can fix it. Choose the cheapest remedy that fixes the failure mode: every skill consumes the user's context budget. `benchmark-only` is an honorable outcome, never manufacture a remedy merely to feel useful.\n\nIf the only sensible remedy target is Codex-side (`AGENTS.md` or `~/.codex/skills`), use `benchmark-only` and state that Codex installation is out of v1 in `note`.\n\nThe existing-remedy digests below are numbered [R1]…[RN]. There are 2 existing-remedy digests. Your `dedup` array MUST contain exactly 2 entries, one per number, with `existing` set to exactly that token (e.g. \"R1\"). Include entries even when the verdict is clear. State `clear` or `overlap` for each. Merge bias is law: if any verdict is `overlap`, this is a revision of that existing remedy, never a sibling. Set `overlap_action.revises` to that R token.\n\nFor a `skill`, write a kebab-case name and a concrete auto-invocation description beginning `Use when ...`; this description is the trigger. The body must be substantive Markdown. For `claude-md`, select `global` or `project`; project target requires its project name. For `hook`, give a Claude Code event and a command sketch. For `benchmark-only`, explain the measurement-only outcome in `note`.\n\nThe upstream classifier deliberately over-merges. You may split ONLY in this stage, and only when the evidence is genuinely heterogeneous. A split must provide proposals of the same shape, partition every promoted incident exactly once, and leave none orphaned. Otherwise return one proposal covering the group.\n\nTAXONOMY GIST:\nignored-instruction: explicit user instruction not followed\n\nPROMOTED EVIDENCE:\nBEGIN PROMOTED EVIDENCE incident_id=1 project=aurora\nOne-liner: Ignored explicit constraints and changed the work plan without authorization.\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nYou ignored the no-network constraint; stop changing the plan.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: You are not following the branch instruction in /work/fake-aurora.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=2 project=aurora\nOne-liner: Failed to follow an explicit instruction about branch configuration\nPreceding request:\nYou ignored the no-network constraint; stop changing the plan.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nYou are not following the branch instruction in /work/fake-aurora.\n\nFollowing exchange:\n\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=4 project=aurora\nOne-liner: Changed a component after being explicitly told not to\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nI told you to leave the formatter alone, and it was changed.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: The fake vendor error says 'what the hell'; quote it verbatim in the fixture.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=5 project=aurora\nOne-liner: Agent modified a component despite explicit instruction not to\nPreceding request:\nI told you to leave the formatter alone, and it was changed.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nThe fake vendor error says 'what the hell'; quote it verbatim in the fixture.\n\nFollowing exchange:\n\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=8 project=cinder\nOne-liner: Modified content despite explicit instruction not to\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nFollow the instructions: this patch must not touch tests.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: The shell target drifted after the handoff.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=26 project=lantern\nOne-liner: Failed to include an explicitly requested field in the payload\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nYou missed the only requested field in the payload.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: Write a playful banner: 'this is a mess' for the fake festival page.\nEND PROMOTED EVIDENCE\n\nEXISTING SKILLS (name and description only):\n- [R1] skill:$HOME/.claude/skills/fake-verify-before-claim/SKILL.md | name=fake-verify-before-claim | description=Use when a completion claim requires verification.\n\nS2S-MANAGED CLAUDE.MD BLOCKS:\n- [R2] claude-md:$HOME/.claude/CLAUDE.md#1 | # Fake Release Discipline\n\nBefore reporting a fake release as complete, run its declared verification\ncommand and report the result plainly.\n\nPENDING OR INSTALLED S2S PROPOSALS:\n- (none)\n\n\nYour prior draft failed local validation. Correct the SKILL.md/frontmatter, dedup, and evidence partition exactly. Specific validation failure: claude-md requires text and global/project target",
+    "schema": {
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "dedup": {
+          "items": {
+            "properties": {
+              "existing": {
+                "pattern": "^R[0-9]+$",
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "clear",
+                  "overlap"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "existing",
+              "verdict",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "properties": {
+              "incident_id": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "quote": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "incident_id",
+              "quote"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "failure_statement": {
+          "type": "string"
+        },
+        "overlap_action": {
+          "properties": {
+            "revises": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "revises"
+          ],
+          "type": "object"
+        },
+        "remedy_content": {
+          "type": "object"
+        },
+        "remedy_type": {
+          "enum": [
+            "claude-md",
+            "hook",
+            "skill",
+            "benchmark-only"
+          ],
+          "type": "string"
+        },
+        "routing_rationale": {
+          "type": "string"
+        },
+        "split": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "remedy_type",
+        "routing_rationale",
+        "failure_statement",
+        "remedy_content",
+        "evidence",
+        "dedup",
+        "confidence"
+      ],
+      "type": "object"
+    },
+    "stage": "synthesize"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 72488,
+    "duration_ms": 72721,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 17548,
+        "cacheReadInputTokens": 62354,
+        "contextWindow": 1000000,
+        "costUSD": 0.24437219999999998,
+        "inputTokens": 6771,
+        "maxOutputTokens": 64000,
+        "outputTokens": 6671,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 3,
+    "permission_denials": [],
+    "result": "{\"remedy_type\":\"claude-md\",\"routing_rationale\":\"All six promoted incidents share one shape: the user stated an explicit, specific constraint (don't touch the formatter/tests, stay off no-network/off the stated branch, include a specific payload field) and the agent violated or dropped it mid-task — not a completion-claim problem, a mid-task-constraint-tracking problem. The constraints vary per task (which file, which field, which branch) so a fixed hook can't enumerate them generically, and there's no multi-step procedure to script — the fix is a standing behavioral rule to actively track and re-check stated constraints, which is exactly what a short CLAUDE.md line is for. This is cheaper than a skill and more general than a hook. Existing remedies (R1, R2) both govern the end-of-task verification-before-claiming-done moment for release/completion claims specifically, not the mid-task constraint fidelity problem seen here, so this is a new, distinct standing rule rather than a revision.\",\"failure_statement\":\"The agent drops or overrides explicit user-stated constraints (protected files/areas, required fields, branch/network restrictions) partway through a task instead of treating them as binding for the task's duration.\",\"remedy_content\":{\"target\":\"global\",\"text\":\"# Explicit Constraints Are Binding\\n\\nWhen the user states an explicit constraint (a file/area to leave untouched, a required field, a branch/network restriction), it stays in force for the rest of the task — before reporting work done, re-check your diff/output against every constraint stated in the conversation and flag any conflict instead of silently overriding it.\"},\"evidence\":[{\"incident_id\":1,\"quote\":\"You ignored the no-network constraint; stop changing the plan.\"},{\"incident_id\":2,\"quote\":\"You are not following the branch instruction in /work/fake-aurora.\"},{\"incident_id\":4,\"quote\":\"I told you to leave the formatter alone, and it was changed.\"},{\"incident_id\":5,\"quote\":\"I told you to leave the formatter alone, and it was changed.\"},{\"incident_id\":8,\"quote\":\"Follow the instructions: this patch must not touch tests.\"},{\"incident_id\":26,\"quote\":\"You missed the only requested field in the payload.\"}],\"dedup\":[{\"existing\":\"R1\",\"verdict\":\"clear\",\"reason\":\"fake-verify-before-claim triggers on verifying a completion claim after the fact; this cluster is about failing to honor a stated constraint during the work itself, a different phase and different trigger.\"},{\"existing\":\"R2\",\"verdict\":\"clear\",\"reason\":\"Fake Release Discipline is scoped narrowly to running a release's declared verification command before claiming a release complete; it doesn't address generic explicit constraints like protected files, required fields, or branch/network restrictions.\"}],\"confidence\":0.68}",
+    "session_id": "50d84ecc-cbe6-485f-883e-b350142d0243",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "confidence": 0.68,
+      "dedup": [
+        {
+          "existing": "R1",
+          "reason": "fake-verify-before-claim triggers on verifying a completion claim after the fact; this cluster is about failing to honor a stated constraint during the work itself, a different phase and different trigger.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R2",
+          "reason": "Fake Release Discipline is scoped narrowly to running a release's declared verification command before claiming a release complete; it doesn't address generic explicit constraints like protected files, required fields, or branch/network restrictions.",
+          "verdict": "clear"
+        }
+      ],
+      "evidence": [
+        {
+          "incident_id": 1,
+          "quote": "You ignored the no-network constraint; stop changing the plan."
+        },
+        {
+          "incident_id": 2,
+          "quote": "You are not following the branch instruction in /work/fake-aurora."
+        },
+        {
+          "incident_id": 4,
+          "quote": "I told you to leave the formatter alone, and it was changed."
+        },
+        {
+          "incident_id": 5,
+          "quote": "I told you to leave the formatter alone, and it was changed."
+        },
+        {
+          "incident_id": 8,
+          "quote": "Follow the instructions: this patch must not touch tests."
+        },
+        {
+          "incident_id": 26,
+          "quote": "You missed the only requested field in the payload."
+        }
+      ],
+      "failure_statement": "The agent drops or overrides explicit user-stated constraints (protected files/areas, required fields, branch/network restrictions) partway through a task instead of treating them as binding for the task's duration.",
+      "remedy_content": {
+        "target": "global",
+        "text": "# Explicit Constraints Are Binding\n\nWhen the user states an explicit constraint (a file/area to leave untouched, a required field, a branch/network restriction), it stays in force for the rest of the task — before reporting work done, re-check your diff/output against every constraint stated in the conversation and flag any conflict instead of silently overriding it."
+      },
+      "remedy_type": "claude-md",
+      "routing_rationale": "All six promoted incidents share one shape: the user stated an explicit, specific constraint (don't touch the formatter/tests, stay off no-network/off the stated branch, include a specific payload field) and the agent violated or dropped it mid-task — not a completion-claim problem, a mid-task-constraint-tracking problem. The constraints vary per task (which file, which field, which branch) so a fixed hook can't enumerate them generically, and there's no multi-step procedure to script — the fix is a standing behavioral rule to actively track and re-check stated constraints, which is exactly what a short CLAUDE.md line is for. This is cheaper than a skill and more general than a hook. Existing remedies (R1, R2) both govern the end-of-task verification-before-claiming-done moment for release/completion claims specifically, not the mid-task constraint fidelity problem seen here, so this is a new, distinct standing rule rather than a revision."
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 112,
+    "total_cost_usd": 0.24437219999999998,
+    "ttft_ms": 53942,
+    "ttft_stream_ms": 7364,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 17548,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 17548,
+      "cache_read_input_tokens": 62354,
+      "inference_geo": "not_available",
+      "input_tokens": 6771,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 12236,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 12236,
+          "cache_read_input_tokens": 33833,
+          "input_tokens": 2,
+          "output_tokens": 1237,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 6671,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "0273047c-1562-4c72-9e08-3bdb0b696ea1"
+  }
+}

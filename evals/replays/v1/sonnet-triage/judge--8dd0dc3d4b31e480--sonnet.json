@@ -1,0 +1,219 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "8dd0dc3d4b31e480",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Grade the proposed remedy, not the\nwriting style of this prompt. A good remedy changes a concrete future behavior,\nis broad enough to cover the failure mode without becoming a platitude, uses a\nreal `Use when ...` trigger when it is a skill, leaks no evidence-specific\nproject nouns into the remedy text, and uses the cheapest adequate remedy type.\n\nScore every dimension from 1 (poor) to 5 (excellent). Give exactly one concise\nsentence of justification for each score. Do not infer facts that are absent.\n\nPROPOSAL:\n{\n  \"failure_statement\": \"Instructions were missed.\",\n  \"remedy_content\": {\n    \"target\": \"global\",\n    \"text\": \"Always carefully follow instructions and do high quality work.\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"A rule may help.\"\n}\n",
+    "schema": {
+      "properties": {
+        "actionability": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "generality_without_vagueness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "leakage": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "routing_fitness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "trigger_quality": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "actionability",
+        "generality_without_vagueness",
+        "trigger_quality",
+        "leakage",
+        "routing_fitness"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 13548,
+    "duration_ms": 13739,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 3599,
+        "cacheReadInputTokens": 28513,
+        "contextWindow": 1000000,
+        "costUSD": 0.0703869,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 1329,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"actionability\":{\"score\":1,\"justification\":\"\\\"Always carefully follow instructions and do high quality work\\\" prescribes no concrete behavior change, check, or trigger condition — it's advice a model already tries to follow by default.\"},\"generality_without_vagueness\":{\"score\":1,\"justification\":\"This is a pure platitude with no specific scope, condition, or mechanism, so it fails the generality-vs-vagueness tradeoff entirely by landing on maximal vagueness.\"},\"trigger_quality\":{\"score\":1,\"justification\":\"There is no 'Use when ...' trigger or any conditional scoping at all; as a global claude-md entry it fires unconditionally on every future task, which is indistinguishable from no trigger.\"},\"leakage\":{\"score\":5,\"justification\":\"The remedy text contains no project-specific nouns, file names, or evidence details — it is generic to a fault, so there is no leakage.\"},\"routing_fitness\":{\"score\":1,\"justification\":\"Given an unspecified failure ('Instructions were missed') with no root-cause detail, permanently adding a vague directive to the global CLAUDE.md is not the cheapest adequate remedy — the routing rationale ('A rule may help') doesn't justify why a persistent global rule is warranted over no action or a targeted fix.\"}}",
+    "session_id": "41963f24-69e1-42c4-9cfd-82880acde759",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "actionability": {
+        "justification": "\"Always carefully follow instructions and do high quality work\" prescribes no concrete behavior change, check, or trigger condition — it's advice a model already tries to follow by default.",
+        "score": 1
+      },
+      "generality_without_vagueness": {
+        "justification": "This is a pure platitude with no specific scope, condition, or mechanism, so it fails the generality-vs-vagueness tradeoff entirely by landing on maximal vagueness.",
+        "score": 1
+      },
+      "leakage": {
+        "justification": "The remedy text contains no project-specific nouns, file names, or evidence details — it is generic to a fault, so there is no leakage.",
+        "score": 5
+      },
+      "routing_fitness": {
+        "justification": "Given an unspecified failure ('Instructions were missed') with no root-cause detail, permanently adding a vague directive to the global CLAUDE.md is not the cheapest adequate remedy — the routing rationale ('A rule may help') doesn't justify why a persistent global rule is warranted over no action or a targeted fix.",
+        "score": 1
+      },
+      "trigger_quality": {
+        "justification": "There is no 'Use when ...' trigger or any conditional scoping at all; as a global claude-md entry it fires unconditionally on every future task, which is indistinguishable from no trigger.",
+        "score": 1
+      }
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 100,
+    "total_cost_usd": 0.0703869,
+    "ttft_ms": 9145,
+    "ttft_stream_ms": 1119,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 3599,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 3599,
+      "cache_read_input_tokens": 28513,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 3599,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 3599,
+          "cache_read_input_tokens": 28513,
+          "input_tokens": 6768,
+          "output_tokens": 1329,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 1329,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "4a317bd6-d4d5-470b-9b63-1009778873d0"
+  }
+}

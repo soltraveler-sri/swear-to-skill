@@ -78,6 +78,19 @@ def test_cli_exposes_all_eval_controls() -> None:
     assert args.corpus == CORPUS
 
 
+def test_rescore_run_refreshes_existing_score_and_report_artifacts(tmp_path: Path) -> None:
+    result = evalrun.run_eval(_config(tmp_path, stages=("scan",)))
+
+    rescored = evalrun.rescore_run(result.record_path.parent, corpus=CORPUS)
+
+    assert rescored.record_path == result.record_path
+    assert rescored.scores_path.is_file()
+    assert rescored.report_markdown_path.is_file()
+    assert rescored.report_html_path.is_file()
+    assert json.loads(rescored.scores_path.read_text(encoding="utf-8"))["status"] == "withheld"
+    assert rescored.verdict == "WIRING CHECK ONLY"
+
+
 def test_sandbox_canary_and_child_environment_audit(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -304,3 +317,20 @@ def test_repeat_and_tranche_cycles_emit_scorer_inputs(tmp_path: Path) -> None:
     assert all(item["idempotent"] for item in record["cycles"])  # type: ignore[index]
     assert all(item["state_machine_integrity"] for item in record["cycles"])  # type: ignore[index]
     assert all(item["on_new_economics"] for item in record["cycles"])  # type: ignore[index]
+
+
+def test_sandbox_config_garden_version_is_independent_of_curate(tmp_path) -> None:
+    """Live finding: curate v2 must not drag garden to a nonexistent v2."""
+    from s2s import evalrun
+
+    config = evalrun.EvalRunConfig(
+        mode="mock",
+        assume_yes=True,
+        output_root=tmp_path,
+        keep=True,
+        stages=("scan",),
+        curate=evalrun.EvalStageConfig("sonnet", prompt_version="v2"),
+    )
+    result = evalrun.run_eval(config)
+    text = (result.sandbox_path / "s2s-home" / "config.toml").read_text()
+    assert 'garden = "v1"' in text

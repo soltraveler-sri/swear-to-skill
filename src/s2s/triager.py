@@ -21,7 +21,7 @@ from .taxonomy import label_names, list_labels
 
 
 PROMPT_NAME = "triage"
-PROMPT_VERSION = 1
+PROMPT_VERSION = 2
 
 
 class ContextResolutionError(RuntimeError):

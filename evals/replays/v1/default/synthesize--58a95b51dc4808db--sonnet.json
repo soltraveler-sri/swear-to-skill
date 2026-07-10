@@ -1,0 +1,217 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "58a95b51dc4808db",
+    "model": "sonnet",
+    "stage": "synthesize"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are the Stage 4 Synthesist. Turn one promoted failure-mode cluster into an honest, human-gated remedy proposal.\n\nMost frustrations do not deserve a skill. Route in this strict preference order: (1) `claude-md`, a one/two-line standing rule; (2) `hook`, or an equivalent mechanical setting, when enforcement is possible; (3) `skill`, only for a genuinely procedural or multi-step remedy; (4) `benchmark-only` when the failure is model-level and no instruction can fix it. Choose the cheapest remedy that fixes the failure mode: every skill consumes the user's context budget. `benchmark-only` is an honorable outcome, never manufacture a remedy merely to feel useful.\n\nIf the only sensible remedy target is Codex-side (`AGENTS.md` or `~/.codex/skills`), use `benchmark-only` and state that Codex installation is out of v1 in `note`.\n\nThe existing-remedy digests below are numbered [R1]…[RN]. There are 2 existing-remedy digests. Your `dedup` array MUST contain exactly 2 entries, one per number, with `existing` set to exactly that token (e.g. \"R1\"). Include entries even when the verdict is clear. State `clear` or `overlap` for each. Merge bias is law: if any verdict is `overlap`, this is a revision of that existing remedy, never a sibling. Set `overlap_action.revises` to that R token.\n\nFor a `skill`, write a kebab-case name and a concrete auto-invocation description beginning `Use when ...`; this description is the trigger. The body must be substantive Markdown. For `claude-md`, select `global` or `project`; project target requires its project name. For `hook`, give a Claude Code event and a command sketch. For `benchmark-only`, explain the measurement-only outcome in `note`.\n\nThe upstream classifier deliberately over-merges. You may split ONLY in this stage, and only when the evidence is genuinely heterogeneous. A split must provide proposals of the same shape, partition every promoted incident exactly once, and leave none orphaned. Otherwise return one proposal covering the group.\n\nTAXONOMY GIST:\nenvironment-mismanagement: wrong dir/branch/deps/tool state\n\nPROMOTED EVIDENCE:\nBEGIN PROMOTED EVIDENCE incident_id=16 project=harbor\nOne-liner: Continued work on an outdated or incorrect branch despite prior notification of an unverified state.\nPreceding request:\nThat fix is not verified; the test command was never run.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nWhy are you doing this from the stale fake branch?\n\nFollowing exchange:\n\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=23 project=lantern\nOne-liner: Agent did not use the specified workspace/environment as requested\nPreceding request:\nThis is not what I asked; a rewrite was not requested.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nYou did not use the /work/fake-lantern workspace requested.\n\nFollowing exchange:\n\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=6 project=aurora\nOne-liner: worked in the wrong environment configuration\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nTry again with the small change I specified.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: Read the prompt: this is the wrong fake environment.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=7 project=aurora\nOne-liner: Working in wrong environment state instead of correct one\nPreceding request:\nTry again with the small change I specified.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nRead the prompt: this is the wrong fake environment.\n\nFollowing exchange:\n\nEND PROMOTED EVIDENCE\n\nEXISTING SKILLS (name and description only):\n- [R1] skill:$HOME/.claude/skills/fake-verify-before-claim/SKILL.md | name=fake-verify-before-claim | description=Use when a completion claim requires verification.\n\nS2S-MANAGED CLAUDE.MD BLOCKS:\n- [R2] claude-md:$HOME/.claude/CLAUDE.md#1 | # Fake Release Discipline\n\nBefore reporting a fake release as complete, run its declared verification\ncommand and report the result plainly.\n\nPENDING OR INSTALLED S2S PROPOSALS:\n- (none)\n",
+    "schema": {
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "dedup": {
+          "items": {
+            "properties": {
+              "existing": {
+                "pattern": "^R[0-9]+$",
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "clear",
+                  "overlap"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "existing",
+              "verdict",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "properties": {
+              "incident_id": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "quote": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "incident_id",
+              "quote"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "failure_statement": {
+          "type": "string"
+        },
+        "overlap_action": {
+          "properties": {
+            "revises": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "revises"
+          ],
+          "type": "object"
+        },
+        "remedy_content": {
+          "type": "object"
+        },
+        "remedy_type": {
+          "enum": [
+            "claude-md",
+            "hook",
+            "skill",
+            "benchmark-only"
+          ],
+          "type": "string"
+        },
+        "routing_rationale": {
+          "type": "string"
+        },
+        "split": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "remedy_type",
+        "routing_rationale",
+        "failure_statement",
+        "remedy_content",
+        "evidence",
+        "dedup",
+        "confidence"
+      ],
+      "type": "object"
+    },
+    "stage": "synthesize"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 37491,
+    "duration_ms": 37682,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 33416,
+        "cacheReadInputTokens": 0,
+        "contextWindow": 1000000,
+        "costUSD": 0.273825,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 3535,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"confidence\":0.8,\"dedup\":[{\"existing\":\"R1\",\"verdict\":\"clear\",\"reason\":\"R1 (fake-verify-before-claim) targets verifying a completion claim by running the declared test/verification command before reporting done. This cluster is about operating in the wrong branch/workspace/environment (and not correcting course when told so) — a different failure surface (environment state, not completion verification).\"},{\"existing\":\"R2\",\"verdict\":\"clear\",\"reason\":\"R2 (Fake Release Discipline) is the claude-md counterpart to R1, also scoped to running verification commands before claiming a release/fix complete. None of the four incidents here are about skipping a verification command before claiming completion — they're about the agent being on/using the wrong branch, workspace, or environment configuration, including continuing there after being told it was wrong.\"}],\"evidence\":[{\"incident_id\":16,\"quote\":\"Why are you doing this from the stale fake branch?\"},{\"incident_id\":23,\"quote\":\"You did not use the /work/fake-lantern workspace requested.\"},{\"incident_id\":6,\"quote\":\"Read the prompt: this is the wrong fake environment.\"},{\"incident_id\":7,\"quote\":\"Read the prompt: this is the wrong fake environment.\"}],\"failure_statement\":\"The agent works in, or continues working in, a branch, workspace, or environment other than the one the user specified — and when the user explicitly flags that the environment/branch/workspace is wrong, the agent merely acknowledges rather than verifying actual state and switching to the correct one before proceeding.\",\"remedy_type\":\"claude-md\",\"remedy_content\":{\"target\":\"global\",\"file\":\"$HOME/.claude/CLAUDE.md\",\"header\":\"# Environment State Verification\",\"content\":\"Before starting work, and any time the user says you're in the wrong branch, workspace, or environment, verify actual state with a tool call (e.g. `pwd`, `git branch --show-current`, `git remote -v`) rather than assuming it carried over from a prior turn or acknowledging without checking. If the state is wrong, switch to the correct branch/workspace before doing or re-doing any work — do not proceed or re-attempt the task from the same incorrect state.\"},\"routing_rationale\":\"This is a recurring cross-project pattern (harbor, lantern, aurora x2) of the agent not confirming/using the branch, workspace, or environment the user specified, including failing to actually correct course after being told the state was wrong — classic environment-mismanagement. A hook can't fix this because there's no static, checkable definition of the 'correct' branch/workspace/env — it's user- and task-specific each time, so no mechanical assertion is possible. It isn't a multi-step procedure needing a skill; it's a single standing behavioral rule ('verify state, don't just acknowledge and continue'), so a one/two-line claude-md addition is the cheapest fix that matches the failure. It's placed globally (like existing R2) since the pattern spans unrelated projects, not one codebase.\"}",
+    "session_id": "70ed3e17-528c-45df-b57d-9f053cf1c407",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "confidence": 0.8,
+      "dedup": [
+        {
+          "existing": "R1",
+          "reason": "R1 (fake-verify-before-claim) targets verifying a completion claim by running the declared test/verification command before reporting done. This cluster is about operating in the wrong branch/workspace/environment (and not correcting course when told so) — a different failure surface (environment state, not completion verification).",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R2",
+          "reason": "R2 (Fake Release Discipline) is the claude-md counterpart to R1, also scoped to running verification commands before claiming a release/fix complete. None of the four incidents here are about skipping a verification command before claiming completion — they're about the agent being on/using the wrong branch, workspace, or environment configuration, including continuing there after being told it was wrong.",
+          "verdict": "clear"
+        }
+      ],
+      "evidence": [
+        {
+          "incident_id": 16,
+          "quote": "Why are you doing this from the stale fake branch?"
+        },
+        {
+          "incident_id": 23,
+          "quote": "You did not use the /work/fake-lantern workspace requested."
+        },
+        {
+          "incident_id": 6,
+          "quote": "Read the prompt: this is the wrong fake environment."
+        },
+        {
+          "incident_id": 7,
+          "quote": "Read the prompt: this is the wrong fake environment."
+        }
+      ],
+      "failure_statement": "The agent works in, or continues working in, a branch, workspace, or environment other than the one the user specified — and when the user explicitly flags that the environment/branch/workspace is wrong, the agent merely acknowledges rather than verifying actual state and switching to the correct one before proceeding.",
+      "remedy_content": {
+        "content": "Before starting work, and any time the user says you're in the wrong branch, workspace, or environment, verify actual state with a tool call (e.g. `pwd`, `git branch --show-current`, `git remote -v`) rather than assuming it carried over from a prior turn or acknowledging without checking. If the state is wrong, switch to the correct branch/workspace before doing or re-doing any work — do not proceed or re-attempt the task from the same incorrect state.",
+        "file": "$HOME/.claude/CLAUDE.md",
+        "header": "# Environment State Verification",
+        "target": "global"
+      },
+      "remedy_type": "claude-md",
+      "routing_rationale": "This is a recurring cross-project pattern (harbor, lantern, aurora x2) of the agent not confirming/using the branch, workspace, or environment the user specified, including failing to actually correct course after being told the state was wrong — classic environment-mismanagement. A hook can't fix this because there's no static, checkable definition of the 'correct' branch/workspace/env — it's user- and task-specific each time, so no mechanical assertion is possible. It isn't a multi-step procedure needing a skill; it's a single standing behavioral rule ('verify state, don't just acknowledge and continue'), so a one/two-line claude-md addition is the cheapest fix that matches the failure. It's placed globally (like existing R2) since the pattern spans unrelated projects, not one codebase."
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 101,
+    "total_cost_usd": 0.273825,
+    "ttft_ms": 28274,
+    "ttft_stream_ms": 1424,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 33416,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 33416,
+      "cache_read_input_tokens": 0,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 33416,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 33416,
+          "cache_read_input_tokens": 0,
+          "input_tokens": 6768,
+          "output_tokens": 3535,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 3535,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "035832ff-a5e6-46c0-ae32-57e62dd197ab"
+  }
+}

@@ -2,8 +2,9 @@
 description = "Production-default comparison arm."
 
 [triage]
-model = "haiku"
-prompt_version = "v1"
+model = "sonnet"
+# v1 remains available as an explicit A/B arm.
+prompt_version = "v2"
 
 [curate]
 model = "sonnet"

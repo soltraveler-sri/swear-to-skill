@@ -262,6 +262,8 @@ is recorded in a git-tracked state dir with provenance (cluster, incidents,
 proposal), tagged in-file (`<!-- s2s:remedy-id -->` / frontmatter comment), and
 removable via `s2s rollback <remedy-id>`.
 
+Pipeline-generated skills are installed with an `s2s-` name prefix, providing at-a-glance operator provenance. Claude Code discovers skills only as `skills/*/SKILL.md`, so this namespace must live in the skill name rather than an extra directory level or renamed file.
+
 ### Stage 6 — Auditor (deterministic + periodic judgment)
 
 Stage 1 never stops running, so outcome data is free: for each installed remedy,
@@ -354,7 +356,7 @@ Rules that make this fragmentation-proof by construction:
 | Stage | Model | Cost shape | Trigger |
 |---|---|---|---|
 | Archive/Scan | none | ~0 | SessionEnd hook / backfill |
-| Triage | Haiku | ¢-level per incident, O(hits) | batched (default daily or on-demand) |
+| Triage | Sonnet (Haiku frugal option) | ¢-level per incident, O(hits) | batched (default daily or on-demand) |
 | Curate | Sonnet | one batched pass, O(new incidents + touched clusters) | ≥10 unreviewed or 7 days |
 | Synthesize | Sonnet/Opus | per promoted cluster (rare) | promotion |
 | Audit | none + Curator | ~0 | continuous / piggybacks on Curate |

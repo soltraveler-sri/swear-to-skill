@@ -1,4 +1,4 @@
-"""The single, auditable subprocess boundary for Claude-powered stages."""
+"""The single, auditable subprocess boundary for model-powered stages."""
 
 from __future__ import annotations
 
@@ -30,6 +30,30 @@ CLAUDE_BASE_ARGS = ("claude", "-p", "--output-format", "json")
 # subprocess in a neutral empty working directory (see NEUTRAL_CWD below), which
 # prevents project CLAUDE.md/skill pickup.
 CLAUDE_REQUIRED_FLAGS = ("--no-session-persistence", "--disable-slash-commands")
+CODEX_MODEL_PREFIX = "codex:"
+# Discovered from Codex CLI 0.144.0.  ``--ask-for-approval`` is a global flag
+# and therefore must precede ``exec``; the remaining flags belong to ``exec``.
+# ``--ephemeral`` is load-bearing: ordinary Codex calls persist rollouts under
+# ~/.codex/sessions, where the s2s scanner would otherwise ingest its own work.
+CODEX_BASE_ARGS = (
+    "codex",
+    # Pipeline transport calls must not load the user's MCP servers: they are
+    # irrelevant to structured one-shot calls, and a server that fails to
+    # spawn or authenticate under sandboxed env is fatal to the whole run.
+    "-c",
+    "mcp_servers={}",
+    "--ask-for-approval",
+    "never",
+    "exec",
+    "--ephemeral",
+    "--ignore-rules",
+    "--skip-git-repo-check",
+    "--sandbox",
+    "read-only",
+    "--color",
+    "never",
+    "--json",
+)
 CORRECTIVE_SUFFIX = (
     "\n\nYour previous response was not valid for the required JSON schema. "
     "Return only a corrected JSON result that exactly satisfies the schema."
@@ -38,6 +62,9 @@ INPUT_DIGEST_LENGTH = 16
 
 # Deliberately conservative, rough per-call estimates for an explicit bulk-work gate.
 ESTIMATED_CALL_COST_USD = {"haiku": 0.003, "sonnet": 0.03, "opus": 0.15}
+# Codex CLI JSONL does not expose stable billing data.  This deliberately rough
+# flat guess exists only for the preflight confirmation gate, not accounting.
+CODEX_FLAT_CALL_ESTIMATE_USD = 0.01
 
 T = TypeVar("T")
 R = TypeVar("R")
@@ -49,6 +76,10 @@ class LLMError(RuntimeError):
 
 class ClaudeNotFoundError(LLMError):
     """Raised when the user's Claude CLI cannot be found on PATH."""
+
+
+class CodexNotFoundError(LLMError):
+    """Raised when an explicitly selected Codex CLI transport is unavailable."""
 
 
 class ClaudeAuthError(LLMError):
@@ -136,7 +167,15 @@ def claude_supports_effort() -> bool:
 def build_argv(
     schema: Mapping[str, object] | str, model: str, *, effort: str | None = None
 ) -> list[str]:
-    """Construct the sole supported Claude CLI command without shell interpolation."""
+    """Construct the selected CLI command without shell interpolation."""
+
+    if model.startswith(CODEX_MODEL_PREFIX):
+        codex_model = model.removeprefix(CODEX_MODEL_PREFIX)
+        if not codex_model:
+            raise ValueError("codex: model strings must include a model name after the prefix")
+        # Schema/output paths are per-attempt temporary files, so the provider
+        # adds them immediately before spawning the process.
+        return [*CODEX_BASE_ARGS, "--model", codex_model, "-"]
 
     schema_text, _ = _schema_text_and_data(schema)
     argv = [
@@ -163,7 +202,7 @@ def call(
     effort: str | None = None,
     timeout_s: float = 300,
 ) -> dict[str, object]:
-    """Run one structured Claude request, retrying malformed output exactly once.
+    """Run one structured model request, retrying malformed output exactly once.
 
     Each subprocess attempt receives its own append-only ledger entry, including a
     failed first response before a corrective retry.
@@ -171,6 +210,7 @@ def call(
 
     schema_text, schema_data = _schema_text_and_data(schema)
     argv = build_argv(schema_text, model, effort=effort)
+    transport = _transport_for_model(model)
 
     with Ledger() as ledger:
         for attempt_index in range(2):
@@ -184,6 +224,7 @@ def call(
                     model=model,
                     stage=stage,
                     timeout_s=timeout_s,
+                    transport=transport,
                 ).result
             except MalformedOutputError:
                 if attempt_index == 1:
@@ -202,9 +243,10 @@ def _call_once(
     model: str,
     stage: str,
     timeout_s: float,
+    transport: str,
 ) -> _Attempt:
-    tokens = 0
-    cost_usd = 0.0
+    tokens: int | None = None if transport == "codex" else 0
+    cost_usd: float | None = None if transport == "codex" else 0.0
     started = perf_counter()
     deterministic_transport = bool(
         response_provider is not None
@@ -221,24 +263,32 @@ def _call_once(
                 timeout_s=timeout_s,
                 env=dict(os.environ),
             )
-            envelope_value = (
-                response_provider(request)
-                if response_provider is not None
-                else default_response_provider(request)
-            )
+            if response_provider is not None:
+                envelope_value = response_provider(request)
+            elif transport == "codex":
+                envelope_value = codex_response_provider(request)
+            else:
+                envelope_value = default_response_provider(request)
         except FileNotFoundError as error:
+            if transport == "codex":
+                raise CodexNotFoundError(
+                    "Codex CLI not found; install the OpenAI Codex CLI, run `codex login`, "
+                    "and check PATH before using a codex:<model> setting."
+                ) from error
             raise ClaudeNotFoundError(
                 "Claude CLI not found; install claude and check PATH before running s2s."
             ) from error
         except subprocess.TimeoutExpired as error:
-            raise LLMTimeout(f"Claude CLI timed out after {timeout_s:g}s.") from error
+            cli_name = "Codex" if transport == "codex" else "Claude"
+            raise LLMTimeout(f"{cli_name} CLI timed out after {timeout_s:g}s.") from error
 
         envelope = dict(envelope_value)
         if not isinstance(envelope, dict):
             raise MalformedOutputError("Claude CLI response must be a JSON object envelope.")
-        usage = envelope.get("usage", {})
-        tokens = _usage_tokens(usage)
-        cost_usd = _cost(envelope.get("total_cost_usd"))
+        if transport == "claude":
+            usage = envelope.get("usage", {})
+            tokens = _usage_tokens(usage)
+            cost_usd = _cost(envelope.get("total_cost_usd"))
         if "result" not in envelope:
             raise MalformedOutputError("Claude CLI response did not include a result.")
         result = envelope["result"]
@@ -264,6 +314,7 @@ def _call_once(
         ledger.log_run(
             stage=stage,
             model=model,
+            transport=transport,
             tokens=tokens,
             cost_usd=cost_usd,
             duration_ms=duration_ms,
@@ -273,7 +324,7 @@ def _call_once(
 
 @lru_cache(maxsize=1)
 def _neutral_cwd() -> str:
-    """An empty directory for claude subprocesses.
+    """An empty directory for model subprocesses.
 
     Running from a neutral cwd prevents `claude -p` from loading whatever
     project CLAUDE.md/skills surround the caller's working directory —
@@ -307,9 +358,18 @@ def _real_user_home() -> str:
 # including credentials, so a sandboxed value must never reach the transport;
 # a user's own pre-existing value must always be honored.
 _PROCESS_START_CLAUDE_CONFIG_DIR = os.environ.get("CLAUDE_CONFIG_DIR")
+_PROCESS_START_CODEX_HOME = os.environ.get("CODEX_HOME")
 
 
 def default_response_provider(request: LLMRequest) -> dict[str, object]:
+    """Route a live request for eval wrappers that install the default provider."""
+
+    if _transport_for_model(request.model) == "codex":
+        return codex_response_provider(request)
+    return claude_response_provider(request)
+
+
+def claude_response_provider(request: LLMRequest) -> dict[str, object]:
     """Execute the real Claude transport and return its parsed JSON envelope."""
 
     env = dict(request.env)
@@ -360,6 +420,90 @@ def default_response_provider(request: LLMRequest) -> dict[str, object]:
     return parsed
 
 
+def _openai_strict_schema(schema: dict[str, object]) -> dict[str, object]:
+    """Transform a schema to OpenAI structured-output strict form.
+
+    Strict mode requires ``additionalProperties: false`` on every object and
+    every property listed in ``required``. Anthropic's validation is looser,
+    so schemas written for the claude transport fail codex verbatim
+    (live finding: invalid_json_schema).
+    """
+
+    def walk(node: object) -> object:
+        if isinstance(node, dict):
+            out = {key: walk(value) for key, value in node.items()}
+            if out.get("type") == "object":
+                out.setdefault("properties", {})
+                out["additionalProperties"] = False
+                out["required"] = sorted(out["properties"].keys())
+            return out
+        if isinstance(node, list):
+            return [walk(item) for item in node]
+        return node
+
+    return walk(schema)  # type: ignore[return-value]
+
+
+def codex_response_provider(request: LLMRequest) -> dict[str, object]:
+    """Execute an opt-in Codex transport and normalize its final JSON result.
+
+    Codex's ``--json`` stream is useful diagnostics but is not a Claude-style
+    response envelope.  ``--output-last-message`` gives us the exact assistant
+    result, while ``--output-schema`` asks the CLI to constrain it before the
+    existing local validator and one corrective retry run.
+    """
+
+    env = dict(request.env)
+    env["HOME"] = _real_user_home()
+    if _PROCESS_START_CODEX_HOME is None:
+        env.pop("CODEX_HOME", None)
+    else:
+        env["CODEX_HOME"] = _PROCESS_START_CODEX_HOME
+
+    with tempfile.TemporaryDirectory(prefix="s2s-codex-call-", dir=_neutral_cwd()) as directory:
+        temporary_dir = Path(directory)
+        schema_path = temporary_dir / "output.schema.json"
+        output_path = temporary_dir / "last-message.json"
+        schema_path.write_text(
+            json.dumps(_openai_strict_schema(dict(request.schema)), separators=(",", ":")),
+            encoding="utf-8",
+        )
+        argv = list(request.argv)
+        stdin_marker = argv.pop() if argv and argv[-1] == "-" else None
+        argv.extend(("--output-schema", str(schema_path), "--output-last-message", str(output_path)))
+        if stdin_marker is not None:
+            argv.append(stdin_marker)
+
+        completed = subprocess.run(
+            argv,
+            input=request.prompt,
+            capture_output=True,
+            text=True,
+            timeout=request.timeout_s,
+            check=False,
+            env=env,
+            cwd=_neutral_cwd(),
+        )
+        if completed.returncode != 0:
+            stderr = completed.stderr.strip()
+            stdout_head = completed.stdout.strip()[:500]
+            detail = "".join(
+                part
+                for part in (
+                    f": {stderr}" if stderr else "",
+                    f" [stdout: {stdout_head}]" if stdout_head else "",
+                )
+            )
+            raise LLMError(f"Codex CLI exited with status {completed.returncode}{detail}")
+        try:
+            final_message = output_path.read_text(encoding="utf-8")
+        except OSError as error:
+            raise MalformedOutputError(
+                "Codex CLI did not write its final response to --output-last-message."
+            ) from error
+        return {"result": _parse_json(final_message, "Codex result")}
+
+
 def load_prompt(name: str, version: int | str) -> tuple[str, dict[str, object]]:
     """Load a versioned prompt and its sibling JSON-schema asset."""
 
@@ -397,7 +541,7 @@ def estimate_and_confirm(n_calls: int, model: str, *, assume_yes: bool = False) 
 
     if n_calls < 0:
         raise ValueError("n_calls cannot be negative")
-    per_call = _estimated_call_cost(model)
+    per_call = estimated_call_cost(model)
     total = n_calls * per_call
     threshold = load_config().costs.confirm_threshold_usd
     print(
@@ -536,9 +680,17 @@ def _same_json_value(left: object, right: object) -> bool:
     return left == right
 
 
-def _estimated_call_cost(model: str) -> float:
+def estimated_call_cost(model: str) -> float:
+    """Return the documented preflight guess for one model call."""
+
+    if model.lower().startswith(CODEX_MODEL_PREFIX):
+        return CODEX_FLAT_CALL_ESTIMATE_USD
     normalized = model.lower()
     for family, cost in ESTIMATED_CALL_COST_USD.items():
         if family in normalized:
             return cost
     return ESTIMATED_CALL_COST_USD["sonnet"]
+
+
+def _transport_for_model(model: str) -> str:
+    return "codex" if model.startswith(CODEX_MODEL_PREFIX) else "claude"

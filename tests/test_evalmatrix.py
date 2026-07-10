@@ -53,11 +53,15 @@ def test_matrix_pins_v2_prompt_and_writes_comparative_artifacts(tmp_path: Path) 
 
     result = evalrun.run_matrix(
         evalrun.EvalRunConfig(corpus=CORPUS, mode="live", assume_yes=True, output_root=tmp_path),
-        (_profile("baseline"), _profile("v2", triage_version="v2", synth_model="opus")),
+        (_profile("baseline", triage_version="v2"), _profile("v1-arm", triage_version="v1", synth_model="opus")),
         live_provider=recorder,
     )
     markdown = result.report_markdown_path.read_text(encoding="utf-8")
-    assert any("V2 TEST FIXTURE PROMPT" in prompt for prompt in prompts)
+    triage_prompts = [prompt for prompt in prompts if "one_liner" in prompt]
+    # Version threading proven with the real prompt files: the default (v2)
+    # carries the authenticity checklist; the arm pinned to v1 must not.
+    assert any("AUTHENTICITY CHECKLIST" in prompt for prompt in triage_prompts)
+    assert any("AUTHENTICITY CHECKLIST" not in prompt for prompt in triage_prompts)
     assert result.report_html_path.is_file()
     assert "| detection_recall |" in markdown
     assert "Overfitting hazard" in markdown

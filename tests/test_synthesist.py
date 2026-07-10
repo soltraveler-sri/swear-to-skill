@@ -6,7 +6,12 @@ from pathlib import Path
 import pytest
 
 from s2s.ledger import Ledger
-from s2s.synthesist import SynthesisValidationError, parse_skill_markdown, synthesize_pending
+from s2s.synthesist import (
+    SynthesisValidationError,
+    collect_remedy_surface,
+    parse_skill_markdown,
+    synthesize_pending,
+)
 
 
 def _envelope(result: dict[str, object]) -> dict[str, object]:
@@ -219,6 +224,20 @@ def test_prompt_contains_injectable_existing_remedy_digests(ledger: Ledger, mock
     assert f"[R3] proposal #{existing}" in prompt
     assert "name=existing-rule | description=Use when an existing remedy applies." in prompt
     assert "managed rule" in prompt and "Prior hook" in prompt
+
+
+def test_skill_surface_dedup_normalizes_generated_prefix(ledger: Ledger, tmp_path: Path) -> None:
+    skills = tmp_path / "skills"
+    skill_file = skills / "s2s-scope-check" / "SKILL.md"
+    skill_file.parent.mkdir(parents=True)
+    skill_file.write_text(
+        "---\nname: s2s-scope-check\ndescription: Use when scope needs checking.\n---\n# Scope\n",
+        encoding="utf-8",
+    )
+
+    surface = collect_remedy_surface(ledger, skills_dir=skills)
+
+    assert surface.skills[0][1].startswith("name=scope-check |")
 
 
 @pytest.mark.parametrize("use_reference_id", [True, False])

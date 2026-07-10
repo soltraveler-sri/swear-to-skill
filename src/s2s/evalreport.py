@@ -152,7 +152,11 @@ def _metric_value(scores: Mapping[str, object], name: str) -> float:
 
 
 def _run_cost(record: Mapping[str, object]) -> float:
-    return sum(float(row.get("cost_usd", 0.0)) for row in _rows(record, "llm_run_log"))
+    return sum(
+        float(value)
+        for row in _rows(record, "llm_run_log")
+        if isinstance((value := row.get("cost_usd")), (int, float))
+    )
 
 
 def _run_duration(record: Mapping[str, object]) -> float:
@@ -311,6 +315,7 @@ def render_markdown(
                 f"{metric.get('op', '')} {_number(metric.get('threshold'))} | "
                 f"{_metric_verdict(metric)} |"
             )
+        lines.extend(_markdown_convergence_components(scores))
     lines.extend(_markdown_excerpts("Narrative excerpts", excerpts))
     if spotlights:
         lines.extend(["", "## Failure spotlights"])
@@ -337,6 +342,7 @@ def render_html(
     """Return a complete offline document with no external assets or references."""
 
     score_section = _html_scores(scores, verdict)
+    convergence_section = _html_convergence_components(scores, verdict)
     excerpt_section = "".join(_html_excerpt(excerpt) for excerpt in excerpts) or "<p class=muted>No traceable excerpts were available.</p>"
     spotlight_section = ""
     if spotlights:
@@ -361,6 +367,7 @@ def render_html(
 <header><div class="eyebrow">swear-to-skill / synthetic eval</div><h1>Greenlight report</h1><div class="banner {_banner_class(verdict)}">{escape(_banner_text(verdict))}</div><p class="muted">{escape(_metadata_summary(record, judge, thresholds_file, override))}</p></header>
 <section><h2>Run metadata</h2><div class="card">{_html_metadata(record, judge, thresholds_file, override)}</div></section>
 {score_section}
+{convergence_section}
 <section><h2>Narrative excerpts</h2>{excerpt_section}</section>
 {spotlight_section}
 <footer><strong>Honest limits.</strong> {escape(HONEST_LIMITS)}</footer>
@@ -477,6 +484,56 @@ def _html_scores(scores: Mapping[str, object], verdict: str) -> str:
         for metric in _rows(scores, "metrics")
     )
     return f"<section><h2>Thresholds</h2><div class=card><table><thead><tr><th>Metric</th><th>Value</th><th>Threshold</th><th>Verdict</th></tr></thead><tbody>{rows}</tbody></table></div></section>"
+
+
+def _convergence_clusters(scores: Mapping[str, object]) -> list[Mapping[str, object]]:
+    metric = next((row for row in _rows(scores, "metrics") if row.get("metric") == "convergence"), None)
+    clusters = metric.get("clusters") if isinstance(metric, Mapping) else None
+    return [item for item in clusters if isinstance(item, Mapping)] if isinstance(clusters, list) else []
+
+
+def _markdown_convergence_components(scores: Mapping[str, object]) -> list[str]:
+    clusters = _convergence_clusters(scores)
+    if not any("post_curation_unified" in cluster for cluster in clusters):
+        return []
+    lines = ["", "## Convergence composition", "", "| Cluster | Triage-label share | Post-curation unification | Verdict |", "| --- | ---: | --- | --- |"]
+    for cluster in clusters:
+        unified = bool(cluster.get("post_curation_unified"))
+        clean = bool(cluster.get("post_curation_clean"))
+        group = cluster.get("promotion_group_id")
+        contamination = ", ".join(str(value) for value in _int_list(cluster.get("contaminating_incident_ids")))
+        cleanliness = "clean" if clean else f"contaminated: {contamination or 'unknown'}"
+        unification = "not unified" if not unified else f"proposal {group}; {cleanliness}"
+        lines.append(
+            f"| {cluster.get('cluster', 'unknown')} | {_number(cluster.get('triage_label_share'))} | "
+            f"{unification} | {'converged' if cluster.get('converged') else 'not converged'} |"
+        )
+    return lines
+
+
+def _html_convergence_components(scores: Mapping[str, object], verdict: str) -> str:
+    if verdict == "WIRING CHECK ONLY":
+        return ""
+    clusters = _convergence_clusters(scores)
+    if not any("post_curation_unified" in cluster for cluster in clusters):
+        return ""
+    rows = []
+    for cluster in clusters:
+        unified = bool(cluster.get("post_curation_unified"))
+        clean = bool(cluster.get("post_curation_clean"))
+        group = cluster.get("promotion_group_id")
+        contamination = ", ".join(str(value) for value in _int_list(cluster.get("contaminating_incident_ids")))
+        cleanliness = "clean" if clean else f"contaminated: {contamination or 'unknown'}"
+        unification = "not unified" if not unified else f"proposal {group}; {cleanliness}"
+        rows.append(
+            "<tr>"
+            f"<td>{escape(str(cluster.get('cluster', 'unknown')))}</td>"
+            f"<td>{escape(_number(cluster.get('triage_label_share')))}</td>"
+            f"<td>{escape(unification)}</td>"
+            f"<td>{'converged' if cluster.get('converged') else 'not converged'}</td>"
+            "</tr>"
+        )
+    return "<section><h2>Convergence composition</h2><div class=card><table><thead><tr><th>Cluster</th><th>Triage-label share</th><th>Post-curation unification</th><th>Verdict</th></tr></thead><tbody>" + "".join(rows) + "</tbody></table></div></section>"
 
 
 def _metric_verdict(metric: Mapping[str, object]) -> str:

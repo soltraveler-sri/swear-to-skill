@@ -177,13 +177,76 @@ def test_each_rendered_prompt_contains_only_its_own_incident_context(
 
 def test_rendered_prompt_never_asks_the_forbidden_structural_questions(ledger: Ledger) -> None:
     _archive_and_detect(ledger, ["One incident only."])
-    template, _ = load_prompt("triage", 1)
+    template, _ = load_prompt("triage", 2)
     pack = build_context_pack(
         Path(ledger.path).parent / "archive" / "project-a" / "session-1.jsonl", "incident-0"
     )
     prompt = render_triage_prompt(template, pack).casefold()
 
     assert all(forbidden not in prompt for forbidden in ("similar to", "same as", "compare"))
+
+
+def test_triage_v2_pins_authenticity_checklist_and_label_discipline() -> None:
+    template, _ = load_prompt("triage", 2)
+
+    required = (
+        "AUTHENTICITY CHECKLIST:",
+        "Quoted or reported speech:",
+        "Third-party-tool venting:",
+        "Self-directed annoyance:",
+        "Playful or ironic profanity:",
+        "LABEL DISCIPLINE: identify the 2-3 closest labels, test each against the gists; "
+        "when torn: ignored-instruction requires an explicit violated instruction; "
+        "scope-deviation means more or less than asked with NO violated instruction.",
+        "The supplied menu is a closed enum: do not invent or rename labels.",
+        "This call covers exactly one incident. Never match it to another incident or make grouping decisions.",
+    )
+
+    assert all(pin in template for pin in required)
+    assert template.count("Example:") == 4
+    assert template.count("Counter-example:") == 4
+
+
+def test_triage_v2_contains_no_verbatim_eval_corpus_message() -> None:
+    template, _ = load_prompt("triage", 2)
+    corpus = Path(__file__).parents[1] / "evals" / "corpus" / "v1"
+    messages: list[str] = []
+    for path in corpus.rglob("*.jsonl"):
+        for line in path.read_text(encoding="utf-8").splitlines():
+            record = json.loads(line)
+            message = record.get("message")
+            if isinstance(message, dict) and isinstance(message.get("content"), str):
+                messages.append(message["content"])
+            payload = record.get("payload")
+            if isinstance(payload, dict) and payload.get("type") == "user_message" and isinstance(payload.get("message"), str):
+                messages.append(payload["message"])
+            if isinstance(record.get("text"), str):
+                messages.append(record["text"])
+
+    assert messages
+    assert all(message not in template for message in messages)
+
+
+def test_triager_uses_the_configured_prompt_version_via_mock_recorder(
+    ledger: Ledger, mock_claude
+) -> None:
+    _archive_and_detect(ledger, ["The assistant ignored my constraint."], session="default-v2")
+    mock_claude.enqueue_response(_response())
+
+    triage_pending(ledger, assume_yes=True)
+
+    default_prompt = str(mock_claude.invocations()[0]["stdin"])
+    assert "AUTHENTICITY CHECKLIST:" in default_prompt
+
+    config = Path(ledger.path).parent / "config.toml"
+    config.write_text("[prompts]\ntriage = 'v1'\n", encoding="utf-8")
+    _archive_and_detect(ledger, ["The assistant ignored my second constraint."], session="override-v1")
+    mock_claude.enqueue_response(_response())
+
+    triage_pending(ledger, assume_yes=True)
+
+    overridden_prompt = str(mock_claude.invocations()[1]["stdin"])
+    assert "AUTHENTICITY CHECKLIST:" not in overridden_prompt
 
 
 def test_dynamic_schema_uses_the_current_taxonomy_menu() -> None:

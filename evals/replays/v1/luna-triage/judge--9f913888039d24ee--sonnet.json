@@ -1,0 +1,219 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "9f913888039d24ee",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Grade the proposed remedy, not the\nwriting style of this prompt. A good remedy changes a concrete future behavior,\nis broad enough to cover the failure mode without becoming a platitude, uses a\nreal `Use when ...` trigger when it is a skill, leaks no evidence-specific\nproject nouns into the remedy text, and uses the cheapest adequate remedy type.\n\nScore every dimension from 1 (poor) to 5 (excellent). Give exactly one concise\nsentence of justification for each score. Do not infer facts that are absent.\n\nPROPOSAL:\n{\n  \"confidence\": 0.78,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"R1 (fake-verify-before-claim skill) triggers on exactly this pattern: a completion claim made without running the required verification. Same failure mode as this cluster, but the cheaper existing remedy for it is the R2 claude-md rule, not a skill — consistent with how R6 and R8 already resolved this same tension.\",\n      \"verdict\": \"overlap\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"R2 (Fake Release Discipline) already requires running a declared verification command before reporting completion. This cluster is the same failure mode, just broader than 'release' (covers fixes, lint, test suites, repairs) — this proposal is a revision/broadening of R2, the direct merge target.\",\n      \"verdict\": \"overlap\"\n    },\n    {\n      \"existing\": \"R3\",\n      \"reason\": \"R3 covers unauthorized deletion of content despite a stated constraint, a destructive-action failure, not a verification-before-claiming-done failure.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R4\",\n      \"reason\": \"R4 covers acting in the wrong branch/workspace in the first place, an environment-state failure, distinct from claiming a fix is verified when it wasn't.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R5\",\n      \"reason\": \"R5 covers solving/delivering the wrong scope of a request, a comprehension failure, not a false verification claim.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R6\",\n      \"reason\": \"R6 already identified this exact pattern (declaring a migration done while checks fail) as overlapping with R1 and chose to revise R2 instead. This cluster is the same failure mode; the eventual merge target remains R2, consistent with R6's resolution.\",\n      \"verdict\": \"overlap\"\n    },\n    {\n      \"existing\": \"R7\",\n      \"reason\": \"R7 covers silently omitting a specifically-requested output field, a request-comprehension/scope gap, not a false completion/verification claim.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R8\",\n      \"reason\": \"R8 is the same failure mode (a completion/verification claim made without actually verifying) and already chose R2 as the cheaper merge target over R1's skill format, matching this proposal's resolution.\",\n      \"verdict\": \"overlap\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 15,\n      \"quote\": \"That fix is not verified; the test command was never run.\"\n    },\n    {\n      \"incident_id\": 17,\n      \"quote\": \"Please stop claiming success without running the fake suite.\"\n    },\n    {\n      \"incident_id\": 13,\n      \"quote\": \"You did not run the fake lint before saying it passed.\"\n    },\n    {\n      \"incident_id\": 30,\n      \"quote\": \"You told me it was fixed before any fake check ran.\"\n    },\n    {\n      \"incident_id\": 32,\n      \"quote\": \"Show me evidence before calling this repaired.\"\n    }\n  ],\n  \"failure_statement\": \"The agent reports a fix, repair, or change as complete/passing/verified without actually running the declared verification command (tests, lint, build check) first, so the claim turns out false when the user checks.\",\n  \"overlap_action\": {\n    \"revises\": \"claude-md:$HOME/.claude/CLAUDE.md#1\"\n  },\n  \"remedy_content\": {\n    \"path\": \"$HOME/.claude/CLAUDE.md\",\n    \"target\": \"global\",\n    \"text\": \"# Verification Before Completion Claims\\n\\nBefore reporting any fix, repair, change, or release as complete, passing, or verified, actually run its declared verification command (tests, lint, build, or check) in this session and report the true result plainly. Never assert something is fixed or verified based on inspection or assumption alone.\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"This cluster (incidents 15, 17, 13, 30, 32) is the canonical unverified-change pattern: claiming a fix/success/repair complete without running the declared verification command (test suite, lint, check). This is exactly the failure mode already covered by the existing skill R1 (fake-verify-before-claim) and the existing claude-md rule R2 (Fake Release Discipline), and by pending proposals R6 and R8 which both already chose to revise R2 rather than adopt R1's skill format — a claude-md one-liner is cheaper than a skill and fully mechanical (run the command, report the true result), so no procedural multi-step skill is warranted. Following that established precedent, this proposal revises R2 again, broadening its scope from \\\"release\\\" specifically to any fix/change/check claim, since these incidents span test suites, lint, and repair claims, not just releases. Per merge-bias-is-law, since R1, R2, R6, and R8 all verdict as overlap, this is a revision of R2 (the root claude-md target), not a new sibling.\",\n  \"singleton\": false\n}\n",
+    "schema": {
+      "properties": {
+        "actionability": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "generality_without_vagueness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "leakage": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "routing_fitness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "trigger_quality": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "actionability",
+        "generality_without_vagueness",
+        "trigger_quality",
+        "leakage",
+        "routing_fitness"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 25621,
+    "duration_ms": 25818,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 5189,
+        "cacheReadInputTokens": 28511,
+        "contextWindow": 1000000,
+        "costUSD": 0.0952413,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 2350,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"actionability\":{\"score\":5,\"justification\":\"The remedy specifies a concrete, checkable behavior change: run the declared verification command in-session and report the true result before claiming any fix/change is complete, which directly targets the observed failure of asserting success without running checks.\"},\"generality_without_vagueness\":{\"score\":4,\"justification\":\"Broadening from 'release' to any fix/repair/change/check claim covers the evidence cluster (test suites, lint, repairs) while still naming concrete artifacts (tests, lint, build, check) rather than collapsing into an empty platitude.\"},\"trigger_quality\":{\"score\":4,\"justification\":\"As a claude-md rule rather than a skill it has no formal 'Use when...' clause, but the activating condition is stated plainly and unambiguously inline ('before reporting any fix, repair, change, or release as complete, passing, or verified').\"},\"leakage\":{\"score\":5,\"justification\":\"The remedy text uses only generic terms (tests, lint, build, check) and omits the evidence quotes' idiosyncratic 'fake suite/lint/check' phrasing, so no evidence-specific nouns leak into the durable rule.\"},\"routing_fitness\":{\"score\":5,\"justification\":\"Consistent with the dedup analysis showing R1/R2/R6/R8 as the same overlapping failure mode, the proposal correctly merges into the cheaper always-loaded claude-md rule (R2) rather than spawning a redundant skill, matching prior merge precedent for this cluster.\"}}",
+    "session_id": "935ff78e-b8b3-4178-ab58-67c5db8326b6",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "actionability": {
+        "justification": "The remedy specifies a concrete, checkable behavior change: run the declared verification command in-session and report the true result before claiming any fix/change is complete, which directly targets the observed failure of asserting success without running checks.",
+        "score": 5
+      },
+      "generality_without_vagueness": {
+        "justification": "Broadening from 'release' to any fix/repair/change/check claim covers the evidence cluster (test suites, lint, repairs) while still naming concrete artifacts (tests, lint, build, check) rather than collapsing into an empty platitude.",
+        "score": 4
+      },
+      "leakage": {
+        "justification": "The remedy text uses only generic terms (tests, lint, build, check) and omits the evidence quotes' idiosyncratic 'fake suite/lint/check' phrasing, so no evidence-specific nouns leak into the durable rule.",
+        "score": 5
+      },
+      "routing_fitness": {
+        "justification": "Consistent with the dedup analysis showing R1/R2/R6/R8 as the same overlapping failure mode, the proposal correctly merges into the cheaper always-loaded claude-md rule (R2) rather than spawning a redundant skill, matching prior merge precedent for this cluster.",
+        "score": 5
+      },
+      "trigger_quality": {
+        "justification": "As a claude-md rule rather than a skill it has no formal 'Use when...' clause, but the activating condition is stated plainly and unambiguously inline ('before reporting any fix, repair, change, or release as complete, passing, or verified').",
+        "score": 4
+      }
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 112,
+    "total_cost_usd": 0.0952413,
+    "ttft_ms": 20754,
+    "ttft_stream_ms": 1935,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 5189,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 5189,
+      "cache_read_input_tokens": 28511,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 5189,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 5189,
+          "cache_read_input_tokens": 28511,
+          "input_tokens": 6768,
+          "output_tokens": 2350,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 2350,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "ac536cac-8583-4240-bb5b-bb8ce3366336"
+  }
+}

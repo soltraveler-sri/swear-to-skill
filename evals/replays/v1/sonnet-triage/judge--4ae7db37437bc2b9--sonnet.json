@@ -1,0 +1,219 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "4ae7db37437bc2b9",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Grade the proposed remedy, not the\nwriting style of this prompt. A good remedy changes a concrete future behavior,\nis broad enough to cover the failure mode without becoming a platitude, uses a\nreal `Use when ...` trigger when it is a skill, leaks no evidence-specific\nproject nouns into the remedy text, and uses the cheapest adequate remedy type.\n\nScore every dimension from 1 (poor) to 5 (excellent). Give exactly one concise\nsentence of justification for each score. Do not infer facts that are absent.\n\nPROPOSAL:\n{\n  \"failure_statement\": \"Completion was claimed without a relevant verification result.\",\n  \"remedy_content\": {\n    \"body\": \"Run the relevant checks, record their outcome, and report any unavailable check before making a success claim.\",\n    \"description\": \"Use when reporting a completed code change or fix.\",\n    \"name\": \"verify-before-claim\"\n  },\n  \"remedy_type\": \"skill\",\n  \"routing_rationale\": \"Verification needs a repeatable multi-step procedure, so a skill is justified.\"\n}\n",
+    "schema": {
+      "properties": {
+        "actionability": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "generality_without_vagueness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "leakage": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "routing_fitness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "trigger_quality": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "actionability",
+        "generality_without_vagueness",
+        "trigger_quality",
+        "leakage",
+        "routing_fitness"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 21555,
+    "duration_ms": 21757,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 3667,
+        "cacheReadInputTokens": 28513,
+        "contextWindow": 1000000,
+        "costUSD": 0.08144490000000001,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 2039,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"actionability\":{\"score\":2,\"justification\":\"The body says to \\\"run the relevant checks\\\" and \\\"record their outcome\\\" but never specifies which checks, how to run them, or what \\\"recording\\\" means, so it reads as an intention rather than an executable procedure.\"},\"generality_without_vagueness\":{\"score\":2,\"justification\":\"It is broad enough to cover any completion claim, but \\\"relevant checks\\\" is left undefined with no branching for what counts as relevant or how to handle ambiguous cases, tipping it into platitude territory.\"},\"trigger_quality\":{\"score\":4,\"justification\":\"\\\"Use when reporting a completed code change or fix\\\" is a concrete, recognizable moment that maps directly onto the failure statement.\"},\"leakage\":{\"score\":5,\"justification\":\"The remedy text contains no project-specific nouns, file names, or evidence-specific details — it is fully generic.\"},\"routing_fitness\":{\"score\":2,\"justification\":\"The routing rationale asserts a \\\"repeatable multi-step procedure\\\" but the body is a single generic sentence with no steps, script, or checklist, so a lighter-weight rule/memory note would likely serve as well as a full skill.\"}}",
+    "session_id": "425069cd-d50c-4ffe-948d-c250b3f62887",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "actionability": {
+        "justification": "The body says to \"run the relevant checks\" and \"record their outcome\" but never specifies which checks, how to run them, or what \"recording\" means, so it reads as an intention rather than an executable procedure.",
+        "score": 2
+      },
+      "generality_without_vagueness": {
+        "justification": "It is broad enough to cover any completion claim, but \"relevant checks\" is left undefined with no branching for what counts as relevant or how to handle ambiguous cases, tipping it into platitude territory.",
+        "score": 2
+      },
+      "leakage": {
+        "justification": "The remedy text contains no project-specific nouns, file names, or evidence-specific details — it is fully generic.",
+        "score": 5
+      },
+      "routing_fitness": {
+        "justification": "The routing rationale asserts a \"repeatable multi-step procedure\" but the body is a single generic sentence with no steps, script, or checklist, so a lighter-weight rule/memory note would likely serve as well as a full skill.",
+        "score": 2
+      },
+      "trigger_quality": {
+        "justification": "\"Use when reporting a completed code change or fix\" is a concrete, recognizable moment that maps directly onto the failure statement.",
+        "score": 4
+      }
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 112,
+    "total_cost_usd": 0.08144490000000001,
+    "ttft_ms": 20260,
+    "ttft_stream_ms": 1582,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 3667,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 3667,
+      "cache_read_input_tokens": 28513,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 3667,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 3667,
+          "cache_read_input_tokens": 28513,
+          "input_tokens": 6768,
+          "output_tokens": 2039,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 2039,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "fefe06eb-c3da-4e5f-ab81-9fc24b403d5c"
+  }
+}

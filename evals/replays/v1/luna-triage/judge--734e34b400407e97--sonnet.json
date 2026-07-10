@@ -1,0 +1,219 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "734e34b400407e97",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Grade the proposed remedy, not the\nwriting style of this prompt. A good remedy changes a concrete future behavior,\nis broad enough to cover the failure mode without becoming a platitude, uses a\nreal `Use when ...` trigger when it is a skill, leaks no evidence-specific\nproject nouns into the remedy text, and uses the cheapest adequate remedy type.\n\nScore every dimension from 1 (poor) to 5 (excellent). Give exactly one concise\nsentence of justification for each score. Do not infer facts that are absent.\n\nPROPOSAL:\n{\n  \"confidence\": 0.6,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"R1 (fake-verify-before-claim) targets verifying completion claims (e.g. running declared test commands) before reporting done — an honesty/verification-of-result failure. This cluster is about acting in the wrong branch/workspace in the first place, a distinct environment-state failure, not a verification-of-claim failure.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"R2 (Fake Release Discipline) is about running a declared verification command before reporting a release complete — same verification-before-claiming category as R1. This cluster's incidents involve no release-completion claims, only wrong branch/workspace usage.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R3\",\n      \"reason\": \"R3 (pending claude-md proposal) addresses unauthorized deletion of content despite a stated constraint — a destructive-action failure mode. This cluster's incidents involve no deletion or destructive action, only operating in an incorrect branch/workspace/directory relative to what the user specified.\",\n      \"verdict\": \"clear\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 16,\n      \"quote\": \"Why are you doing this from the stale fake branch?\"\n    },\n    {\n      \"incident_id\": 22,\n      \"quote\": \"You did not use the /work/fake-lantern workspace requested.\"\n    },\n    {\n      \"incident_id\": 23,\n      \"quote\": \"You did not use the /work/fake-lantern workspace requested.\"\n    },\n    {\n      \"incident_id\": 6,\n      \"quote\": \"Read the prompt: this is the wrong fake environment.\"\n    },\n    {\n      \"incident_id\": 7,\n      \"quote\": \"Read the prompt: this is the wrong fake environment.\"\n    }\n  ],\n  \"failure_statement\": \"The agent began or continued work in an incorrect environment — a stale branch, a default/cached directory, or the wrong workspace path — instead of the specific branch or workspace the user had named, without first checking current state (pwd/branch) against the user's instruction.\",\n  \"remedy_content\": {\n    \"target\": \"global\",\n    \"text\": \"# Verify Working Environment Before Acting\\n\\nWhen a user names a specific branch or workspace path (e.g. \\\"use /work/foo\\\", \\\"on the release branch\\\"), confirm your current state matches it (`pwd`, `git branch --show-current`, etc.) before making changes. If it doesn't match, switch to the named one or ask — never proceed on a stale, cached, or default environment and assume it's correct.\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"All five promoted incidents (harbor#16, lantern#22/23, aurora#6/7) share one root cause: the agent acted (or claimed to act) using the wrong branch, directory, or workspace path instead of the one the user explicitly named (\\\"stale fake branch\\\", \\\"/work/fake-lantern workspace\\\", \\\"wrong fake environment\\\"). This is a single failure mode, not heterogeneous evidence, so no split is warranted. A hook is not viable because there is no generic mechanical check for \\\"is this the environment the user meant\\\" — the correct branch/workspace name is contextual to each request, not a fixed pattern a script can verify. It is not procedural/multi-step enough to justify a skill (no branching logic, tool sequence, or multi-step workflow — just a habit of checking state before acting). A short standing instruction to confirm current working context (pwd/branch/workspace) against what the user specified, before making changes, is the cheapest fix and directly targets the failure. None of the three existing remedies address environment/workspace verification (R1 and R2 are about verifying completion claims via test/release commands; R3 is about unauthorized destructive deletion despite a stated constraint), so this is a new global rule, not a revision.\",\n  \"singleton\": false\n}\n",
+    "schema": {
+      "properties": {
+        "actionability": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "generality_without_vagueness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "leakage": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "routing_fitness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "trigger_quality": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "actionability",
+        "generality_without_vagueness",
+        "trigger_quality",
+        "leakage",
+        "routing_fitness"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 27818,
+    "duration_ms": 28031,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 4820,
+        "cacheReadInputTokens": 28511,
+        "contextWindow": 1000000,
+        "costUSD": 0.0941973,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 2428,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"actionability\":{\"score\":5,\"justification\":\"The remedy specifies a concrete pre-action check (pwd, git branch --show-current) with a clear branching behavior (switch or ask) rather than a vague admonition to \\\"be careful,\\\" so it directly changes what the agent does before making changes.\"},\"generality_without_vagueness\":{\"score\":5,\"justification\":\"It covers the whole failure class (stale branch, cached directory, wrong workspace path) with a single testable condition — 'current state matches what the user named' — without collapsing into an unfalsifiable platitude like 'be mindful of your environment.'\"},\"trigger_quality\":{\"score\":4,\"justification\":\"As a claude-md rule rather than a skill it has no formal 'Use when ...' header, but the opening clause ('When a user names a specific branch or workspace path...') functions as a clear, well-scoped trigger condition.\"},\"leakage\":{\"score\":5,\"justification\":\"The text uses only generic placeholder examples ('/work/foo', 'the release branch') and contains none of the evidence-specific nouns (fake-lantern, aurora, harbor) from the source incidents.\"},\"routing_fitness\":{\"score\":4,\"justification\":\"The routing rationale correctly rules out a hook (no fixed pattern can define 'the environment the user meant') and a skill (no multi-step procedure), leaving a short standing global instruction as the cheapest adequate mechanism, though it's a judgment call whether this belongs in global CLAUDE.md versus a narrower per-project note.\"}}",
+    "session_id": "e3268c79-a1d3-47a0-9fd7-f86ce63f8a93",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "actionability": {
+        "justification": "The remedy specifies a concrete pre-action check (pwd, git branch --show-current) with a clear branching behavior (switch or ask) rather than a vague admonition to \"be careful,\" so it directly changes what the agent does before making changes.",
+        "score": 5
+      },
+      "generality_without_vagueness": {
+        "justification": "It covers the whole failure class (stale branch, cached directory, wrong workspace path) with a single testable condition — 'current state matches what the user named' — without collapsing into an unfalsifiable platitude like 'be mindful of your environment.'",
+        "score": 5
+      },
+      "leakage": {
+        "justification": "The text uses only generic placeholder examples ('/work/foo', 'the release branch') and contains none of the evidence-specific nouns (fake-lantern, aurora, harbor) from the source incidents.",
+        "score": 5
+      },
+      "routing_fitness": {
+        "justification": "The routing rationale correctly rules out a hook (no fixed pattern can define 'the environment the user meant') and a skill (no multi-step procedure), leaving a short standing global instruction as the cheapest adequate mechanism, though it's a judgment call whether this belongs in global CLAUDE.md versus a narrower per-project note.",
+        "score": 4
+      },
+      "trigger_quality": {
+        "justification": "As a claude-md rule rather than a skill it has no formal 'Use when ...' header, but the opening clause ('When a user names a specific branch or workspace path...') functions as a clear, well-scoped trigger condition.",
+        "score": 4
+      }
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 97,
+    "total_cost_usd": 0.0941973,
+    "ttft_ms": 21359,
+    "ttft_stream_ms": 3024,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 4820,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 4820,
+      "cache_read_input_tokens": 28511,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 4820,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 4820,
+          "cache_read_input_tokens": 28511,
+          "input_tokens": 6768,
+          "output_tokens": 2428,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 2428,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "de8d889e-7978-4c55-9653-2f419e12796c"
+  }
+}

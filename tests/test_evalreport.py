@@ -104,6 +104,39 @@ def test_excluded_metric_renders_its_reason_as_info() -> None:
     assert "FAIL" not in markdown
 
 
+def test_report_renders_both_convergence_components() -> None:
+    scores = {
+        "status": "pass",
+        "metrics": [
+            {
+                "metric": "convergence",
+                "value": 1.0,
+                "threshold": 0.8,
+                "op": ">=",
+                "pass": True,
+                "evidence": [],
+                "clusters": [
+                    {
+                        "cluster": "ignored-instruction",
+                        "triage_label_share": 1 / 3,
+                        "post_curation_unified": True,
+                        "post_curation_clean": False,
+                        "promotion_group_id": 7,
+                        "contaminating_incident_ids": [4],
+                        "converged": False,
+                    }
+                ],
+            }
+        ],
+    }
+
+    markdown = evalreport.render_markdown({"mode": "replay"}, scores, {}, "PASS", (), (), Path("thresholds.toml"), False)
+    html = evalreport.render_html({"mode": "replay"}, scores, {}, "PASS", (), (), Path("thresholds.toml"), False)
+
+    assert "Convergence composition" in markdown and "Convergence composition" in html
+    assert "0.333" in markdown and "proposal 7; contaminated: 4" in markdown
+
+
 @pytest.mark.parametrize(
     ("verdict", "code"),
     [("PASS", 0), ("FAIL", 1), ("PARTIAL", 2), ("WIRING CHECK ONLY", 0)],

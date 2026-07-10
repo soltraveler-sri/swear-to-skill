@@ -23,6 +23,7 @@ from typing import Literal
 from unittest.mock import patch
 
 from . import llm
+from . import config as _config_module
 from . import evaljudge
 from .adapters import claude_code, codex
 from .archiver import archive_transcript, backfill
@@ -180,6 +181,17 @@ class EvalRunResult:
     detections: int
     triaged: int
     proposals: int
+
+
+@dataclass(frozen=True)
+class EvalRescoreResult:
+    """Artifacts refreshed from an already-completed eval record."""
+
+    record_path: Path
+    scores_path: Path
+    report_markdown_path: Path
+    report_html_path: Path
+    verdict: str
 
 
 def load_profile(name: str, *, root: Path = PROFILE_ROOT) -> EvalProfile:
@@ -410,7 +422,7 @@ class MockProvider:
     def _curate(self, prompt: str) -> dict[str, object]:
         verdicts: list[dict[str, object]] = []
         pack_pattern = re.compile(
-            r"BEGIN FULL CONTEXT PACK incident_id=(\d+) label=([^ ]+) origin=([^\n]+)\n"
+            r"BEGIN FULL CONTEXT PACK incident_id=(\d+) label=([^ ]+)[^\n]*? origin=([^\n]+)\n"
             r"(.*?)END FULL CONTEXT PACK incident_id=\1",
             re.DOTALL,
         )
@@ -634,6 +646,42 @@ def run_eval(
     return primary
 
 
+def rescore_run(
+    run_dir: Path,
+    *,
+    corpus: Path = DEFAULT_CORPUS,
+    thresholds_path: Path | None = None,
+) -> EvalRescoreResult:
+    """Refresh scores and report without rerunning an eval pipeline or judge.
+
+    The caller supplies an existing run directory, whose ``record.json`` and
+    ``judge-results.json`` remain the only run facts used by this operation.
+    """
+
+    record_path = Path(run_dir) / "record.json"
+    judge_path = record_path.with_name("judge-results.json")
+    if not record_path.is_file():
+        raise EvalRunError(f"rescore requires an existing record.json: {record_path}")
+    if not judge_path.is_file():
+        raise EvalRunError(f"rescore requires an existing judge-results.json: {judge_path}")
+    manifest_path = Path(corpus) / "manifest.json"
+    if not manifest_path.is_file():
+        raise EvalRunError(f"rescore requires corpus manifest: {manifest_path}")
+
+    from .evalreport import write_report
+    from .evalscore import score_files
+
+    score_files(record_path, manifest_path, thresholds_path=thresholds_path)
+    report = write_report(record_path, thresholds_path=thresholds_path)
+    return EvalRescoreResult(
+        record_path=record_path,
+        scores_path=record_path.with_name("scores.json"),
+        report_markdown_path=report.markdown_path,
+        report_html_path=report.html_path,
+        verdict=report.verdict,
+    )
+
+
 def run_matrix(
     config: EvalRunConfig,
     profiles: Sequence[EvalProfile],
@@ -697,7 +745,7 @@ def _matrix_live_estimate(config: EvalRunConfig, profiles: Sequence[EvalProfile]
     counts = estimate_call_counts(manifest, selected, judge_repeat=config.judge_repeat)
     stage_counts = {"triage": counts.triage, "curate": counts.curate, "synthesize": counts.synthesize, "judge": counts.judge}
     return sum(
-        stage_counts[stage] * llm.ESTIMATED_CALL_COST_USD.get(profile_stage.model, llm.ESTIMATED_CALL_COST_USD["sonnet"])
+        stage_counts[stage] * llm.estimated_call_cost(profile_stage.model)
         for profile in profiles
         for stage, profile_stage in (("triage", profile.triage), ("curate", profile.curate), ("synthesize", profile.synthesize), ("judge", profile.judge))
         if stage in config.stages or stage == "judge"
@@ -1112,8 +1160,21 @@ def _drive_pipeline(
             passes: list[dict[str, object]] = []
             with Ledger() as ledger:
                 while ledger.curator_unreviewed_incidents() or ledger.curator_qc_candidates():
+                    pending_before = len(ledger.curator_unreviewed_incidents()) + len(
+                        ledger.curator_qc_candidates()
+                    )
                     digest = render_ledger_digest(ledger)
                     result = run_pass(ledger, assume_yes=True)
+                    pending_after = len(ledger.curator_unreviewed_incidents()) + len(
+                        ledger.curator_qc_candidates()
+                    )
+                    if pending_after >= pending_before and not (
+                        result.applied_incident_verdicts or result.applied_cluster_verdicts
+                    ):
+                        raise EvalRunError(
+                            "curator pass made no progress; aborting instead of looping "
+                            f"(pending {pending_before} -> {pending_after})"
+                        )
                     passes.append(
                         {
                             "ledger_digest": digest,
@@ -1191,8 +1252,9 @@ def _capture_run_log(record: dict[str, object]) -> None:
                 "id": int(row["id"]),
                 "stage": str(row["stage"]),
                 "model": str(row["model"]),
-                "tokens": int(row["tokens"]),
-                "cost_usd": float(row["cost_usd"]),
+                "transport": str(row["transport"]),
+                "tokens": int(row["tokens"]) if row["tokens"] is not None else None,
+                "cost_usd": float(row["cost_usd"]) if row["cost_usd"] is not None else None,
                 "duration_ms": int(row["duration_ms"]),
                 "input_digest": str(row["input_digest"]),
                 "created_at": str(row["created_at"]),
@@ -1317,7 +1379,11 @@ def _fabricate_sandbox(
                 "[prompts]",
                 f'triage = {json.dumps(str(config.triage.prompt_version))}',
                 f'curate = {json.dumps(str(config.curate.prompt_version))}',
-                f'garden = {json.dumps(str(config.curate.prompt_version))}',
+                # Gardening is part of the curate pass but has its own prompt
+                # lineage; pinning it to curate's version breaks the moment the
+                # versions diverge (live finding: curate v2 exists, garden v2
+                # does not, and the miss only fires when gardening runs).
+                f'garden = {json.dumps(str(_config_module.Config().prompts.garden))}',
                 f'synthesize = {json.dumps(str(config.synthesize.prompt_version))}',
                 f'judge_remedy = {json.dumps(str(config.judge.prompt_version))}',
                 f'judge_counterfactual = {json.dumps(str(config.judge.prompt_version))}',

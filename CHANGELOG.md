@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented here.
 
+## 0.3.0 — 2026-07-10
+
+- Pipeline-generated skills carry an enforced `s2s-` name prefix and a
+  description provenance marker, so operators can identify them at a glance
+  (Claude Code discovers skills only via `skills/*/SKILL.md`, so provenance
+  must live in the name).
+- Changed the default triage model to Sonnet after measured golden-corpus results
+  showed cleaner remedy evidence; Haiku remains the explicitly selectable frugal arm.
+- Documented the live golden-corpus comparison and the Codex CLI transport arm for
+  `codex:gpt-5.6-luna`.
+
 ## 0.2.1 — 2026-07-10
 
 - Live-eval hardening: subscription-auth transport fixes (claude subprocess now

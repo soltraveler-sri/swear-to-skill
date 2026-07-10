@@ -1,0 +1,219 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "5a6db9e63544de93",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Grade the proposed remedy, not the\nwriting style of this prompt. A good remedy changes a concrete future behavior,\nis broad enough to cover the failure mode without becoming a platitude, uses a\nreal `Use when ...` trigger when it is a skill, leaks no evidence-specific\nproject nouns into the remedy text, and uses the cheapest adequate remedy type.\n\nScore every dimension from 1 (poor) to 5 (excellent). Give exactly one concise\nsentence of justification for each score. Do not infer facts that are absent.\n\nPROPOSAL:\n{\n  \"failure_statement\": \"Small requested changes expanded into rewrites.\",\n  \"remedy_content\": {\n    \"body\": \"Compare the work with the request before responding.\",\n    \"description\": \"Use for tasks.\",\n    \"name\": \"scope-check\"\n  },\n  \"remedy_type\": \"skill\",\n  \"routing_rationale\": \"A skill can guide scope management.\"\n}\n",
+    "schema": {
+      "properties": {
+        "actionability": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "generality_without_vagueness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "leakage": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "routing_fitness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "trigger_quality": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "actionability",
+        "generality_without_vagueness",
+        "trigger_quality",
+        "leakage",
+        "routing_fitness"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 14134,
+    "duration_ms": 14321,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 3621,
+        "cacheReadInputTokens": 28513,
+        "contextWindow": 1000000,
+        "costUSD": 0.0679989,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 1161,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"actionability\":{\"score\":1,\"justification\":\"\\\"Compare the work with the request before responding\\\" gives no concrete check (e.g., diff scope against explicit request, flag added files/refactors not asked for) so it won't reliably change behavior.\"},\"generality_without_vagueness\":{\"score\":1,\"justification\":\"The description \\\"Use for tasks\\\" and body are so generic they apply to literally every interaction, offering no specific guidance on what scope creep looks like or how to catch it.\"},\"trigger_quality\":{\"score\":1,\"justification\":\"\\\"Use for tasks\\\" is not a real 'Use when...' trigger — it fails to distinguish this skill from any other and gives the router no signal for when to invoke it.\"},\"leakage\":{\"score\":5,\"justification\":\"The remedy text contains no project-specific nouns or evidence details; it is generic to a fault, but at least nothing leaked.\"},\"routing_fitness\":{\"score\":2,\"justification\":\"A one-line behavioral rule about not over-expanding scope reads more like a feedback memory than a standalone skill, and as written the skill has no distinguishing trigger to justify the heavier remedy type.\"}}",
+    "session_id": "e2e5dfd3-3759-4992-b9af-598137ce377d",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "actionability": {
+        "justification": "\"Compare the work with the request before responding\" gives no concrete check (e.g., diff scope against explicit request, flag added files/refactors not asked for) so it won't reliably change behavior.",
+        "score": 1
+      },
+      "generality_without_vagueness": {
+        "justification": "The description \"Use for tasks\" and body are so generic they apply to literally every interaction, offering no specific guidance on what scope creep looks like or how to catch it.",
+        "score": 1
+      },
+      "leakage": {
+        "justification": "The remedy text contains no project-specific nouns or evidence details; it is generic to a fault, but at least nothing leaked.",
+        "score": 5
+      },
+      "routing_fitness": {
+        "justification": "A one-line behavioral rule about not over-expanding scope reads more like a feedback memory than a standalone skill, and as written the skill has no distinguishing trigger to justify the heavier remedy type.",
+        "score": 2
+      },
+      "trigger_quality": {
+        "justification": "\"Use for tasks\" is not a real 'Use when...' trigger — it fails to distinguish this skill from any other and gives the router no signal for when to invoke it.",
+        "score": 1
+      }
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 93,
+    "total_cost_usd": 0.0679989,
+    "ttft_ms": 9918,
+    "ttft_stream_ms": 1918,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 3621,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 3621,
+      "cache_read_input_tokens": 28513,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 3621,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 3621,
+          "cache_read_input_tokens": 28513,
+          "input_tokens": 6768,
+          "output_tokens": 1161,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 1161,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "0766bb65-c698-4aff-ac94-ed918ce96037"
+  }
+}

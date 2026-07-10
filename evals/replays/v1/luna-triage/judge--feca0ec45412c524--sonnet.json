@@ -1,0 +1,219 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "feca0ec45412c524",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Grade the proposed remedy, not the\nwriting style of this prompt. A good remedy changes a concrete future behavior,\nis broad enough to cover the failure mode without becoming a platitude, uses a\nreal `Use when ...` trigger when it is a skill, leaks no evidence-specific\nproject nouns into the remedy text, and uses the cheapest adequate remedy type.\n\nScore every dimension from 1 (poor) to 5 (excellent). Give exactly one concise\nsentence of justification for each score. Do not infer facts that are absent.\n\nPROPOSAL:\n{\n  \"failure_statement\": \"Things went wrong.\",\n  \"remedy_content\": {\n    \"target\": \"global\",\n    \"text\": \"Be better and avoid mistakes.\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"It is good to have guidance.\"\n}\n",
+    "schema": {
+      "properties": {
+        "actionability": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "generality_without_vagueness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "leakage": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "routing_fitness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "trigger_quality": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "actionability",
+        "generality_without_vagueness",
+        "trigger_quality",
+        "leakage",
+        "routing_fitness"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 16759,
+    "duration_ms": 16948,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 3596,
+        "cacheReadInputTokens": 28511,
+        "contextWindow": 1000000,
+        "costUSD": 0.0733983,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 1531,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"actionability\":{\"score\":1,\"justification\":\"\\\"Be better and avoid mistakes\\\" specifies no concrete behavior change, decision rule, or check to apply — it cannot alter any future action.\"},\"generality_without_vagueness\":{\"score\":1,\"justification\":\"The text is pure platitude with no scope, condition, or content that distinguishes it from generic encouragement — it is vague rather than usefully general.\"},\"trigger_quality\":{\"score\":1,\"justification\":\"As a global claude-md remedy it has no 'Use when ...' trigger or any condition at all, so it would apply (uselessly) to every future interaction.\"},\"leakage\":{\"score\":5,\"justification\":\"No project-specific nouns, filenames, or evidence details appear in the remedy text, so there is no leakage, though only because the text contains no substantive content at all.\"},\"routing_fitness\":{\"score\":1,\"justification\":\"A permanent global CLAUDE.md edit is the heaviest-weight remedy type available, yet it's applied to an unspecified, unverified failure ('Things went wrong'), making it maximally overscoped rather than the cheapest adequate fix.\"}}",
+    "session_id": "dd2cc8a4-d154-4eed-89a8-65f581c22134",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "actionability": {
+        "justification": "\"Be better and avoid mistakes\" specifies no concrete behavior change, decision rule, or check to apply — it cannot alter any future action.",
+        "score": 1
+      },
+      "generality_without_vagueness": {
+        "justification": "The text is pure platitude with no scope, condition, or content that distinguishes it from generic encouragement — it is vague rather than usefully general.",
+        "score": 1
+      },
+      "leakage": {
+        "justification": "No project-specific nouns, filenames, or evidence details appear in the remedy text, so there is no leakage, though only because the text contains no substantive content at all.",
+        "score": 5
+      },
+      "routing_fitness": {
+        "justification": "A permanent global CLAUDE.md edit is the heaviest-weight remedy type available, yet it's applied to an unspecified, unverified failure ('Things went wrong'), making it maximally overscoped rather than the cheapest adequate fix.",
+        "score": 1
+      },
+      "trigger_quality": {
+        "justification": "As a global claude-md remedy it has no 'Use when ...' trigger or any condition at all, so it would apply (uselessly) to every future interaction.",
+        "score": 1
+      }
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 97,
+    "total_cost_usd": 0.0733983,
+    "ttft_ms": 12394,
+    "ttft_stream_ms": 1391,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 3596,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 3596,
+      "cache_read_input_tokens": 28511,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 3596,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 3596,
+          "cache_read_input_tokens": 28511,
+          "input_tokens": 6768,
+          "output_tokens": 1531,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 1531,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "0a6e2bc1-f12c-41af-8b5b-e770ceb6ea61"
+  }
+}

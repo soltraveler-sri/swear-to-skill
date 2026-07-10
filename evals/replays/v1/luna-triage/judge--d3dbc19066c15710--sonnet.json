@@ -1,0 +1,219 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "d3dbc19066c15710",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Grade the proposed remedy, not the\nwriting style of this prompt. A good remedy changes a concrete future behavior,\nis broad enough to cover the failure mode without becoming a platitude, uses a\nreal `Use when ...` trigger when it is a skill, leaks no evidence-specific\nproject nouns into the remedy text, and uses the cheapest adequate remedy type.\n\nScore every dimension from 1 (poor) to 5 (excellent). Give exactly one concise\nsentence of justification for each score. Do not infer facts that are absent.\n\nPROPOSAL:\n{\n  \"confidence\": 0.55,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"R1 (fake-verify-before-claim skill) triggers on exactly this pattern: a completion/verification claim made without actually verifying. Overlaps in failure mode, but the cheaper existing remedy for this pattern is the claude-md rule R2, not a skill — consistent with how pending proposal R6 already resolved this same tension in favor of R2.\",\n      \"verdict\": \"overlap\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"R2 (Fake Release Discipline) already requires running the declared verification command instead of assuming, but scopes the rule to 'fake release' completion claims specifically. This incident shows the same guessing-instead-of-verifying failure outside a release context, so R2 should be broadened rather than treated as a new sibling rule. This proposal revises R2.\",\n      \"verdict\": \"overlap\"\n    },\n    {\n      \"existing\": \"R3\",\n      \"reason\": \"R3 concerns unauthorized deletion of content despite a stated constraint — a destructive-action failure, unrelated to verification-before-claiming.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R4\",\n      \"reason\": \"R4 concerns acting in the wrong branch/workspace — an environment-state failure, unrelated to skipping verification.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R5\",\n      \"reason\": \"R5 concerns solving/delivering the wrong scope of a request — a request-comprehension failure, unrelated to verification.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R6\",\n      \"reason\": \"R6 is itself a pending proposal that broadens R2 to cover declaring a migration done while checks fail — the same general theme of guessing instead of verifying. This incident is consistent with R6's direction, but since R6 targets R2 as the canonical remedy, this proposal also targets R2 directly rather than a sibling pending proposal; a human curator can consolidate R6 and this proposal at merge time.\",\n      \"verdict\": \"overlap\"\n    },\n    {\n      \"existing\": \"R7\",\n      \"reason\": \"R7 concerns silently omitting a specifically-requested output field — a scope-comprehension gap, not a false/guessed verification claim.\",\n      \"verdict\": \"clear\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 36,\n      \"quote\": \"Actually run the verification instead of guessing.\"\n    }\n  ],\n  \"failure_statement\": \"When asked to verify something (or when a completion claim depends on a verification step), the agent sometimes reports a guessed or assumed result instead of actually running the requested verification and reporting the real output.\",\n  \"overlap_action\": {\n    \"revises\": \"claude-md:$HOME/.claude/CLAUDE.md#1\"\n  },\n  \"remedy_content\": {\n    \"heading\": \"Verification Discipline\",\n    \"revises_heading\": \"Fake Release Discipline\",\n    \"target\": \"global\",\n    \"text\": \"Before reporting any task, fix, or claim as complete — or whenever the user asks you to verify something — actually run the relevant command, test, or check. Don't guess, assume, or reason your way to a probable result. Report the real output plainly, even if it isn't what you expected or hoped to report.\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"Single thin incident: the agent reported a guessed/assumed result instead of actually running the verification the user asked for. This is the same failure mode already partly covered by the installed \\\"Fake Release Discipline\\\" claude-md rule (R2), which currently only scopes to \\\"fake release\\\" completion claims. R1 (fake-verify-before-claim skill) covers the same territory but a standing claude-md rule is the cheaper remedy per the routing preference order, so — consistent with the precedent set by pending proposal R6 — this is a revision of R2 rather than a new skill. The fix is to broaden R2's wording from \\\"reporting a fake release as complete\\\" to any requested verification step, so it also covers cases like this one that aren't release-shaped. No hook is possible here (the failure is deciding to skip running a command, not a detectable tool-call pattern), and the evidence is a single generic incident with no transcript detail, so this doesn't warrant a new procedural skill.\",\n  \"singleton\": true\n}\n",
+    "schema": {
+      "properties": {
+        "actionability": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "generality_without_vagueness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "leakage": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "routing_fitness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "trigger_quality": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "actionability",
+        "generality_without_vagueness",
+        "trigger_quality",
+        "leakage",
+        "routing_fitness"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 23571,
+    "duration_ms": 23791,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 4973,
+        "cacheReadInputTokens": 28511,
+        "contextWindow": 1000000,
+        "costUSD": 0.0904803,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 2119,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"actionability\":{\"score\":4,\"justification\":\"The remedy gives a concrete behavioral directive (actually run the command/test/check and report the real output rather than guessing) that is directly checkable against future transcripts.\"},\"generality_without_vagueness\":{\"score\":4,\"justification\":\"It broadens from release-claims specifically to any completion or verification claim while still anchoring to concrete actions (run, report real output), avoiding a pure platitude like 'be careful' but risking some breadth by covering 'any task, fix, or claim as complete.'\"},\"trigger_quality\":{\"score\":4,\"justification\":\"Not a skill, so no formal 'Use when...' clause is required, but the rule embeds a clear activation condition ('before reporting ... complete — or whenever the user asks you to verify something') that is concrete enough to apply consistently.\"},\"leakage\":{\"score\":5,\"justification\":\"The remedy text is fully generic with no project-, incident-, or tool-specific nouns leaked from the evidence.\"},\"routing_fitness\":{\"score\":4,\"justification\":\"Given a single thin, generic incident and an existing overlapping claude-md rule (R2) plus a pending broadening proposal (R6) pointed at the same rule, revising R2 rather than minting a new skill is the cheaper, consistent choice, though the thinness of the evidence (one short quote) makes the broadened scope somewhat speculative.\"}}",
+    "session_id": "d92c45b0-7935-4bb2-ac7a-28a718c64c3e",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "actionability": {
+        "justification": "The remedy gives a concrete behavioral directive (actually run the command/test/check and report the real output rather than guessing) that is directly checkable against future transcripts.",
+        "score": 4
+      },
+      "generality_without_vagueness": {
+        "justification": "It broadens from release-claims specifically to any completion or verification claim while still anchoring to concrete actions (run, report real output), avoiding a pure platitude like 'be careful' but risking some breadth by covering 'any task, fix, or claim as complete.'",
+        "score": 4
+      },
+      "leakage": {
+        "justification": "The remedy text is fully generic with no project-, incident-, or tool-specific nouns leaked from the evidence.",
+        "score": 5
+      },
+      "routing_fitness": {
+        "justification": "Given a single thin, generic incident and an existing overlapping claude-md rule (R2) plus a pending broadening proposal (R6) pointed at the same rule, revising R2 rather than minting a new skill is the cheaper, consistent choice, though the thinness of the evidence (one short quote) makes the broadened scope somewhat speculative.",
+        "score": 4
+      },
+      "trigger_quality": {
+        "justification": "Not a skill, so no formal 'Use when...' clause is required, but the rule embeds a clear activation condition ('before reporting ... complete — or whenever the user asks you to verify something') that is concrete enough to apply consistently.",
+        "score": 4
+      }
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 119,
+    "total_cost_usd": 0.0904803,
+    "ttft_ms": 18911,
+    "ttft_stream_ms": 2135,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 4973,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 4973,
+      "cache_read_input_tokens": 28511,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 4973,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 4973,
+          "cache_read_input_tokens": 28511,
+          "input_tokens": 6768,
+          "output_tokens": 2119,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 2119,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "ec98459e-2a63-4d5e-a2ab-8617def2f124"
+  }
+}

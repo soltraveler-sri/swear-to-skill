@@ -1,0 +1,18 @@
+[profile]
+description = "Sonnet at the triage seat: the quality/usage tradeoff arm. Roughly 10x haiku's per-call cost."
+
+[triage]
+model = "sonnet"
+prompt_version = "v2"
+
+[curate]
+model = "sonnet"
+prompt_version = "v2"
+
+[synthesize]
+model = "sonnet"
+prompt_version = "v2"
+
+[judge]
+model = "sonnet"
+prompt_version = "v1"

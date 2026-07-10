@@ -1,0 +1,221 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "d079ebd4337a633b",
+    "model": "sonnet",
+    "stage": "synthesize"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are the Stage 4 Synthesist. Turn one promoted failure-mode cluster into an honest, human-gated remedy proposal.\n\nMost frustrations do not deserve a skill. Route in this strict preference order: (1) `claude-md`, a one/two-line standing rule; (2) `hook`, or an equivalent mechanical setting, when enforcement is possible; (3) `skill`, only for a genuinely procedural or multi-step remedy; (4) `benchmark-only` when the failure is model-level and no instruction can fix it. Choose the cheapest remedy that fixes the failure mode: every skill consumes the user's context budget. `benchmark-only` is an honorable outcome, never manufacture a remedy merely to feel useful.\n\nIf the only sensible remedy target is Codex-side (`AGENTS.md` or `~/.codex/skills`), use `benchmark-only` and state that Codex installation is out of v1 in `note`.\n\nThe existing-remedy digests below are numbered [R1]…[RN]. There are 4 existing-remedy digests. Your `dedup` array MUST contain exactly 4 entries, one per number, with `existing` set to exactly that token (e.g. \"R1\"). Include entries even when the verdict is clear. State `clear` or `overlap` for each. Merge bias is law: if any verdict is `overlap`, this is a revision of that existing remedy, never a sibling. Set `overlap_action.revises` to that R token.\n\nFor a `skill`, write a kebab-case name and a concrete auto-invocation description beginning `Use when ...`; this description is the trigger. The body must be substantive Markdown. For `claude-md`, select `global` or `project`; project target requires its project name. For `hook`, give a Claude Code event and a command sketch. For `benchmark-only`, explain the measurement-only outcome in `note`.\n\nThe upstream classifier deliberately over-merges. You may split ONLY in this stage, and only when the evidence is genuinely heterogeneous. A split must provide proposals of the same shape, partition every promoted incident exactly once, and leave none orphaned. Otherwise return one proposal covering the group.\n\nTAXONOMY GIST:\nhouse-rules-violation: ignored CLAUDE.md / workflow conventions\n\nPROMOTED EVIDENCE:\nBEGIN PROMOTED EVIDENCE incident_id=31 project=fake-aurora\nOne-liner: Agent declared work complete without following a documented project policy it should have read and applied first.\nPreceding request:\nYou told me it was fixed before any fake check ran.\n\nAgent activity digest:\n\n\nFrustrated message:\nRead the prompt: fake repository policy requires a changelog.\n\nFollowing exchange:\n\nEND PROMOTED EVIDENCE\n\nEXISTING SKILLS (name and description only):\n- [R1] skill:$HOME/.claude/skills/fake-verify-before-claim/SKILL.md | name=fake-verify-before-claim | description=Use when a completion claim requires verification.\n\nS2S-MANAGED CLAUDE.MD BLOCKS:\n- [R2] claude-md:$HOME/.claude/CLAUDE.md#1 | # Fake Release Discipline\n\nBefore reporting a fake release as complete, run its declared verification\ncommand and report the result plainly.\n\nPENDING OR INSTALLED S2S PROPOSALS:\n- [R3] proposal #1 | type=hook | status=pending | {\"confidence\":0.55,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) governs verifying completion claims before reporting them done; this incident is about unconfirmed destructive deletion, a different failure mode with no overlap.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline claude-md block) governs running verification commands before reporting a fake release complete; it does not address asking for confirmation before deleting/removing files, so t\n- [R4] proposal #2 | type=claude-md | status=pending | {\"confidence\":0.6,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) governs verifying completion claims before reporting work done; these incidents are about acting on the wrong/stale branch, an unrelated failure mode with no overlap.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline) governs running a declared verification command before reporting a release complete; it has nothing to do with confirming which git branch is active before working.\",\"verdic\n\n\nYour prior draft failed local validation. Correct the SKILL.md/frontmatter, dedup, and evidence partition exactly. Specific validation failure: skill requires name, description, and body_markdown",
+    "schema": {
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "dedup": {
+          "items": {
+            "properties": {
+              "existing": {
+                "pattern": "^R[0-9]+$",
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "clear",
+                  "overlap"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "existing",
+              "verdict",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "properties": {
+              "incident_id": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "quote": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "incident_id",
+              "quote"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "failure_statement": {
+          "type": "string"
+        },
+        "overlap_action": {
+          "properties": {
+            "revises": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "revises"
+          ],
+          "type": "object"
+        },
+        "remedy_content": {
+          "type": "object"
+        },
+        "remedy_type": {
+          "enum": [
+            "claude-md",
+            "hook",
+            "skill",
+            "benchmark-only"
+          ],
+          "type": "string"
+        },
+        "routing_rationale": {
+          "type": "string"
+        },
+        "split": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "remedy_type",
+        "routing_rationale",
+        "failure_statement",
+        "remedy_content",
+        "evidence",
+        "dedup",
+        "confidence"
+      ],
+      "type": "object"
+    },
+    "stage": "synthesize"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 46248,
+    "duration_ms": 46445,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 4884,
+        "cacheReadInputTokens": 28519,
+        "contextWindow": 1000000,
+        "costUSD": 0.1225167,
+        "inputTokens": 6769,
+        "maxOutputTokens": 64000,
+        "outputTokens": 4290,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"remedy_type\":\"skill\",\"routing_rationale\":\"Incident 31 shows the agent declaring work \\\"fixed\\\"/complete before any verification check ran, and separately failing to read and apply a documented project policy (a required changelog entry) before that completion claim. Both symptoms are instances of the same failure mode already covered by R1's skill, fake-verify-before-claim (\\\"Use when a completion claim requires verification\\\") — that skill's scope already spans verification of completion claims generally, which includes checking documented project policy/requirements, not just running a literal verification command. R2's claude-md block is narrower (specifically: run the declared verification command for a release), so it doesn't fully cover the \\\"read documented policy before claiming done\\\" angle. Per merge bias, since R1 overlaps, this is a revision of R1 rather than a new sibling skill — I'm expanding the existing skill's body to explicitly include checking documented project policy (e.g., changelog requirements) as part of pre-completion verification, rather than creating a second skill that would compete for the same trigger.\",\"failure_statement\":\"The agent declares work complete (or claims something is \\\"fixed\\\") without first reading and applying documented project policy that governs completion (e.g., a required changelog entry) and without running the declared verification check — repeating a pattern already flagged once before in this project.\",\"remedy_content\":{\"name\":\"fake-verify-before-claim\",\"description\":\"Use when a completion claim requires verification — before reporting a task, fix, or release as done, check documented project policy for required completion steps (changelog entries, verification commands, sign-offs) and actually run/apply them first.\",\"body_markdown\":\"# Verify Before Claiming Completion\\n\\nBefore telling the user something is fixed, done, or complete:\\n\\n1. **Find the applicable policy.** Check for project-level completion requirements — CONTRIBUTING docs, CLAUDE.md rules, README sections, or explicit instructions in the current prompt/thread — that specify what \\\"done\\\" requires (e.g., a changelog entry, a passing test suite, a specific verification command).\\n2. **Apply it, don't skip it.** If a changelog update, verification script, or other declared step is required, do it before claiming completion — not after the user objects.\\n3. **Run the actual check.** If a verification command or test is declared for this kind of change, run it and report its real output. Never assert a fix worked without having executed the check.\\n4. **Report plainly.** State what you verified and how (\\\"ran X, it passed\\\" / \\\"added the changelog entry per policy Y\\\"), not just \\\"done\\\" or \\\"fixed.\\\"\\n\\nIf you're unsure whether a documented policy applies, search for it (repo docs, CLAUDE.md, prompt instructions) before declaring completion rather than after being corrected.\\n\"},\"evidence\":[{\"incident_id\":31,\"quote\":\"Read the prompt: fake repository policy requires a changelog.\"},{\"incident_id\":31,\"quote\":\"You told me it was fixed before any fake check ran.\"}],\"dedup\":[{\"existing\":\"R1\",\"verdict\":\"overlap\",\"reason\":\"R1 (fake-verify-before-claim) already governs verifying completion claims before reporting them done; incident 31's failure — declaring something fixed before a check ran and before a documented changelog policy was applied — is the same failure mode (premature completion claim), so this revises R1's body to explicitly cover checking documented project policy, not just running a command.\"},{\"existing\":\"R2\",\"verdict\":\"clear\",\"reason\":\"R2 (Fake Release Discipline claude-md block) is scoped specifically to running a release's declared verification command; incident 31 is about a general completion claim and a changelog policy, not release verification specifically, and R1 is the closer, broader match to revise instead.\"},{\"existing\":\"R3\",\"verdict\":\"clear\",\"reason\":\"R3 (pending hook proposal) addresses confirming before destructive file deletion, an unrelated failure mode with no overlap to premature completion claims.\"},{\"existing\":\"R4\",\"verdict\":\"clear\",\"reason\":\"R4 (pending claude-md proposal) addresses acting on the wrong/stale git branch, an unrelated failure mode with no overlap to premature completion claims.\"}],\"overlap_action\":{\"revises\":\"R1\"},\"confidence\":0.62}",
+    "session_id": "d639a2d6-6184-42b7-bed8-f89bd8e91733",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "confidence": 0.62,
+      "dedup": [
+        {
+          "existing": "R1",
+          "reason": "R1 (fake-verify-before-claim) already governs verifying completion claims before reporting them done; incident 31's failure — declaring something fixed before a check ran and before a documented changelog policy was applied — is the same failure mode (premature completion claim), so this revises R1's body to explicitly cover checking documented project policy, not just running a command.",
+          "verdict": "overlap"
+        },
+        {
+          "existing": "R2",
+          "reason": "R2 (Fake Release Discipline claude-md block) is scoped specifically to running a release's declared verification command; incident 31 is about a general completion claim and a changelog policy, not release verification specifically, and R1 is the closer, broader match to revise instead.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R3",
+          "reason": "R3 (pending hook proposal) addresses confirming before destructive file deletion, an unrelated failure mode with no overlap to premature completion claims.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R4",
+          "reason": "R4 (pending claude-md proposal) addresses acting on the wrong/stale git branch, an unrelated failure mode with no overlap to premature completion claims.",
+          "verdict": "clear"
+        }
+      ],
+      "evidence": [
+        {
+          "incident_id": 31,
+          "quote": "Read the prompt: fake repository policy requires a changelog."
+        },
+        {
+          "incident_id": 31,
+          "quote": "You told me it was fixed before any fake check ran."
+        }
+      ],
+      "failure_statement": "The agent declares work complete (or claims something is \"fixed\") without first reading and applying documented project policy that governs completion (e.g., a required changelog entry) and without running the declared verification check — repeating a pattern already flagged once before in this project.",
+      "overlap_action": {
+        "revises": "R1"
+      },
+      "remedy_content": {
+        "body_markdown": "# Verify Before Claiming Completion\n\nBefore telling the user something is fixed, done, or complete:\n\n1. **Find the applicable policy.** Check for project-level completion requirements — CONTRIBUTING docs, CLAUDE.md rules, README sections, or explicit instructions in the current prompt/thread — that specify what \"done\" requires (e.g., a changelog entry, a passing test suite, a specific verification command).\n2. **Apply it, don't skip it.** If a changelog update, verification script, or other declared step is required, do it before claiming completion — not after the user objects.\n3. **Run the actual check.** If a verification command or test is declared for this kind of change, run it and report its real output. Never assert a fix worked without having executed the check.\n4. **Report plainly.** State what you verified and how (\"ran X, it passed\" / \"added the changelog entry per policy Y\"), not just \"done\" or \"fixed.\"\n\nIf you're unsure whether a documented policy applies, search for it (repo docs, CLAUDE.md, prompt instructions) before declaring completion rather than after being corrected.\n",
+        "description": "Use when a completion claim requires verification — before reporting a task, fix, or release as done, check documented project policy for required completion steps (changelog entries, verification commands, sign-offs) and actually run/apply them first.",
+        "name": "fake-verify-before-claim"
+      },
+      "remedy_type": "skill",
+      "routing_rationale": "Incident 31 shows the agent declaring work \"fixed\"/complete before any verification check ran, and separately failing to read and apply a documented project policy (a required changelog entry) before that completion claim. Both symptoms are instances of the same failure mode already covered by R1's skill, fake-verify-before-claim (\"Use when a completion claim requires verification\") — that skill's scope already spans verification of completion claims generally, which includes checking documented project policy/requirements, not just running a literal verification command. R2's claude-md block is narrower (specifically: run the declared verification command for a release), so it doesn't fully cover the \"read documented policy before claiming done\" angle. Per merge bias, since R1 overlaps, this is a revision of R1 rather than a new sibling skill — I'm expanding the existing skill's body to explicitly include checking documented project policy (e.g., changelog requirements) as part of pre-completion verification, rather than creating a second skill that would compete for the same trigger."
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 108,
+    "total_cost_usd": 0.1225167,
+    "ttft_ms": 31082,
+    "ttft_stream_ms": 2206,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 4884,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 4884,
+      "cache_read_input_tokens": 28519,
+      "inference_geo": "not_available",
+      "input_tokens": 6769,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 4884,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 4884,
+          "cache_read_input_tokens": 28519,
+          "input_tokens": 6769,
+          "output_tokens": 4290,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 4290,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "1f02cf4c-f139-4c5d-bb49-6caae5d986b1"
+  }
+}

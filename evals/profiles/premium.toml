@@ -3,7 +3,7 @@ description = "Tests whether an Opus Synthesist changes remedy quality enough to
 
 [triage]
 model = "haiku"
-prompt_version = "v1"
+prompt_version = "v2"
 
 [curate]
 model = "sonnet"

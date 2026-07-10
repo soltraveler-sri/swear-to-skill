@@ -42,13 +42,20 @@ events = ["proposal_pending", "autonomous_action"]
 
 [models]
 # Model aliases resolved by the user's Claude Code CLI. Keep policy here, not at call sites.
-triage = "haiku"
+# Prefix an explicit model with "codex:" to opt into the installed, authenticated
+# OpenAI Codex CLI for that stage, for example: triage = "codex:gpt-5.6-luna".
+# Codex calls are ephemeral; usage and cost are logged as unknown, while the bulk
+# confirmation gate uses a rough $0.01-per-call estimate.
+# Measured on the golden corpus: Sonnet is safer for remedy evidence; Haiku remains the frugal option.
+triage = "sonnet"
 curate = "sonnet"
 synthesize = "sonnet"
 # Subprocess calls are independent; bounded threads keep bulk work pleasant.
 parallelism = 2
 
 [prompts]
+# v1 remains available as an explicit A/B arm.
+triage = "v2"
 # Cluster synthesis takes precedence over conflicting member park/dismiss verdicts.
 curate = "v2"
 # Stable R-ids make the default synthesis dedup contract round-trip reliably.

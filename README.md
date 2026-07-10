@@ -74,7 +74,7 @@ sharing is always your choice.
 | Stage | Default cost shape |
 | --- | --- |
 | Archive / scan / meter | Free and local |
-| Triage | Haiku, cents per incident |
+| Triage | Sonnet, cents per incident (Haiku is the frugal option) |
 | Curation | Sonnet, one batched pass over new incidents and touched clusters |
 | Synthesis | Sonnet (or Opus for high-stakes work), per promoted cluster |
 | Audit | Local measurement; Curator judgment piggybacks on review |
@@ -121,6 +121,30 @@ thresholds and narrative excerpts tracing real incidents through detection → t
 clustering → remedy → judge verdicts. `s2s eval --matrix baseline,premium` compares
 model/prompt configurations side by side. Design details: [NORTHSTAR §15](docs/NORTHSTAR.md#15-eval-harness--proving-quality-not-just-function).
 No API key is needed — evals use your `claude` CLI subscription like everything else.
+
+## Measured performance
+
+Full live golden-corpus results (v2 prompts, 2026-07-10) are strong across all
+three triage models: detection recall and dedup-as-revision catch 1.0, stability
+(flip rates) 0.0, pipeline invariants 1.0, and ~0.1–0.2 remedies per incident.
+
+| Triage model | Authenticity precision | Authenticity recall | Label agreement | Convergence | Evidence contamination |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Haiku (previous default) | 0.89 | 0.96 | 0.64 | 0.4 | some (spam precision 0.85) |
+| Sonnet (new default) | 1.00 | 0.85 | 0.72 | 0.6 | none (1.0 / clean) |
+| `codex:gpt-5.6-luna` | 1.00 | 0.89 | 0.60 | 0.2 | none (1.0 / clean) |
+
+Precision and contamination are safety-critical for a system that installs remedies:
+a missed incident waits for recurrence, while a contaminated remedy installs
+misinformation. That makes Sonnet the default. Haiku is cheaper with higher recall
+but some contamination risk; choose it via `[models] triage` in config. For Codex CLI
+operators, Luna has excellent authenticity but lower label agreement than the Claude
+models on these prompts; use `codex:gpt-5.6-luna` and measure your own arm with
+`s2s eval --matrix`.
+
+Convergence (0.6 best) remains the active frontier (issues #68/#69 lineage);
+thresholds are intentionally aspirational and unchanged. Reproduce on your machine
+with `s2s eval --mode live --quick`; recorded replays make re-scoring free.
 
 ## License and attribution
 

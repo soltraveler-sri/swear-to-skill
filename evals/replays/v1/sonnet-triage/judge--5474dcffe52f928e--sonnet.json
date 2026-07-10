@@ -1,0 +1,99 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "5474dcffe52f928e",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Given one proposed remedy and one\nplanted incident context pack, decide whether the remedy plausibly would have\nprevented this incident had it been active beforehand. Return `prevented` only\nwhen the remedy directly addresses the failure, `partially` when it would help\nbut leaves a material gap, and `no` otherwise. Give concise evidence-based\nreasoning without inventing facts.\n\nPROPOSAL:\n{\n  \"confidence\": 0.6,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"R1 (fake-verify-before-claim) governs verifying completion claims before reporting work done; these incidents are about acting on the wrong/stale branch, an unrelated failure mode with no overlap.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"R2 (Fake Release Discipline) governs running a declared verification command before reporting a release complete; it has nothing to do with confirming which git branch is active before working.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R3\",\n      \"reason\": \"R3 is a pending hook proposal about confirming before destructive file deletion; these branch-mismatch incidents involve no deletion and a different mechanism (branch verification vs. destructive-action confirmation), so there is no overlap.\",\n      \"verdict\": \"clear\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 2,\n      \"quote\": \"You are not following the branch instruction in /work/fake-aurora.\"\n    },\n    {\n      \"incident_id\": 16,\n      \"quote\": \"Why are you doing this from the stale fake branch?\"\n    }\n  ],\n  \"failure_statement\": \"The agent proceeds to edit code, run commands, or report progress on a git branch other than the one the user specified or expected (a wrong or stale branch), without first confirming the current branch matches the user's instructions.\",\n  \"remedy_content\": {\n    \"target\": \"global\",\n    \"text\": \"## Branch Verification\\n\\nBefore making edits or running commands in a git repo, confirm the current branch matches what the user specified or would expect (`git branch --show-current` / `git status`). If it looks wrong, stale, or unspecified and ambiguous, stop and either switch to the correct branch or ask — never continue substantive work silently on the wrong branch.\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"Both promoted incidents describe the same failure mode: the agent proceeded to work on the wrong or a stale branch instead of the one the user actually specified/expected (incident 2: \\\"not following the branch instruction\\\"; incident 16: \\\"doing this from the stale fake branch\\\"). This is a classic environment-mismanagement case (wrong branch), and the fix is a simple standing behavioral rule — check the current branch against what the user asked for before acting — not a multi-step procedure, so a skill would be overkill. A hook is not viable as the primary enforcement because determining \\\"the branch the user specified\\\" requires parsing natural-language instructions, which a mechanical PreToolUse/SessionStart hook cannot reliably do; a hook could at best surface the current branch, not verify correctness against intent. That leaves claude-md as the cheapest sufficient remedy: a short standing rule instructing the agent to confirm the active branch matches instructions before editing/running commands, and to stop and reconcile (switch or ask) if not. This is a natural, additive extension of the branch-workflow discipline already present in the user's global CLAUDE.md, so it targets global rather than a specific project (the two incidents span two different synthetic projects, confirming this is a general behavior gap, not project-specific).\",\n  \"singleton\": false\n}\n\nINCIDENT CONTEXT PACK:\n{\n  \"agent_activity_digest\": \"Assistant: Synthetic acknowledgement.\",\n  \"following_exchange\": \"\",\n  \"frustrated_message\": \"Why are you doing this from the stale fake branch?\",\n  \"metadata\": {\n    \"cwd\": \"/work/fake-harbor\",\n    \"git_branch\": \"feat/fake-eval\",\n    \"project\": \"harbor\",\n    \"session_id\": \"claude-harbor-01\",\n    \"timestamp\": \"2026-07-09T13:02:00Z\"\n  },\n  \"preceding_request\": \"That fix is not verified; the test command was never run.\"\n}\n",
+    "schema": {
+      "properties": {
+        "reasoning": {
+          "type": "string"
+        },
+        "verdict": {
+          "enum": [
+            "prevented",
+            "partially",
+            "no"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "verdict",
+        "reasoning"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 41988,
+    "duration_ms": 42183,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 14860,
+        "cacheReadInputTokens": 61026,
+        "contextWindow": 1000000,
+        "costUSD": 0.18572280000000002,
+        "inputTokens": 6770,
+        "maxOutputTokens": 64000,
+        "outputTokens": 3863,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 3,
+    "permission_denials": [],
+    "result": "{\"verdict\":\"prevented\",\"reasoning\":\"The incident pack's frustrated_message (\\\"Why are you doing this from the stale fake branch?\\\") is verbatim the same quote the proposal cites as evidence for incident 16, confirming this pack is that incident. The remedy text explicitly instructs the agent to confirm the current branch against what the user specified/expects before acting, and to stop/ask \\\"if it looks wrong, stale, or unspecified and ambiguous\\\" — this directly matches the \\\"stale ... branch\\\" complaint and the metadata showing a mismatch between cwd (/work/fake-harbor) and the active branch (feat/fake-eval). Had this rule been active, the agent would have checked `git branch --show-current`/git status before proceeding and surfaced or corrected the stale-branch situation instead of continuing silently, which is exactly what triggered the user's frustration.\\n\\nThe one wrinkle is the preceding_request (\\\"That fix is not verified; the test command was never run\\\"), which sounds like a distinct verification-discipline complaint rather than a branch issue. But the proposal's own dedup analysis already considered and correctly excluded the verification-related existing rules (R1, R2) as governing a different failure mode (claiming completion without running tests), leaving the branch-check remedy to address the specific frustrated_message actually tied to this incident. Since the directly quoted failure trigger is the stale-branch complaint and the remedy squarely targets exactly that behavior, this counts as a direct match rather than a partial one.</parameter>\\n</invoke>\\n\"}",
+    "session_id": "b34eb785-5a15-4932-95bb-cb55466ef688",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "reasoning": "The incident pack's frustrated_message (\"Why are you doing this from the stale fake branch?\") is verbatim the same quote the proposal cites as evidence for incident 16, confirming this pack is that incident. The remedy text explicitly instructs the agent to confirm the current branch against what the user specified/expects before acting, and to stop/ask \"if it looks wrong, stale, or unspecified and ambiguous\" — this directly matches the \"stale ... branch\" complaint and the metadata showing a mismatch between cwd (/work/fake-harbor) and the active branch (feat/fake-eval). Had this rule been active, the agent would have checked `git branch --show-current`/git status before proceeding and surfaced or corrected the stale-branch situation instead of continuing silently, which is exactly what triggered the user's frustration.\n\nThe one wrinkle is the preceding_request (\"That fix is not verified; the test command was never run\"), which sounds like a distinct verification-discipline complaint rather than a branch issue. But the proposal's own dedup analysis already considered and correctly excluded the verification-related existing rules (R1, R2) as governing a different failure mode (claiming completion without running tests), leaving the branch-check remedy to address the specific frustrated_message actually tied to this incident. Since the directly quoted failure trigger is the stale-branch complaint and the remedy squarely targets exactly that behavior, this counts as a direct match rather than a partial one.</parameter>\n</invoke>\n",
+      "verdict": "prevented"
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 97,
+    "total_cost_usd": 0.18572280000000002,
+    "ttft_ms": 31753,
+    "ttft_stream_ms": 1801,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 14860,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 14860,
+      "cache_read_input_tokens": 61026,
+      "inference_geo": "not_available",
+      "input_tokens": 6770,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 10108,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 10108,
+          "cache_read_input_tokens": 32889,
+          "input_tokens": 2,
+          "output_tokens": 550,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 3863,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "32ac6b53-4f7f-4fca-be32-c9f8f36c9067"
+  }
+}
