@@ -76,6 +76,16 @@ class PendingProposal:
 
 
 @dataclass(frozen=True)
+class SkillUsageSummary:
+    """Compact usage totals for one generated skill or the companion skill."""
+
+    skill_name: str
+    count: int
+    last_used_at: str
+    is_companion: bool
+
+
+@dataclass(frozen=True)
 class DashboardData:
     """All durable facts needed by the static dashboard and status command."""
 
@@ -99,6 +109,7 @@ class DashboardData:
     pending_proposals: tuple[PendingProposal, ...]
     remedy_outcomes: tuple[RemedyOutcome, ...]
     revision_proposal_count: int
+    skill_usage: tuple[SkillUsageSummary, ...]
 
     @property
     def rate(self) -> float:
@@ -146,6 +157,18 @@ def collect_dashboard_data(ledger: Ledger) -> DashboardData:
     proposals = ledger.pending_proposals()
     pending_proposals = tuple(_pending_proposal_view(proposal) for proposal in proposals)
     revision_proposal_count = sum(proposal.proposal_kind == "revision" for proposal in proposals)
+    usage_groups: dict[str, list[str]] = defaultdict(list)
+    for usage in ledger.skill_usage():
+        usage_groups[usage.skill_name].append(usage.used_at)
+    skill_usage = tuple(
+        SkillUsageSummary(
+            skill_name=skill_name,
+            count=len(timestamps),
+            last_used_at=max(timestamps),
+            is_companion=skill_name == "s2s",
+        )
+        for skill_name, timestamps in sorted(usage_groups.items())
+    )
     weekly: dict[date, list[int]] = defaultdict(lambda: [0, 0])
     models: dict[str, list[int]] = defaultdict(lambda: [0, 0])
     sources: dict[str, list[int]] = defaultdict(lambda: [0, 0])
@@ -218,6 +241,7 @@ def collect_dashboard_data(ledger: Ledger) -> DashboardData:
         pending_proposals=pending_proposals,
         remedy_outcomes=remedy_outcomes,
         revision_proposal_count=revision_proposal_count,
+        skill_usage=skill_usage,
     )
 
 
@@ -282,6 +306,10 @@ footer {{ margin-top:56px; padding-top:18px; border-top:1px solid var(--line); c
     <h2 id="health-heading">Pipeline health</h2>
     {_render_health(data)}
   </section>
+  <section class="section" aria-labelledby="usage-heading">
+    <h2 id="usage-heading">Skill usage</h2>
+    {_render_skill_usage(data.skill_usage)}
+  </section>
   <footer>This file is local and private. Sharing a screenshot shares the dashboard’s content.</footer>
 </main>
 </body>
@@ -321,6 +349,12 @@ def render_status(data: DashboardData, *, archived_sessions: int) -> str:
         f"(pre {_audit_rate(outcome.pre_rate)}, post {_audit_rate(outcome.post_rate)})"
         for outcome in data.remedy_outcomes
     )
+    usage_lines = tuple(
+        "skill usage: "
+        f"{usage.skill_name}{' (companion)' if usage.is_companion else ''} "
+        f"used {usage.count}x (last {_usage_date(usage.last_used_at)})"
+        for usage in data.skill_usage
+    )
     return "\n".join(
         (
             "s2s status",
@@ -339,6 +373,7 @@ def render_status(data: DashboardData, *, archived_sessions: int) -> str:
             f"singleton ratio: {_percentage(data.singleton_ratio * 100)}",
             f"other share: {_percentage(data.other_share * 100)}",
             f"last scan: {data.last_scan or 'none'}",
+            *(usage_lines or ("skill usage: none",)),
             f"remedies installed: {len(data.remedy_outcomes)} ({remedy_summary})",
             *remedy_lines,
             *cost_lines,
@@ -610,6 +645,26 @@ def _render_remedy_outcomes(outcomes: tuple[RemedyOutcome, ...]) -> str:
     return f"""<div id="remedy-outcomes" class="table-card" style="margin-top:12px">
 <h3>Remedy outcomes</h3><table><thead><tr><th>Remedy</th><th>Installed</th><th>Pre rate</th><th>Post rate</th><th>Verdict</th></tr></thead>
 <tbody>{rows}</tbody></table></div>"""
+
+
+def _render_skill_usage(usages: tuple[SkillUsageSummary, ...]) -> str:
+    rows = "".join(
+        "<tr>"
+        f"<td>{escape(usage.skill_name)}</td>"
+        f"<td>{'companion' if usage.is_companion else 'generated'}</td>"
+        f"<td>{usage.count}</td>"
+        f"<td>{escape(_usage_date(usage.last_used_at))}</td>"
+        "</tr>"
+        for usage in usages
+    ) or '<tr><td colspan="4" class="muted">No s2s skill usage recorded yet.</td></tr>'
+    return f'''<div id="skill-usage" class="table-card"><table>
+<thead><tr><th>Skill</th><th>Kind</th><th>Uses</th><th>Last used</th></tr></thead>
+<tbody>{rows}</tbody></table></div>'''
+
+
+def _usage_date(value: str) -> str:
+    parsed = _parse_timestamp(value)
+    return parsed.date().isoformat() if parsed is not None else (value[:10] or "unknown")
 
 
 def _audit_rate(value: float | None) -> str:

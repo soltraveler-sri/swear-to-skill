@@ -118,6 +118,8 @@ class Auditor:
 
     min_post_install_sessions: int = 20
     min_post_install_days: int = 30
+    min_usage_observation_days: int = 30
+    min_sessions_scanned: int = 20
     silent_days: int = 90
     meaningful_drop_fraction: float = 0.20
 
@@ -340,6 +342,16 @@ def load_config(config_path: Path | None = None) -> Config:
                 auditor,
                 "min_post_install_days",
                 defaults.auditor.min_post_install_days,
+            ),
+            min_usage_observation_days=_int(
+                auditor,
+                "min_usage_observation_days",
+                defaults.auditor.min_usage_observation_days,
+            ),
+            min_sessions_scanned=_int(
+                auditor,
+                "min_sessions_scanned",
+                defaults.auditor.min_sessions_scanned,
             ),
             silent_days=_int(auditor, "silent_days", defaults.auditor.silent_days),
             meaningful_drop_fraction=_float(

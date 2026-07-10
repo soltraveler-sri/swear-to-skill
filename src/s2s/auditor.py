@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import json
+from pathlib import Path
 
 from .config import Auditor as AuditorConfig
 from .config import load_config
@@ -49,6 +50,11 @@ def audit_remedies(
     settings = config or load_config().auditor
     outcomes: list[AuditOutcome] = []
     for remedy in ledger.installed_remedies():
+        usage_outcome = _unused_skill_outcome(ledger, remedy, current, settings)
+        if usage_outcome is not None:
+            # Put this first so the existing one-revision-per-remedy Synthesist
+            # path prioritizes a concrete discovery failure over rate evidence.
+            outcomes.append(usage_outcome)
         labels = ledger.remedy_labels(remedy.id)
         for label in labels:
             outcome = _measure(ledger, remedy, label, current, settings)
@@ -60,13 +66,110 @@ def audit_remedies(
                 assessed_at=current,
             )
             proposal_id = None
-            if outcome.verdict == "silent" and not ledger.audit_proposal_exists(
+            if usage_outcome is None and outcome.verdict == "silent" and not ledger.audit_proposal_exists(
                 remedy.id, "retirement"
             ):
                 proposal_id = _queue_retirement(ledger, remedy, outcome)
                 outcome = AuditOutcome(**{**outcome.__dict__, "proposal_id": proposal_id})
             outcomes.append(outcome)
     return tuple(outcomes)
+
+
+def _unused_skill_outcome(
+    ledger: Ledger,
+    remedy: Remedy,
+    now: datetime,
+    config: AuditorConfig,
+) -> AuditOutcome | None:
+    """Return a Synthesist-compatible trigger-revision signal at both thresholds."""
+
+    if remedy.artifact_type != "skill":
+        return None
+    installed = _parse_timestamp(remedy.installed_at)
+    if installed is None:
+        return None
+    age = now - installed
+    if age < timedelta(days=max(0, config.min_usage_observation_days)):
+        return None
+    sessions = ledger.sessions_scanned_since(remedy.installed_at, before=now.isoformat())
+    if sessions < max(0, config.min_sessions_scanned):
+        return None
+    original = ledger.get_proposal(remedy.proposal_id)
+    if original is None or not original.evidence_incident_ids:
+        return None
+    skill = _installed_skill_identity(Path(remedy.artifact_path)) or _proposed_skill_identity(
+        original.drafted_content
+    )
+    if skill is None:
+        return None
+    skill_name, description = skill
+    if not skill_name.startswith("s2s-"):
+        return None
+    if ledger.skill_usage_count(
+        skill_name, after=remedy.installed_at, before=now.isoformat()
+    ):
+        return None
+    prompt_input = (
+        f"Installed skill {skill_name!r}. Description: {description}. "
+        f"It never fired during {sessions} sessions scanned since installation; "
+        "revise its trigger description so the intended situations are discoverable."
+    )
+    return AuditOutcome(
+        remedy_id=remedy.id,
+        label=prompt_input,
+        installed_at=remedy.installed_at,
+        pre_incidents=0,
+        pre_sessions=0,
+        post_incidents=0,
+        post_sessions=sessions,
+        pre_rate=None,
+        post_rate=0.0,
+        verdict="persisting",
+        counter_evidence_ids=original.evidence_incident_ids,
+    )
+
+
+def _installed_skill_identity(path: Path) -> tuple[str, str] | None:
+    """Read only the installed skill's simple name/description frontmatter."""
+
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    if not text.startswith("---\n"):
+        return None
+    closing = text.find("\n---\n", 4)
+    if closing < 0:
+        return None
+    fields: dict[str, str] = {}
+    for line in text[4:closing].splitlines():
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
+            value = value[1:-1]
+        fields[key.strip()] = value
+    name = fields.get("name", "")
+    description = fields.get("description", "")
+    return (name, description) if name and description else None
+
+
+def _proposed_skill_identity(drafted_content: str) -> tuple[str, str] | None:
+    """Fall back to proposal metadata when an installed artifact is unreadable."""
+
+    try:
+        payload = json.loads(drafted_content)
+    except json.JSONDecodeError:
+        return None
+    content = payload.get("remedy_content") if isinstance(payload, dict) else None
+    if not isinstance(content, dict):
+        return None
+    name = content.get("name")
+    description = content.get("description")
+    if not isinstance(name, str) or not isinstance(description, str) or not name or not description:
+        return None
+    return (name if name.startswith("s2s-") else f"s2s-{name}", description)
 
 
 def _measure(

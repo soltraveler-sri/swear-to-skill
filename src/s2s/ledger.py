@@ -18,7 +18,7 @@ import sqlite3
 from .paths import resolve_paths
 
 
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
 BUSY_TIMEOUT_MS = 5_000
 PROPOSAL_STATES = ("pending", "approved", "installed", "rejected")
 
@@ -129,6 +129,21 @@ class SessionStats:
     first_timestamp: str | None
     last_timestamp: str | None
     scanned_at: str
+
+
+@dataclass(frozen=True)
+class SkillUsage:
+    """One usage observation kept separate from frustration incidents."""
+
+    id: int
+    skill_name: str
+    session_id: str
+    source: str
+    used_at: str
+
+    @property
+    def is_companion(self) -> bool:
+        return self.skill_name == "s2s"
 
 
 @dataclass(frozen=True)
@@ -527,6 +542,31 @@ def _migration_8(connection: sqlite3.Connection) -> None:
     connection.execute("DROP TABLE run_log_v7")
 
 
+def _migration_9(connection: sqlite3.Connection) -> None:
+    """Add isolated, idempotent mechanical skill-usage observations."""
+
+    connection.execute(
+        """
+        CREATE TABLE skill_usage (
+            id INTEGER PRIMARY KEY,
+            skill_name TEXT NOT NULL,
+            session_id TEXT NOT NULL,
+            source TEXT NOT NULL CHECK (source IN ('claude-code', 'codex')),
+            used_at TEXT NOT NULL
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE UNIQUE INDEX skill_usage_dedup_idx
+        ON skill_usage (source, session_id, skill_name, used_at)
+        """
+    )
+    connection.execute(
+        "CREATE INDEX skill_usage_skill_time_idx ON skill_usage (skill_name, used_at)"
+    )
+
+
 MIGRATIONS: dict[int, Callable[[sqlite3.Connection], None]] = {
     1: _migration_1,
     2: _migration_2,
@@ -536,6 +576,7 @@ MIGRATIONS: dict[int, Callable[[sqlite3.Connection], None]] = {
     6: _migration_6,
     7: _migration_7,
     8: _migration_8,
+    9: _migration_9,
 }
 
 
@@ -1263,6 +1304,103 @@ class Ledger:
                 "SELECT * FROM session_stats WHERE session_id = ? ORDER BY source", (session_id,)
             ).fetchall()
         return [self._session_stats_from_row(row) for row in rows]
+
+    def record_skill_usage(
+        self,
+        *,
+        skill_name: str,
+        session_id: str,
+        source: str,
+        used_at: str,
+    ) -> bool:
+        """Record one mechanical invocation, returning false for a rescan duplicate."""
+
+        if source not in {"claude-code", "codex"}:
+            raise LedgerError(f"unknown skill usage source {source!r}")
+        if not skill_name or not session_id:
+            raise LedgerError("skill usage requires a skill name and session id")
+        with self._write_transaction():
+            cursor = self.connection.execute(
+                """
+                INSERT INTO skill_usage (skill_name, session_id, source, used_at)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(source, session_id, skill_name, used_at) DO NOTHING
+                """,
+                (skill_name, session_id, source, used_at),
+            )
+        return cursor.rowcount == 1
+
+    def skill_usage(
+        self,
+        skill_name: str | None = None,
+        *,
+        after: str | None = None,
+        before: str | None = None,
+    ) -> list[SkillUsage]:
+        """Query usage observations without consulting or joining incidents."""
+
+        clauses: list[str] = []
+        values: list[object] = []
+        if skill_name is not None:
+            clauses.append("skill_name = ?")
+            values.append(skill_name)
+        if after is not None:
+            clauses.append("used_at >= ?")
+            values.append(after)
+        if before is not None:
+            clauses.append("used_at < ?")
+            values.append(before)
+        where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
+        rows = self.connection.execute(
+            f"SELECT * FROM skill_usage{where} ORDER BY used_at, id", values
+        ).fetchall()
+        return [
+            SkillUsage(
+                id=int(row["id"]),
+                skill_name=str(row["skill_name"]),
+                session_id=str(row["session_id"]),
+                source=str(row["source"]),
+                used_at=str(row["used_at"]),
+            )
+            for row in rows
+        ]
+
+    def skill_usage_count(
+        self,
+        skill_name: str,
+        *,
+        after: str | None = None,
+        before: str | None = None,
+    ) -> int:
+        """Count one skill's observations in a half-open time window."""
+
+        clauses = ["skill_name = ?"]
+        values: list[object] = [skill_name]
+        if after is not None:
+            clauses.append("used_at >= ?")
+            values.append(after)
+        if before is not None:
+            clauses.append("used_at < ?")
+            values.append(before)
+        row = self.connection.execute(
+            f"SELECT COUNT(*) AS total FROM skill_usage WHERE {' AND '.join(clauses)}",
+            values,
+        ).fetchone()
+        return int(row["total"])
+
+    def sessions_scanned_since(self, since: str, *, before: str | None = None) -> int:
+        """Count durable session scans completed in a half-open observation window."""
+
+        clauses = ["scanned_at >= ?"]
+        values: list[object] = [since]
+        if before is not None:
+            clauses.append("scanned_at < ?")
+            values.append(before)
+        row = self.connection.execute(
+            f"SELECT COUNT(*) AS total FROM session_stats WHERE {' AND '.join(clauses)}",
+            values,
+        ).fetchone()
+        return int(row["total"])
 
     def log_run(
         self,

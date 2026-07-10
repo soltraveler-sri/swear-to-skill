@@ -22,6 +22,10 @@ context_char_budget = 60000
 # before a non-silent outcome can be judged.
 min_post_install_sessions = 20
 min_post_install_days = 30
+# An installed generated skill with no recorded invocations needs both this
+# observation age and this many completed session scans before trigger revision.
+min_usage_observation_days = 30
+min_sessions_scanned = 20
 # Zero incidents in the remedy's own cluster for this long is a retirement candidate.
 silent_days = 90
 # Post-install rate must drop at least this fraction to be called effective.
