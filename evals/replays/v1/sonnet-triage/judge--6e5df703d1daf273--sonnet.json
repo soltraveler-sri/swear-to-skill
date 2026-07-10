@@ -1,0 +1,99 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "6e5df703d1daf273",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Given one proposed remedy and one\nplanted incident context pack, decide whether the remedy plausibly would have\nprevented this incident had it been active beforehand. Return `prevented` only\nwhen the remedy directly addresses the failure, `partially` when it would help\nbut leaves a material gap, and `no` otherwise. Give concise evidence-based\nreasoning without inventing facts.\n\nPROPOSAL:\n{\n  \"confidence\": 0.6,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"R1 (fake-verify-before-claim) governs verifying completion claims before reporting work done; these incidents are about acting on the wrong/stale branch, an unrelated failure mode with no overlap.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"R2 (Fake Release Discipline) governs running a declared verification command before reporting a release complete; it has nothing to do with confirming which git branch is active before working.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R3\",\n      \"reason\": \"R3 is a pending hook proposal about confirming before destructive file deletion; these branch-mismatch incidents involve no deletion and a different mechanism (branch verification vs. destructive-action confirmation), so there is no overlap.\",\n      \"verdict\": \"clear\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 2,\n      \"quote\": \"You are not following the branch instruction in /work/fake-aurora.\"\n    },\n    {\n      \"incident_id\": 16,\n      \"quote\": \"Why are you doing this from the stale fake branch?\"\n    }\n  ],\n  \"failure_statement\": \"The agent proceeds to edit code, run commands, or report progress on a git branch other than the one the user specified or expected (a wrong or stale branch), without first confirming the current branch matches the user's instructions.\",\n  \"remedy_content\": {\n    \"target\": \"global\",\n    \"text\": \"## Branch Verification\\n\\nBefore making edits or running commands in a git repo, confirm the current branch matches what the user specified or would expect (`git branch --show-current` / `git status`). If it looks wrong, stale, or unspecified and ambiguous, stop and either switch to the correct branch or ask — never continue substantive work silently on the wrong branch.\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"Both promoted incidents describe the same failure mode: the agent proceeded to work on the wrong or a stale branch instead of the one the user actually specified/expected (incident 2: \\\"not following the branch instruction\\\"; incident 16: \\\"doing this from the stale fake branch\\\"). This is a classic environment-mismanagement case (wrong branch), and the fix is a simple standing behavioral rule — check the current branch against what the user asked for before acting — not a multi-step procedure, so a skill would be overkill. A hook is not viable as the primary enforcement because determining \\\"the branch the user specified\\\" requires parsing natural-language instructions, which a mechanical PreToolUse/SessionStart hook cannot reliably do; a hook could at best surface the current branch, not verify correctness against intent. That leaves claude-md as the cheapest sufficient remedy: a short standing rule instructing the agent to confirm the active branch matches instructions before editing/running commands, and to stop and reconcile (switch or ask) if not. This is a natural, additive extension of the branch-workflow discipline already present in the user's global CLAUDE.md, so it targets global rather than a specific project (the two incidents span two different synthetic projects, confirming this is a general behavior gap, not project-specific).\",\n  \"singleton\": false\n}\n\nINCIDENT CONTEXT PACK:\n{\n  \"agent_activity_digest\": \"Assistant: Synthetic acknowledgement.\",\n  \"following_exchange\": \"\",\n  \"frustrated_message\": \"You are not following the branch instruction in /work/fake-aurora.\",\n  \"metadata\": {\n    \"cwd\": \"/work/fake-aurora\",\n    \"git_branch\": \"feat/fake-eval\",\n    \"project\": \"aurora\",\n    \"session_id\": \"claude-aurora-01\",\n    \"timestamp\": \"2026-07-09T12:02:00Z\"\n  },\n  \"preceding_request\": \"You ignored the no-network constraint; stop changing the plan.\"\n}\n",
+    "schema": {
+      "properties": {
+        "reasoning": {
+          "type": "string"
+        },
+        "verdict": {
+          "enum": [
+            "prevented",
+            "partially",
+            "no"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "verdict",
+        "reasoning"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 37929,
+    "duration_ms": 38147,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 14993,
+        "cacheReadInputTokens": 103499,
+        "contextWindow": 1000000,
+        "costUSD": 0.21047970000000002,
+        "inputTokens": 11669,
+        "maxOutputTokens": 64000,
+        "outputTokens": 3631,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 4,
+    "permission_denials": [],
+    "result": "{\"verdict\":\"prevented\",\"reasoning\":\"The incident's core signal is the frustrated_message: \\\"You are not following the branch instruction in /work/fake-aurora,\\\" which directly describes an agent acting on the wrong/unexpected git branch (metadata confirms git_branch: \\\"feat/fake-eval\\\" in project \\\"aurora\\\"). This matches the proposal's failure_statement precisely: the agent proceeds without confirming the current branch matches what the user specified/expected.\\n\\nThe remedy text is narrowly and directly targeted at this exact failure mode: \\\"Before making edits or running commands in a git repo, confirm the current branch matches what the user specified or would expect... If it looks wrong, stale, or unspecified and ambiguous, stop and either switch to the correct branch or ask.\\\" Had this rule been active, the agent would have been required to run git branch --show-current/git status and reconcile against the user's expectation before proceeding — exactly the missing step implied by the user's complaint.\\n\\nCaveat: the preceding_request (\\\"You ignored the no-network constraint; stop changing the plan.\\\") is unrelated to branch state, and agent_activity_digest is too thin (\\\"Synthetic acknowledgement\\\") to see the actual mechanics of how the wrong branch was reached — likely synthetic noise rather than a complicating factor. But the explicit frustrated_message is unambiguous and squarely the failure this remedy targets, and the dedup analysis correctly rules out overlap with existing remedies (verification-before-claiming, release-verification, destructive-deletion confirmation), none of which touch branch identity.\\n\\nGiven the direct textual match between the stated failure and the remedy's mechanism, and no material gap in coverage for this specific incident, this counts as prevented.\"}",
+    "session_id": "0b4885c5-baba-4f0a-b19c-da26b3944a75",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "reasoning": "The incident's core signal is the frustrated_message: \"You are not following the branch instruction in /work/fake-aurora,\" which directly describes an agent acting on the wrong/unexpected git branch (metadata confirms git_branch: \"feat/fake-eval\" in project \"aurora\"). This matches the proposal's failure_statement precisely: the agent proceeds without confirming the current branch matches what the user specified/expected.\n\nThe remedy text is narrowly and directly targeted at this exact failure mode: \"Before making edits or running commands in a git repo, confirm the current branch matches what the user specified or would expect... If it looks wrong, stale, or unspecified and ambiguous, stop and either switch to the correct branch or ask.\" Had this rule been active, the agent would have been required to run git branch --show-current/git status and reconcile against the user's expectation before proceeding — exactly the missing step implied by the user's complaint.\n\nCaveat: the preceding_request (\"You ignored the no-network constraint; stop changing the plan.\") is unrelated to branch state, and agent_activity_digest is too thin (\"Synthetic acknowledgement\") to see the actual mechanics of how the wrong branch was reached — likely synthetic noise rather than a complicating factor. But the explicit frustrated_message is unambiguous and squarely the failure this remedy targets, and the dedup analysis correctly rules out overlap with existing remedies (verification-before-claiming, release-verification, destructive-deletion confirmation), none of which touch branch identity.\n\nGiven the direct textual match between the stated failure and the remedy's mechanism, and no material gap in coverage for this specific incident, this counts as prevented.",
+      "verdict": "prevented"
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 101,
+    "total_cost_usd": 0.21047970000000002,
+    "ttft_ms": 18761,
+    "ttft_stream_ms": 1266,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 14993,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 14993,
+      "cache_read_input_tokens": 103499,
+      "inference_geo": "not_available",
+      "input_tokens": 11669,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 667,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 667,
+          "cache_read_input_tokens": 42463,
+          "input_tokens": 4484,
+          "output_tokens": 678,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 3631,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "2305352e-3663-4d27-ae24-a775140eb8c0"
+  }
+}

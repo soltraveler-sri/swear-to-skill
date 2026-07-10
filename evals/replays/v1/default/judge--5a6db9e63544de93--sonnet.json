@@ -134,55 +134,55 @@
   },
   "response": {
     "api_error_status": null,
-    "duration_api_ms": 21004,
-    "duration_ms": 21205,
+    "duration_api_ms": 14190,
+    "duration_ms": 14389,
     "fast_mode_state": "off",
     "is_error": false,
     "modelUsage": {
       "claude-sonnet-5": {
         "cacheCreationInputTokens": 3621,
-        "cacheReadInputTokens": 28513,
+        "cacheReadInputTokens": 28515,
         "contextWindow": 1000000,
-        "costUSD": 0.0774339,
+        "costUSD": 0.0692745,
         "inputTokens": 6768,
         "maxOutputTokens": 64000,
-        "outputTokens": 1790,
+        "outputTokens": 1246,
         "webSearchRequests": 0
       }
     },
     "num_turns": 2,
     "permission_denials": [],
-    "result": "{\"actionability\":{\"score\":1,\"justification\":\"\\\"Compare the work with the request before responding\\\" names no concrete check, threshold, or corrective action, so it can't reliably change future behavior.\"},\"generality_without_vagueness\":{\"score\":1,\"justification\":\"The remedy is generic to the point of vacuity — it never specifies what scope-creep looks like or what to do when detected, so it reads as a platitude rather than a usable rule.\"},\"trigger_quality\":{\"score\":1,\"justification\":\"The description \\\"Use for tasks.\\\" is not a real \\\"Use when ...\\\" trigger — it matches every task and gives no signal for when this skill should actually fire.\"},\"leakage\":{\"score\":5,\"justification\":\"No project-specific nouns, file paths, or evidence-specific details appear in the remedy text.\"},\"routing_fitness\":{\"score\":2,\"justification\":\"A one-line behavioral reminder about matching scope to request is better suited to a lightweight feedback-style rule than a full skill artifact, and the routing rationale is circular rather than justifying the choice.\"}}",
-    "session_id": "c98694fa-7a87-459b-9afa-1179afc2112c",
+    "result": "{\"actionability\":{\"score\":2,\"justification\":\"The body only says to \\\"compare the work with the request\\\" without specifying what to check for, what counts as scope overrun, or what corrective action to take, so it gives no concrete behavioral change.\"},\"generality_without_vagueness\":{\"score\":1,\"justification\":\"Both the description (\\\"Use for tasks.\\\") and body are generic platitudes that could apply to any task at all, providing no specific guardrail against the scope-expansion failure mode.\"},\"trigger_quality\":{\"score\":1,\"justification\":\"\\\"Use for tasks.\\\" is not a real Use-when trigger — it fails to name the condition (e.g., small/targeted change requests) that should activate this skill, so it would fire indiscriminately or never reliably.\"},\"leakage\":{\"score\":5,\"justification\":\"The remedy text contains no project-specific nouns, file names, or evidence-specific details — it is fully generic (if uselessly so).\"},\"routing_fitness\":{\"score\":2,\"justification\":\"A one-line generic reminder to check scope is not complex or reusable enough to warrant a skill; a feedback-memory rule or a concrete checklist step would be a cheaper and more effective vehicle for this correction.\"}}",
+    "session_id": "2a029d61-9c19-4d7b-8722-635828896d89",
     "stop_reason": "tool_use",
     "structured_output": {
       "actionability": {
-        "justification": "\"Compare the work with the request before responding\" names no concrete check, threshold, or corrective action, so it can't reliably change future behavior.",
-        "score": 1
+        "justification": "The body only says to \"compare the work with the request\" without specifying what to check for, what counts as scope overrun, or what corrective action to take, so it gives no concrete behavioral change.",
+        "score": 2
       },
       "generality_without_vagueness": {
-        "justification": "The remedy is generic to the point of vacuity — it never specifies what scope-creep looks like or what to do when detected, so it reads as a platitude rather than a usable rule.",
+        "justification": "Both the description (\"Use for tasks.\") and body are generic platitudes that could apply to any task at all, providing no specific guardrail against the scope-expansion failure mode.",
         "score": 1
       },
       "leakage": {
-        "justification": "No project-specific nouns, file paths, or evidence-specific details appear in the remedy text.",
+        "justification": "The remedy text contains no project-specific nouns, file names, or evidence-specific details — it is fully generic (if uselessly so).",
         "score": 5
       },
       "routing_fitness": {
-        "justification": "A one-line behavioral reminder about matching scope to request is better suited to a lightweight feedback-style rule than a full skill artifact, and the routing rationale is circular rather than justifying the choice.",
+        "justification": "A one-line generic reminder to check scope is not complex or reusable enough to warrant a skill; a feedback-memory rule or a concrete checklist step would be a cheaper and more effective vehicle for this correction.",
         "score": 2
       },
       "trigger_quality": {
-        "justification": "The description \"Use for tasks.\" is not a real \"Use when ...\" trigger — it matches every task and gives no signal for when this skill should actually fire.",
+        "justification": "\"Use for tasks.\" is not a real Use-when trigger — it fails to name the condition (e.g., small/targeted change requests) that should activate this skill, so it would fire indiscriminately or never reliably.",
         "score": 1
       }
     },
     "subtype": "success",
     "terminal_reason": "completed",
-    "time_to_request_ms": 100,
-    "total_cost_usd": 0.0774339,
-    "ttft_ms": 17652,
-    "ttft_stream_ms": 2777,
+    "time_to_request_ms": 99,
+    "total_cost_usd": 0.0692745,
+    "ttft_ms": 9927,
+    "ttft_stream_ms": 1541,
     "type": "result",
     "usage": {
       "cache_creation": {
@@ -190,7 +190,7 @@
         "ephemeral_5m_input_tokens": 0
       },
       "cache_creation_input_tokens": 3621,
-      "cache_read_input_tokens": 28513,
+      "cache_read_input_tokens": 28515,
       "inference_geo": "not_available",
       "input_tokens": 6768,
       "iterations": [
@@ -200,13 +200,13 @@
             "ephemeral_5m_input_tokens": 0
           },
           "cache_creation_input_tokens": 3621,
-          "cache_read_input_tokens": 28513,
+          "cache_read_input_tokens": 28515,
           "input_tokens": 6768,
-          "output_tokens": 1790,
+          "output_tokens": 1246,
           "type": "message"
         }
       ],
-      "output_tokens": 1790,
+      "output_tokens": 1246,
       "server_tool_use": {
         "web_fetch_requests": 0,
         "web_search_requests": 0
@@ -214,6 +214,6 @@
       "service_tier": "standard",
       "speed": "standard"
     },
-    "uuid": "3a0596eb-2cb6-4505-aa86-4cca8d5a1a35"
+    "uuid": "490d33a0-e4f0-483e-8b1a-82f6d62b5861"
   }
 }

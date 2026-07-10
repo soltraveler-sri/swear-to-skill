@@ -1,0 +1,227 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "87d04845ef363db4",
+    "model": "sonnet",
+    "stage": "synthesize"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are the Stage 4 Synthesist. Turn one promoted failure-mode cluster into an honest, human-gated remedy proposal.\n\nMost frustrations do not deserve a skill. Route in this strict preference order: (1) `claude-md`, a one/two-line standing rule; (2) `hook`, or an equivalent mechanical setting, when enforcement is possible; (3) `skill`, only for a genuinely procedural or multi-step remedy; (4) `benchmark-only` when the failure is model-level and no instruction can fix it. Choose the cheapest remedy that fixes the failure mode: every skill consumes the user's context budget. `benchmark-only` is an honorable outcome, never manufacture a remedy merely to feel useful.\n\nIf the only sensible remedy target is Codex-side (`AGENTS.md` or `~/.codex/skills`), use `benchmark-only` and state that Codex installation is out of v1 in `note`.\n\nThe existing-remedy digests below are numbered [R1]…[RN]. There are 5 existing-remedy digests. Your `dedup` array MUST contain exactly 5 entries, one per number, with `existing` set to exactly that token (e.g. \"R1\"). Include entries even when the verdict is clear. State `clear` or `overlap` for each. Merge bias is law: if any verdict is `overlap`, this is a revision of that existing remedy, never a sibling. Set `overlap_action.revises` to that R token.\n\nFor a `skill`, write a kebab-case name and a concrete auto-invocation description beginning `Use when ...`; this description is the trigger. The body must be substantive Markdown. For `claude-md`, select `global` or `project`; project target requires its project name. For `hook`, give a Claude Code event and a command sketch. For `benchmark-only`, explain the measurement-only outcome in `note`.\n\nThe upstream classifier deliberately over-merges. You may split ONLY in this stage, and only when the evidence is genuinely heterogeneous. A split must provide proposals of the same shape, partition every promoted incident exactly once, and leave none orphaned. Otherwise return one proposal covering the group.\n\nTAXONOMY GIST:\nignored-instruction: explicit user instruction not followed\n\nPROMOTED EVIDENCE:\nBEGIN PROMOTED EVIDENCE incident_id=1 project=aurora\nOne-liner: Agent violated an explicit constraint and changed the plan without permission.\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nYou ignored the no-network constraint; stop changing the plan.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: You are not following the branch instruction in /work/fake-aurora.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=4 project=aurora\nOne-liner: Agent modified a component the user had explicitly instructed it to leave untouched.\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nI told you to leave the formatter alone, and it was changed.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: The fake vendor error says 'what the hell'; quote it verbatim in the fixture.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=8 project=cinder\nOne-liner: Agent modified files in a scope the user explicitly excluded from the change.\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nFollow the instructions: this patch must not touch tests.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: The shell target drifted after the handoff.\nEND PROMOTED EVIDENCE\n\nEXISTING SKILLS (name and description only):\n- [R1] skill:$HOME/.claude/skills/fake-verify-before-claim/SKILL.md | name=fake-verify-before-claim | description=Use when a completion claim requires verification.\n\nS2S-MANAGED CLAUDE.MD BLOCKS:\n- [R2] claude-md:$HOME/.claude/CLAUDE.md#1 | # Fake Release Discipline\n\nBefore reporting a fake release as complete, run its declared verification\ncommand and report the result plainly.\n\nPENDING OR INSTALLED S2S PROPOSALS:\n- [R3] proposal #1 | type=hook | status=pending | {\"confidence\":0.55,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) governs verifying completion claims before reporting them done; this incident is about unconfirmed destructive deletion, a different failure mode with no overlap.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline claude-md block) governs running verification commands before reporting a fake release complete; it does not address asking for confirmation before deleting/removing files, so t\n- [R4] proposal #2 | type=claude-md | status=pending | {\"confidence\":0.6,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) governs verifying completion claims before reporting work done; these incidents are about acting on the wrong/stale branch, an unrelated failure mode with no overlap.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline) governs running a declared verification command before reporting a release complete; it has nothing to do with confirming which git branch is active before working.\",\"verdic\n- [R5] proposal #3 | type=skill | status=pending | revises=skill:$HOME/.claude/skills/fake-verify-before-claim/SKILL.md | {\"confidence\":0.62,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) already governs verifying completion claims before reporting them done; incident 31's failure \\u2014 declaring something fixed before a check ran and before a documented changelog policy was applied \\u2014 is the same failure mode (premature completion claim), so this revises R1's body to explicitly cover checking documented project policy, not just running a command.\",\"verdict\":\"overlap\"},{\"existing\":\"R2\",\"reas\n\n\nYour prior draft failed local validation. Correct the SKILL.md/frontmatter, dedup, and evidence partition exactly. Specific validation failure: claude-md requires text and global/project target",
+    "schema": {
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "dedup": {
+          "items": {
+            "properties": {
+              "existing": {
+                "pattern": "^R[0-9]+$",
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "clear",
+                  "overlap"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "existing",
+              "verdict",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "properties": {
+              "incident_id": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "quote": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "incident_id",
+              "quote"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "failure_statement": {
+          "type": "string"
+        },
+        "overlap_action": {
+          "properties": {
+            "revises": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "revises"
+          ],
+          "type": "object"
+        },
+        "remedy_content": {
+          "type": "object"
+        },
+        "remedy_type": {
+          "enum": [
+            "claude-md",
+            "hook",
+            "skill",
+            "benchmark-only"
+          ],
+          "type": "string"
+        },
+        "routing_rationale": {
+          "type": "string"
+        },
+        "split": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "remedy_type",
+        "routing_rationale",
+        "failure_statement",
+        "remedy_content",
+        "evidence",
+        "dedup",
+        "confidence"
+      ],
+      "type": "object"
+    },
+    "stage": "synthesize"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 42548,
+    "duration_ms": 42738,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 5458,
+        "cacheReadInputTokens": 28519,
+        "contextWindow": 1000000,
+        "costUSD": 0.1255257,
+        "inputTokens": 6769,
+        "maxOutputTokens": 64000,
+        "outputTokens": 4261,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"remedy_type\":\"claude-md\",\"routing_rationale\":\"All three incidents (aurora #1, aurora #4, cinder #8) share one shape: the user stated an explicit scope/action constraint mid-task (no network calls, leave the formatter alone, don't touch tests) and the agent violated it while pursuing the broader goal. This is a standing-behavior fix, not a multi-step procedure, so it doesn't warrant a skill. It also isn't mechanically enforceable by a hook: the forbidden paths/actions are declared ad hoc in conversation each time (a different file, a different constraint type — network vs. file scope vs. directory scope), so there's no fixed pattern a PreToolUse matcher could check against without maintaining per-conversation state, which is overkill for what is fundamentally a discipline-of-attention problem. A short standing claude-md rule telling the agent to treat user-stated constraints as durable and to re-check them before each action is the cheapest fix that addresses the actual failure (constraints being dropped from working memory as the task progresses), so it is routed as global claude-md text rather than hook or skill.\",\"failure_statement\":\"The agent forgets or overrides explicit scope constraints the user stated earlier in the session (e.g. \\\"no network calls,\\\" \\\"leave the formatter alone,\\\" \\\"don't touch tests\\\"), acting outside the stated boundary as it continues pursuing the task.\",\"remedy_content\":{\"target\":\"global\",\"heading\":\"# Explicit Scope Constraints\",\"text\":\"When the user states an explicit constraint mid-task (e.g. \\\"don't touch the formatter,\\\" \\\"no network calls,\\\" \\\"this patch must not touch tests\\\"), treat it as a hard, durable boundary for the rest of the task, not a one-time note. Before each edit, command, or plan change, check it against every constraint stated so far in the conversation. If an action would cross one, stop and ask instead of proceeding or silently reinterpreting the plan.\"},\"evidence\":[{\"incident_id\":1,\"quote\":\"You ignored the no-network constraint; stop changing the plan.\"},{\"incident_id\":4,\"quote\":\"I told you to leave the formatter alone, and it was changed.\"},{\"incident_id\":8,\"quote\":\"Follow the instructions: this patch must not touch tests.\"}],\"dedup\":[{\"existing\":\"R1\",\"verdict\":\"clear\",\"reason\":\"R1 (fake-verify-before-claim) governs verifying completion claims before reporting work done; this cluster is about violating explicit scope/action constraints mid-task, a distinct failure mode with no overlap.\"},{\"existing\":\"R2\",\"verdict\":\"clear\",\"reason\":\"R2 (Fake Release Discipline) governs running a declared verification command before reporting a release complete; it does not address respecting user-stated exclusions like 'no network' or 'don't touch tests'.\"},{\"existing\":\"R3\",\"verdict\":\"clear\",\"reason\":\"R3 governs confirming with the user before destructive deletion/removal of files; this cluster is about violating already-stated scope constraints during otherwise normal edits, not seeking confirmation before a destructive action.\"},{\"existing\":\"R4\",\"verdict\":\"clear\",\"reason\":\"R4 governs confirming which git branch is active/stale before working; although incident 1's follow-up mentions a branch instruction, the core evidence across all three incidents is about violating stated scope exclusions (network, specific files, specific directories), not branch selection or staleness.\"},{\"existing\":\"R5\",\"verdict\":\"clear\",\"reason\":\"R5 revises R1 to cover premature completion claims against documented changelog policy; unrelated to mid-task violation of user-stated scope constraints.\"}],\"confidence\":0.62}",
+    "session_id": "e30c9d87-2e4a-40cd-9a55-59ef477f2d97",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "confidence": 0.62,
+      "dedup": [
+        {
+          "existing": "R1",
+          "reason": "R1 (fake-verify-before-claim) governs verifying completion claims before reporting work done; this cluster is about violating explicit scope/action constraints mid-task, a distinct failure mode with no overlap.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R2",
+          "reason": "R2 (Fake Release Discipline) governs running a declared verification command before reporting a release complete; it does not address respecting user-stated exclusions like 'no network' or 'don't touch tests'.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R3",
+          "reason": "R3 governs confirming with the user before destructive deletion/removal of files; this cluster is about violating already-stated scope constraints during otherwise normal edits, not seeking confirmation before a destructive action.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R4",
+          "reason": "R4 governs confirming which git branch is active/stale before working; although incident 1's follow-up mentions a branch instruction, the core evidence across all three incidents is about violating stated scope exclusions (network, specific files, specific directories), not branch selection or staleness.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R5",
+          "reason": "R5 revises R1 to cover premature completion claims against documented changelog policy; unrelated to mid-task violation of user-stated scope constraints.",
+          "verdict": "clear"
+        }
+      ],
+      "evidence": [
+        {
+          "incident_id": 1,
+          "quote": "You ignored the no-network constraint; stop changing the plan."
+        },
+        {
+          "incident_id": 4,
+          "quote": "I told you to leave the formatter alone, and it was changed."
+        },
+        {
+          "incident_id": 8,
+          "quote": "Follow the instructions: this patch must not touch tests."
+        }
+      ],
+      "failure_statement": "The agent forgets or overrides explicit scope constraints the user stated earlier in the session (e.g. \"no network calls,\" \"leave the formatter alone,\" \"don't touch tests\"), acting outside the stated boundary as it continues pursuing the task.",
+      "remedy_content": {
+        "heading": "# Explicit Scope Constraints",
+        "target": "global",
+        "text": "When the user states an explicit constraint mid-task (e.g. \"don't touch the formatter,\" \"no network calls,\" \"this patch must not touch tests\"), treat it as a hard, durable boundary for the rest of the task, not a one-time note. Before each edit, command, or plan change, check it against every constraint stated so far in the conversation. If an action would cross one, stop and ask instead of proceeding or silently reinterpreting the plan."
+      },
+      "remedy_type": "claude-md",
+      "routing_rationale": "All three incidents (aurora #1, aurora #4, cinder #8) share one shape: the user stated an explicit scope/action constraint mid-task (no network calls, leave the formatter alone, don't touch tests) and the agent violated it while pursuing the broader goal. This is a standing-behavior fix, not a multi-step procedure, so it doesn't warrant a skill. It also isn't mechanically enforceable by a hook: the forbidden paths/actions are declared ad hoc in conversation each time (a different file, a different constraint type — network vs. file scope vs. directory scope), so there's no fixed pattern a PreToolUse matcher could check against without maintaining per-conversation state, which is overkill for what is fundamentally a discipline-of-attention problem. A short standing claude-md rule telling the agent to treat user-stated constraints as durable and to re-check them before each action is the cheapest fix that addresses the actual failure (constraints being dropped from working memory as the task progresses), so it is routed as global claude-md text rather than hook or skill."
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 99,
+    "total_cost_usd": 0.1255257,
+    "ttft_ms": 31685,
+    "ttft_stream_ms": 1863,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 5458,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 5458,
+      "cache_read_input_tokens": 28519,
+      "inference_geo": "not_available",
+      "input_tokens": 6769,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 5458,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 5458,
+          "cache_read_input_tokens": 28519,
+          "input_tokens": 6769,
+          "output_tokens": 4261,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 4261,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "e6811901-5a48-40f1-a771-db0fff89c61b"
+  }
+}

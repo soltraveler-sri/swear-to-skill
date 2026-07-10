@@ -1,0 +1,99 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "5d38d6bb41a109c2",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Given one proposed remedy and one\nplanted incident context pack, decide whether the remedy plausibly would have\nprevented this incident had it been active beforehand. Return `prevented` only\nwhen the remedy directly addresses the failure, `partially` when it would help\nbut leaves a material gap, and `no` otherwise. Give concise evidence-based\nreasoning without inventing facts.\n\nPROPOSAL:\n{\n  \"confidence\": 0.6,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"R1 (fake-verify-before-claim) governs verifying completion claims before reporting done; this cluster is about violating requested scope boundaries (size/location/contents of the change), not about verifying a claim afterward — no overlap.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"R2 (Fake Release Discipline) governs running a declared verification command before reporting a release complete; it has nothing to do with staying within a narrowly requested scope — no overlap.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R3\",\n      \"reason\": \"R3's cluster is about confirming before unconfirmed destructive deletion; this cluster is about exceeding or missing requested scope on non-destructive edits/notes — different failure mode, no overlap.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R4\",\n      \"reason\": \"R4's cluster is about acting on the wrong or stale git branch; this cluster is about the size/location/contents of the change relative to what was asked, independent of branch state — no overlap.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R5\",\n      \"reason\": \"R5 revises R1's premature-completion-claim failure (declaring something fixed before checks/policy applied); this cluster is about doing more/less than the requested scope, not about prematurely claiming completion — no overlap.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R6\",\n      \"reason\": \"R6's own dedup reasoning describes its cluster as 'violating explicit scope/action constraints mid-task' and 'not respecting user-stated exclusions' — the same underlying failure shape as this cluster: the agent disregards a boundary the user explicitly set on the work (narrow deliverable, specific workspace, required fields) and does more, less, or different work than asked. Per merge-bias law, this is a revision of R6 rather than a new sibling claude-md proposal.\",\n      \"verdict\": \"overlap\"\n    },\n    {\n      \"existing\": \"R7\",\n      \"reason\": \"R7's cluster is about solving the wrong problem entirely (misinterpreting what was asked); this cluster is about correctly understanding the request but then over- or under-delivering relative to its stated scope — a distinct failure mode, no overlap.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R8\",\n      \"reason\": \"R8 revises R2's premature-completion-claim failure (claiming a migration complete while checks still fail); this cluster is about scope boundaries on the work itself, not about the accuracy of a completion claim — no overlap.\",\n      \"verdict\": \"clear\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 9,\n      \"quote\": \"That's not what I asked; the request was a one-file note.\"\n    },\n    {\n      \"incident_id\": 22,\n      \"quote\": \"This is not what I asked; a rewrite was not requested.\"\n    },\n    {\n      \"incident_id\": 24,\n      \"quote\": \"Why did you rebuild the fake UI when I asked for one switch?\"\n    },\n    {\n      \"incident_id\": 26,\n      \"quote\": \"You missed the only requested field in the payload.\"\n    },\n    {\n      \"incident_id\": 6,\n      \"quote\": \"Try again with the small change I specified.\"\n    }\n  ],\n  \"failure_statement\": \"When a user's request explicitly scopes the work narrowly — a single file, a single small change, a specific workspace/location, or specific required output fields — the agent instead expands the work into a broader rewrite or rebuild, uses the wrong location, or omits an explicitly requested element, producing output the user did not ask for (or missing what they did ask for).\",\n  \"overlap_action\": {\n    \"revises\": \"proposal #4\"\n  },\n  \"remedy_content\": {\n    \"target\": \"global\",\n    \"text\": \"Scope Discipline: When a request names a narrow scope (a single file, a single change, a specific workspace/location, or specific required output fields), deliver exactly that — do not expand it into a broader rewrite or rebuild, do not work in a different location than requested, and do not omit elements the user explicitly asked to be included.\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"All five promoted incidents (9, 22, 24, 26, 6) are the same taxonomy gist — scope-deviation: the agent delivered more, less, or otherwise different output than a narrowly-scoped request called for (a full rewrite instead of one switch, a rebuild instead of one small change, wrong workspace, an omitted required field). This is a standing behavioral rule about respecting explicit scope boundaries stated in the request, not a multi-step procedure, so a claude-md line is the cheapest sufficient remedy — no mechanical hook can detect 'is this the right amount of change' and it doesn't warrant a skill's context cost. R6 is an existing pending claude-md proposal whose own dedup reasoning describes its cluster as 'violating explicit scope/action constraints mid-task' (e.g., not respecting user-stated exclusions) — the same failure shape as this cluster (not respecting user-stated scope boundaries), so per merge-bias law this is treated as a revision of R6 rather than a new sibling proposal. No other existing remedy (R1, R2, R5, R8: premature completion claims; R3: unconfirmed destructive deletion; R4: stale branch; R7: solving the wrong problem entirely) addresses scope size/boundary adherence.\",\n  \"singleton\": false\n}\n\nINCIDENT CONTEXT PACK:\n{\n  \"agent_activity_digest\": \"\",\n  \"following_exchange\": \"Assistant: Synthetic acknowledgement.\\nUser: My future self will say 'this is awful' if I forget the fake demo; that is a joke.\",\n  \"frustrated_message\": \"That's not what I asked; the request was a one-file note.\",\n  \"metadata\": {\n    \"cwd\": \"/work/fake-cinder\",\n    \"git_branch\": \"feat/fake-eval\",\n    \"project\": \"cinder\",\n    \"session_id\": \"claude-cinder-02\",\n    \"timestamp\": \"2026-07-09T12:40:00Z\"\n  },\n  \"preceding_request\": \"\"\n}\n",
+    "schema": {
+      "properties": {
+        "reasoning": {
+          "type": "string"
+        },
+        "verdict": {
+          "enum": [
+            "prevented",
+            "partially",
+            "no"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "verdict",
+        "reasoning"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 28497,
+    "duration_ms": 28691,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 14397,
+        "cacheReadInputTokens": 61833,
+        "contextWindow": 1000000,
+        "costUSD": 0.1650369,
+        "inputTokens": 6770,
+        "maxOutputTokens": 64000,
+        "outputTokens": 2653,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 3,
+    "permission_denials": [],
+    "result": "{\"verdict\":\"prevented\",\"reasoning\":\"The incident pack's frustrated_message (\\\"That's not what I asked; the request was a one-file note.\\\") is an exact match to incident_id 9, one of the five incidents cited as evidence for this proposal's failure_statement (narrow scope requested — single file/change/location/field — but agent delivered something broader/different/wrong-located, or omitted a requested element). The remedy text explicitly instructs: when a request names a narrow scope (a single file, a single change, a specific location, specific required fields), deliver exactly that — no expansion into a rewrite/rebuild, no wrong location, no omission of explicitly requested elements. That is a direct, on-point behavioral instruction matching this exact failure mode (a one-file note request being escalated into something larger).\\n\\nThe context pack itself is thin in isolation — preceding_request and agent_activity_digest are both empty, so we can't independently verify from this pack alone what the agent actually built instead of the one-file note. But since this incident is one of the source incidents the rule was explicitly derived from (matching quote), the causal link between failure and remedy is established at the proposal level rather than something needing re-derivation from a sparse pack. The follow-up exchange (joke about \\\"forgetting the fake demo\\\") suggests the agent may have built an unrequested demo/deliverable instead of the simple note, which is squarely the over-delivery pattern the remedy targets.\\n\\nThis is a simple, general instruction that plausibly would have kept the agent within the requested one-file scope had it been active beforehand. No material gap is apparent for this case (no destructive action, no ambiguity about what \\\"one-file note\\\" means), so this counts as a full match rather than partial.</parameter>\\n</invoke>\\n\"}",
+    "session_id": "1b902f98-1e4e-43b9-a880-e2bd26d8fc77",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "reasoning": "The incident pack's frustrated_message (\"That's not what I asked; the request was a one-file note.\") is an exact match to incident_id 9, one of the five incidents cited as evidence for this proposal's failure_statement (narrow scope requested — single file/change/location/field — but agent delivered something broader/different/wrong-located, or omitted a requested element). The remedy text explicitly instructs: when a request names a narrow scope (a single file, a single change, a specific location, specific required fields), deliver exactly that — no expansion into a rewrite/rebuild, no wrong location, no omission of explicitly requested elements. That is a direct, on-point behavioral instruction matching this exact failure mode (a one-file note request being escalated into something larger).\n\nThe context pack itself is thin in isolation — preceding_request and agent_activity_digest are both empty, so we can't independently verify from this pack alone what the agent actually built instead of the one-file note. But since this incident is one of the source incidents the rule was explicitly derived from (matching quote), the causal link between failure and remedy is established at the proposal level rather than something needing re-derivation from a sparse pack. The follow-up exchange (joke about \"forgetting the fake demo\") suggests the agent may have built an unrequested demo/deliverable instead of the simple note, which is squarely the over-delivery pattern the remedy targets.\n\nThis is a simple, general instruction that plausibly would have kept the agent within the requested one-file scope had it been active beforehand. No material gap is apparent for this case (no destructive action, no ambiguity about what \"one-file note\" means), so this counts as a full match rather than partial.</parameter>\n</invoke>\n",
+      "verdict": "prevented"
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 96,
+    "total_cost_usd": 0.1650369,
+    "ttft_ms": 16528,
+    "ttft_stream_ms": 1259,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 14397,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 14397,
+      "cache_read_input_tokens": 61833,
+      "inference_geo": "not_available",
+      "input_tokens": 6770,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 8838,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 8838,
+          "cache_read_input_tokens": 33696,
+          "input_tokens": 2,
+          "output_tokens": 610,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 2653,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "71df9bd3-5b30-4c3d-a8ea-c101578ed268"
+  }
+}

@@ -1,0 +1,219 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "dee5a11906c6d889",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Grade the proposed remedy, not the\nwriting style of this prompt. A good remedy changes a concrete future behavior,\nis broad enough to cover the failure mode without becoming a platitude, uses a\nreal `Use when ...` trigger when it is a skill, leaks no evidence-specific\nproject nouns into the remedy text, and uses the cheapest adequate remedy type.\n\nScore every dimension from 1 (poor) to 5 (excellent). Give exactly one concise\nsentence of justification for each score. Do not infer facts that are absent.\n\nPROPOSAL:\n{\n  \"confidence\": 0.62,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"R1 (fake-verify-before-claim) governs verifying completion claims before reporting work done; this cluster is about violating explicit scope/action constraints mid-task, a distinct failure mode with no overlap.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"R2 (Fake Release Discipline) governs running a declared verification command before reporting a release complete; it does not address respecting user-stated exclusions like 'no network' or 'don't touch tests'.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R3\",\n      \"reason\": \"R3 governs confirming with the user before destructive deletion/removal of files; this cluster is about violating already-stated scope constraints during otherwise normal edits, not seeking confirmation before a destructive action.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R4\",\n      \"reason\": \"R4 governs confirming which git branch is active/stale before working; although incident 1's follow-up mentions a branch instruction, the core evidence across all three incidents is about violating stated scope exclusions (network, specific files, specific directories), not branch selection or staleness.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R5\",\n      \"reason\": \"R5 revises R1 to cover premature completion claims against documented changelog policy; unrelated to mid-task violation of user-stated scope constraints.\",\n      \"verdict\": \"clear\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 1,\n      \"quote\": \"You ignored the no-network constraint; stop changing the plan.\"\n    },\n    {\n      \"incident_id\": 4,\n      \"quote\": \"I told you to leave the formatter alone, and it was changed.\"\n    },\n    {\n      \"incident_id\": 8,\n      \"quote\": \"Follow the instructions: this patch must not touch tests.\"\n    }\n  ],\n  \"failure_statement\": \"The agent forgets or overrides explicit scope constraints the user stated earlier in the session (e.g. \\\"no network calls,\\\" \\\"leave the formatter alone,\\\" \\\"don't touch tests\\\"), acting outside the stated boundary as it continues pursuing the task.\",\n  \"remedy_content\": {\n    \"heading\": \"# Explicit Scope Constraints\",\n    \"target\": \"global\",\n    \"text\": \"When the user states an explicit constraint mid-task (e.g. \\\"don't touch the formatter,\\\" \\\"no network calls,\\\" \\\"this patch must not touch tests\\\"), treat it as a hard, durable boundary for the rest of the task, not a one-time note. Before each edit, command, or plan change, check it against every constraint stated so far in the conversation. If an action would cross one, stop and ask instead of proceeding or silently reinterpreting the plan.\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"All three incidents (aurora #1, aurora #4, cinder #8) share one shape: the user stated an explicit scope/action constraint mid-task (no network calls, leave the formatter alone, don't touch tests) and the agent violated it while pursuing the broader goal. This is a standing-behavior fix, not a multi-step procedure, so it doesn't warrant a skill. It also isn't mechanically enforceable by a hook: the forbidden paths/actions are declared ad hoc in conversation each time (a different file, a different constraint type — network vs. file scope vs. directory scope), so there's no fixed pattern a PreToolUse matcher could check against without maintaining per-conversation state, which is overkill for what is fundamentally a discipline-of-attention problem. A short standing claude-md rule telling the agent to treat user-stated constraints as durable and to re-check them before each action is the cheapest fix that addresses the actual failure (constraints being dropped from working memory as the task progresses), so it is routed as global claude-md text rather than hook or skill.\",\n  \"singleton\": false\n}\n",
+    "schema": {
+      "properties": {
+        "actionability": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "generality_without_vagueness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "leakage": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "routing_fitness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "trigger_quality": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "actionability",
+        "generality_without_vagueness",
+        "trigger_quality",
+        "leakage",
+        "routing_fitness"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 18186,
+    "duration_ms": 18376,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 4848,
+        "cacheReadInputTokens": 28513,
+        "contextWindow": 1000000,
+        "costUSD": 0.0829209,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 1665,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"actionability\":{\"score\":4,\"justification\":\"The instruction gives a concrete operational check (verify each edit/command/plan change against every constraint stated so far, stop and ask before crossing one) rather than a vague admonition to 'be careful.'\"},\"generality_without_vagueness\":{\"score\":4,\"justification\":\"It generalizes across constraint types (network, file/directory scope, feature scope) via a single mechanism—durable boundary + per-action check—without collapsing into an unfalsifiable platitude like 'respect user intent.'\"},\"trigger_quality\":{\"score\":4,\"justification\":\"Not a skill, so no formal 'Use when...' header is required, but the remedy text embeds its own trigger ('When the user states an explicit constraint mid-task...') that clearly demarcates when the rule fires.\"},\"leakage\":{\"score\":5,\"justification\":\"The quoted examples (formatter, no network calls, don't touch tests) are generic illustrative constraint types drawn from the incidents but contain no project names, session identifiers, or other evidence-specific nouns.\"},\"routing_fitness\":{\"score\":5,\"justification\":\"The rationale correctly rules out a hook (constraints are ad hoc/free-text each time, no fixed matchable pattern) and a skill (this is a standing attentional discipline, not a multi-step procedure), making a short global claude-md rule the cheapest adequate fix.\"}}",
+    "session_id": "ecac979b-ff84-434f-9fd7-a2a2f208af07",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "actionability": {
+        "justification": "The instruction gives a concrete operational check (verify each edit/command/plan change against every constraint stated so far, stop and ask before crossing one) rather than a vague admonition to 'be careful.'",
+        "score": 4
+      },
+      "generality_without_vagueness": {
+        "justification": "It generalizes across constraint types (network, file/directory scope, feature scope) via a single mechanism—durable boundary + per-action check—without collapsing into an unfalsifiable platitude like 'respect user intent.'",
+        "score": 4
+      },
+      "leakage": {
+        "justification": "The quoted examples (formatter, no network calls, don't touch tests) are generic illustrative constraint types drawn from the incidents but contain no project names, session identifiers, or other evidence-specific nouns.",
+        "score": 5
+      },
+      "routing_fitness": {
+        "justification": "The rationale correctly rules out a hook (constraints are ad hoc/free-text each time, no fixed matchable pattern) and a skill (this is a standing attentional discipline, not a multi-step procedure), making a short global claude-md rule the cheapest adequate fix.",
+        "score": 5
+      },
+      "trigger_quality": {
+        "justification": "Not a skill, so no formal 'Use when...' header is required, but the remedy text embeds its own trigger ('When the user states an explicit constraint mid-task...') that clearly demarcates when the rule fires.",
+        "score": 4
+      }
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 100,
+    "total_cost_usd": 0.0829209,
+    "ttft_ms": 13421,
+    "ttft_stream_ms": 1016,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 4848,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 4848,
+      "cache_read_input_tokens": 28513,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 4848,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 4848,
+          "cache_read_input_tokens": 28513,
+          "input_tokens": 6768,
+          "output_tokens": 1665,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 1665,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "0fd2dc8d-adaf-4f9d-980e-601d919fa9ea"
+  }
+}

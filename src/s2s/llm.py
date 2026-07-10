@@ -37,6 +37,11 @@ CODEX_MODEL_PREFIX = "codex:"
 # ~/.codex/sessions, where the s2s scanner would otherwise ingest its own work.
 CODEX_BASE_ARGS = (
     "codex",
+    # Pipeline transport calls must not load the user's MCP servers: they are
+    # irrelevant to structured one-shot calls, and a server that fails to
+    # spawn or authenticate under sandboxed env is fatal to the whole run.
+    "-c",
+    "mcp_servers={}",
     "--ask-for-approval",
     "never",
     "exec",

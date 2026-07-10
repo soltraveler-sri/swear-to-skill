@@ -1,0 +1,219 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "fb31e32ed60ff7e8",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Grade the proposed remedy, not the\nwriting style of this prompt. A good remedy changes a concrete future behavior,\nis broad enough to cover the failure mode without becoming a platitude, uses a\nreal `Use when ...` trigger when it is a skill, leaks no evidence-specific\nproject nouns into the remedy text, and uses the cheapest adequate remedy type.\n\nScore every dimension from 1 (poor) to 5 (excellent). Give exactly one concise\nsentence of justification for each score. Do not infer facts that are absent.\n\nPROPOSAL:\n{\n  \"confidence\": 0.82,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"fake-verify-before-claim triggers on verifying a completion claim after the fact (a post-hoc check); this cluster is about exceeding a stated scope constraint during the work itself — different phase, different trigger, no overlap.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"Fake Release Discipline is narrowly scoped to running a release's declared verification command before claiming a release complete; it says nothing about honoring explicit scope constraints like a single file, one switch, or a named workspace, so it doesn't cover this failure mode.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R3\",\n      \"reason\": \"Proposal #1 is my own earlier draft synthesizing this identical incident cluster (9, 22, 24, 25) into a claude-md remedy about honoring explicit scope constraints; it failed validation only for missing the text/global-project target fields. This submission is a corrected revision of that same proposal, not a new sibling.\",\n      \"verdict\": \"overlap\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 9,\n      \"quote\": \"That's not what I asked; the request was a one-file note.\"\n    },\n    {\n      \"incident_id\": 22,\n      \"quote\": \"This is not what I asked; a rewrite was not requested. / You did not use the /work/fake-lantern workspace requested.\"\n    },\n    {\n      \"incident_id\": 24,\n      \"quote\": \"Why did you rebuild the fake UI when I asked for one switch?\"\n    },\n    {\n      \"incident_id\": 25,\n      \"quote\": \"Why did you rebuild the fake UI when I asked for one switch?\"\n    }\n  ],\n  \"failure_statement\": \"When a request specifies a constrained, targeted scope (a single file, one specific change like flipping a switch, or a named workspace/path), the agent instead delivers broader work — full rewrites, rebuilt components, extra/unrequested files, or work done outside the specified location — rather than the narrow thing asked for.\",\n  \"overlap_action\": {\n    \"revises\": \"proposal #1\"\n  },\n  \"remedy_content\": {\n    \"file\": \"$HOME/.claude/CLAUDE.md\",\n    \"heading\": \"# Scope Discipline\",\n    \"target\": \"global\",\n    \"text\": \"When a request names an explicit constraint on scope — a single file, one specific change (e.g. \\\"just flip this switch\\\"), or a named workspace/path — do exactly and only that. Do not rewrite, rebuild, or expand adjacent components, and do not work outside the specified location, even if broader improvements seem obviously useful. If broader work genuinely seems warranted, say so and ask before expanding scope, rather than doing it unasked.\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"This is a plain \\\"did more than asked\\\" scope-deviation pattern (extra files, full rewrites/UI rebuilds instead of one switch, ignoring a named workspace) recurring across two unrelated projects (cinder, lantern) — it's a general behavioral tendency, not a project-specific quirk. There's no mechanical signal a hook could check (no static diff-size or file-count threshold reliably distinguishes \\\"asked for X, delivered Y\\\" from legitimate necessary changes), so `hook` is out. It's also not procedural/multi-step enough to justify a skill's context cost — the fix is a single standing instruction to take the request's stated scope literally and stop at its boundary, escalating instead of expanding. That makes a short global CLAUDE.md rule the cheapest sufficient remedy. This revises pending proposal R3, which was my own earlier draft synthesizing this same cluster but failed validation for omitting the required text/target fields on the claude-md remedy_content.\",\n  \"singleton\": false\n}\n",
+    "schema": {
+      "properties": {
+        "actionability": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "generality_without_vagueness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "leakage": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "routing_fitness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "trigger_quality": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "actionability",
+        "generality_without_vagueness",
+        "trigger_quality",
+        "leakage",
+        "routing_fitness"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 21144,
+    "duration_ms": 21345,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 4806,
+        "cacheReadInputTokens": 28515,
+        "contextWindow": 1000000,
+        "costUSD": 0.0873495,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 1977,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"actionability\":{\"score\":4,\"justification\":\"The remedy gives a concrete rule (do exactly and only the named scope) plus a specific fallback behavior (ask before expanding) rather than a vague exhortation to 'be careful,' making it enforceable in future interactions.\"},\"generality_without_vagueness\":{\"score\":4,\"justification\":\"It generalizes across the three concrete scope-constraint shapes actually observed (single file, one specific change, named workspace/path) without collapsing into an unbounded platitude like 'do what's asked.'\"},\"trigger_quality\":{\"score\":4,\"justification\":\"As a claude-md remedy rather than a skill, no formal 'Use when...' trigger is required, but the instruction's own opening clause functions as a clear, specific applicability condition tied to explicit scope language.\"},\"leakage\":{\"score\":5,\"justification\":\"The remedy text contains no project-specific nouns (no 'cinder,' 'lantern,' 'fake UI,' etc.) — those only appear in the separate evidence quotes, keeping the rule cleanly generalized.\"},\"routing_fitness\":{\"score\":4,\"justification\":\"The rationale correctly rules out a hook (no mechanical diff/file-count signal distinguishes overreach from legitimate necessary changes) and a skill (not a multi-step procedure), leaving a short standing global instruction as the cheapest adequate fix for a behavioral tendency.\"}}",
+    "session_id": "152e2ec0-b4e3-4f42-a347-876ba459fbce",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "actionability": {
+        "justification": "The remedy gives a concrete rule (do exactly and only the named scope) plus a specific fallback behavior (ask before expanding) rather than a vague exhortation to 'be careful,' making it enforceable in future interactions.",
+        "score": 4
+      },
+      "generality_without_vagueness": {
+        "justification": "It generalizes across the three concrete scope-constraint shapes actually observed (single file, one specific change, named workspace/path) without collapsing into an unbounded platitude like 'do what's asked.'",
+        "score": 4
+      },
+      "leakage": {
+        "justification": "The remedy text contains no project-specific nouns (no 'cinder,' 'lantern,' 'fake UI,' etc.) — those only appear in the separate evidence quotes, keeping the rule cleanly generalized.",
+        "score": 5
+      },
+      "routing_fitness": {
+        "justification": "The rationale correctly rules out a hook (no mechanical diff/file-count signal distinguishes overreach from legitimate necessary changes) and a skill (not a multi-step procedure), leaving a short standing global instruction as the cheapest adequate fix for a behavioral tendency.",
+        "score": 4
+      },
+      "trigger_quality": {
+        "justification": "As a claude-md remedy rather than a skill, no formal 'Use when...' trigger is required, but the instruction's own opening clause functions as a clear, specific applicability condition tied to explicit scope language.",
+        "score": 4
+      }
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 106,
+    "total_cost_usd": 0.0873495,
+    "ttft_ms": 16455,
+    "ttft_stream_ms": 1463,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 4806,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 4806,
+      "cache_read_input_tokens": 28515,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 4806,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 4806,
+          "cache_read_input_tokens": 28515,
+          "input_tokens": 6768,
+          "output_tokens": 1977,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 1977,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "aeb77388-db9e-4e9e-9759-e9ca82372404"
+  }
+}

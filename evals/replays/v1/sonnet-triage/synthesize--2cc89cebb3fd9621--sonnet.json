@@ -1,0 +1,250 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "2cc89cebb3fd9621",
+    "model": "sonnet",
+    "stage": "synthesize"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are the Stage 4 Synthesist. Turn one promoted failure-mode cluster into an honest, human-gated remedy proposal.\n\nMost frustrations do not deserve a skill. Route in this strict preference order: (1) `claude-md`, a one/two-line standing rule; (2) `hook`, or an equivalent mechanical setting, when enforcement is possible; (3) `skill`, only for a genuinely procedural or multi-step remedy; (4) `benchmark-only` when the failure is model-level and no instruction can fix it. Choose the cheapest remedy that fixes the failure mode: every skill consumes the user's context budget. `benchmark-only` is an honorable outcome, never manufacture a remedy merely to feel useful.\n\nIf the only sensible remedy target is Codex-side (`AGENTS.md` or `~/.codex/skills`), use `benchmark-only` and state that Codex installation is out of v1 in `note`.\n\nThe existing-remedy digests below are numbered [R1]…[RN]. There are 8 existing-remedy digests. Your `dedup` array MUST contain exactly 8 entries, one per number, with `existing` set to exactly that token (e.g. \"R1\"). Include entries even when the verdict is clear. State `clear` or `overlap` for each. Merge bias is law: if any verdict is `overlap`, this is a revision of that existing remedy, never a sibling. Set `overlap_action.revises` to that R token.\n\nFor a `skill`, write a kebab-case name and a concrete auto-invocation description beginning `Use when ...`; this description is the trigger. The body must be substantive Markdown. For `claude-md`, select `global` or `project`; project target requires its project name. For `hook`, give a Claude Code event and a command sketch. For `benchmark-only`, explain the measurement-only outcome in `note`.\n\nThe upstream classifier deliberately over-merges. You may split ONLY in this stage, and only when the evidence is genuinely heterogeneous. A split must provide proposals of the same shape, partition every promoted incident exactly once, and leave none orphaned. Otherwise return one proposal covering the group.\n\nTAXONOMY GIST:\nscope-deviation: did more or less than asked\n\nPROMOTED EVIDENCE:\nBEGIN PROMOTED EVIDENCE incident_id=9 project=cinder\nOne-liner: Agent delivered more or different output than the narrowly scoped single-item request called for.\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nThat's not what I asked; the request was a one-file note.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: My future self will say 'this is awful' if I forget the fake demo; that is a joke.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=22 project=lantern\nOne-liner: Agent performed a full rewrite when only a targeted, narrower change was requested.\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nThis is not what I asked; a rewrite was not requested.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: You did not use the /work/fake-lantern workspace requested.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=24 project=lantern\nOne-liner: Agent expanded a small, narrowly scoped request into a much larger rebuild than was asked for.\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nWhy did you rebuild the fake UI when I asked for one switch?\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: Our fake monitoring bot labels retries 'not working at all'; keep that label.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=26 project=lantern\nOne-liner: Agent omitted a specific element the user had explicitly asked to be included in the output.\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nYou missed the only requested field in the payload.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: Write a playful banner: 'this is a mess' for the fake festival page.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=6 project=aurora\nOne-liner: Agent produced a broader or different change than the small, specific change the user asked for.\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nTry again with the small change I specified.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: Read the prompt: this is the wrong fake environment.\nEND PROMOTED EVIDENCE\n\nEXISTING SKILLS (name and description only):\n- [R1] skill:$HOME/.claude/skills/fake-verify-before-claim/SKILL.md | name=fake-verify-before-claim | description=Use when a completion claim requires verification.\n\nS2S-MANAGED CLAUDE.MD BLOCKS:\n- [R2] claude-md:$HOME/.claude/CLAUDE.md#1 | # Fake Release Discipline\n\nBefore reporting a fake release as complete, run its declared verification\ncommand and report the result plainly.\n\nPENDING OR INSTALLED S2S PROPOSALS:\n- [R3] proposal #1 | type=hook | status=pending | {\"confidence\":0.55,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) governs verifying completion claims before reporting them done; this incident is about unconfirmed destructive deletion, a different failure mode with no overlap.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline claude-md block) governs running verification commands before reporting a fake release complete; it does not address asking for confirmation before deleting/removing files, so t\n- [R4] proposal #2 | type=claude-md | status=pending | {\"confidence\":0.6,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) governs verifying completion claims before reporting work done; these incidents are about acting on the wrong/stale branch, an unrelated failure mode with no overlap.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline) governs running a declared verification command before reporting a release complete; it has nothing to do with confirming which git branch is active before working.\",\"verdic\n- [R5] proposal #3 | type=skill | status=pending | revises=skill:$HOME/.claude/skills/fake-verify-before-claim/SKILL.md | {\"confidence\":0.62,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) already governs verifying completion claims before reporting them done; incident 31's failure \\u2014 declaring something fixed before a check ran and before a documented changelog policy was applied \\u2014 is the same failure mode (premature completion claim), so this revises R1's body to explicitly cover checking documented project policy, not just running a command.\",\"verdict\":\"overlap\"},{\"existing\":\"R2\",\"reas\n- [R6] proposal #4 | type=claude-md | status=pending | {\"confidence\":0.62,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) governs verifying completion claims before reporting work done; this cluster is about violating explicit scope/action constraints mid-task, a distinct failure mode with no overlap.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline) governs running a declared verification command before reporting a release complete; it does not address respecting user-stated exclusions like 'no network' o\n- [R7] proposal #5 | type=claude-md | status=pending | {\"confidence\":0.4,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) governs verifying completion claims before reporting work done; this incident is about solving the wrong problem in the first place, not about verifying a claim afterward \\u2014 no overlap.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline) governs running a declared verification command before reporting a release complete; it has nothing to do with the agent answering a different request\n- [R8] proposal #6 | type=claude-md | status=pending | revises=claude-md:$HOME/.claude/CLAUDE.md#1 | {\"confidence\":0.55,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim skill) governs the identical failure mode \\u2014 verifying completion claims before reporting done \\u2014 as this incident (claiming a migration complete while its checks still fail). Since a cheaper claude-md remedy (R2) already covers this near-verbatim, the revision targets R2 rather than duplicating into the skill, but the overlap is real.\",\"verdict\":\"overlap\"},{\"existing\":\"R2\",\"reason\":\"R2's 'Fake Release Di\n",
+    "schema": {
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "dedup": {
+          "items": {
+            "properties": {
+              "existing": {
+                "pattern": "^R[0-9]+$",
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "clear",
+                  "overlap"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "existing",
+              "verdict",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "properties": {
+              "incident_id": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "quote": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "incident_id",
+              "quote"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "failure_statement": {
+          "type": "string"
+        },
+        "overlap_action": {
+          "properties": {
+            "revises": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "revises"
+          ],
+          "type": "object"
+        },
+        "remedy_content": {
+          "type": "object"
+        },
+        "remedy_type": {
+          "enum": [
+            "claude-md",
+            "hook",
+            "skill",
+            "benchmark-only"
+          ],
+          "type": "string"
+        },
+        "routing_rationale": {
+          "type": "string"
+        },
+        "split": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "remedy_type",
+        "routing_rationale",
+        "failure_statement",
+        "remedy_content",
+        "evidence",
+        "dedup",
+        "confidence"
+      ],
+      "type": "object"
+    },
+    "stage": "synthesize"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 69649,
+    "duration_ms": 69852,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 6382,
+        "cacheReadInputTokens": 28519,
+        "contextWindow": 1000000,
+        "costUSD": 0.1629417,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 6386,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"remedy_type\":\"claude-md\",\"routing_rationale\":\"All five promoted incidents (cinder#9, lantern#22, lantern#24, lantern#26, aurora#6) share one concrete pattern: the agent's output breadth didn't match the request's stated breadth — it substituted a full rewrite/rebuild for a requested single switch or one-file note, or it dropped the one specific element (a field, a workspace path) the user explicitly named. This is a judgment call about literal scope-reading, not something a deterministic hook can check (no lint/test can verify \\\"was this a rewrite when a switch was asked\\\"), and it isn't procedural/multi-step enough to warrant a skill — it's a standing one-line discipline to re-read the request's scope before delivering. A short claude-md rule is the cheapest fix that addresses the root behavior directly. Scope is global because the pattern recurs across three unrelated projects (cinder, lantern, aurora), not one codebase's convention.\",\"failure_statement\":\"When a request specifies a narrow, single-item change (one file, one switch, one field, a named workspace), the agent instead delivers a broader rewrite/rebuild than asked, or drops the one specific element the user explicitly named — producing output that doesn't match the request's literal scope in either direction.\",\"remedy_content\":{\"scope\":\"global\",\"heading\":\"Match the Requested Scope Literally\",\"body\":\"Before delivering, re-read the request's literal scope. If it names a single file, a single switch/flag, a single field, or a specific workspace/path, deliver exactly that — do not substitute a broader rewrite, rebuild, or refactor, and do not drop or substitute the specific element named. If broader work genuinely seems warranted, say so and ask before doing it instead of just doing it.\"},\"evidence\":[{\"incident_id\":9,\"quote\":\"That's not what I asked; the request was a one-file note.\"},{\"incident_id\":22,\"quote\":\"This is not what I asked; a rewrite was not requested.\"},{\"incident_id\":24,\"quote\":\"Why did you rebuild the fake UI when I asked for one switch?\"},{\"incident_id\":26,\"quote\":\"You missed the only requested field in the payload.\"},{\"incident_id\":6,\"quote\":\"Try again with the small change I specified.\"}],\"dedup\":[{\"existing\":\"R1\",\"verdict\":\"clear\",\"reason\":\"R1 (fake-verify-before-claim) governs verifying completion claims before reporting work done; this cluster is about mismatching the requested breadth of a change (rewrite vs. targeted edit, omitted field), not about verifying that a claim of completion is true. No overlap.\"},{\"existing\":\"R2\",\"verdict\":\"clear\",\"reason\":\"R2 (Fake Release Discipline) governs running a declared verification command before reporting a release complete; it has nothing to do with matching the size/scope of a change to what was explicitly requested.\"},{\"existing\":\"R3\",\"verdict\":\"clear\",\"reason\":\"R3 addresses confirming before destructive deletions; this cluster is about over- or under-delivering relative to requested scope on non-destructive edits/notes, a distinct failure mode.\"},{\"existing\":\"R4\",\"verdict\":\"clear\",\"reason\":\"R4 addresses confirming the active git branch before working; unrelated to matching the breadth of a requested change or including a named element.\"},{\"existing\":\"R5\",\"verdict\":\"clear\",\"reason\":\"R5 revises R1 to cover premature completion claims plus documented changelog policy; still about claiming done prematurely, not about rewrite-vs-targeted-change scope mismatches.\"},{\"existing\":\"R6\",\"verdict\":\"clear\",\"reason\":\"R6's own description centers on respecting user-stated negative exclusions during a task (e.g. 'no network') — a forbidden-action violation. This cluster is about a different concrete behavior: expanding a narrow positive ask into a full rewrite/rebuild, or dropping a specifically named element, with no stated prohibition involved. Both sit under the broad 'scope-deviation' taxonomy label, but the remedy text needed differs (respect stated prohibitions vs. match requested breadth/exact named elements), so kept as siblings pending clearer evidence they're the same instruction in practice.\"},{\"existing\":\"R7\",\"verdict\":\"clear\",\"reason\":\"R7 addresses the agent solving an entirely different problem than the one asked (wrong problem), a low-confidence distinct failure from doing more-or-less of the *correct* problem's scope, which is what this cluster covers.\"},{\"existing\":\"R8\",\"verdict\":\"clear\",\"reason\":\"R8 revises R2 to cover claiming a migration complete while its checks still fail — a completion-claim accuracy issue, not a request-scope mismatch.\"}],\"confidence\":0.58}",
+    "session_id": "39e07130-da58-41c5-96e0-1c7c744981c2",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "confidence": 0.58,
+      "dedup": [
+        {
+          "existing": "R1",
+          "reason": "R1 (fake-verify-before-claim) governs verifying completion claims before reporting work done; this cluster is about mismatching the requested breadth of a change (rewrite vs. targeted edit, omitted field), not about verifying that a claim of completion is true. No overlap.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R2",
+          "reason": "R2 (Fake Release Discipline) governs running a declared verification command before reporting a release complete; it has nothing to do with matching the size/scope of a change to what was explicitly requested.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R3",
+          "reason": "R3 addresses confirming before destructive deletions; this cluster is about over- or under-delivering relative to requested scope on non-destructive edits/notes, a distinct failure mode.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R4",
+          "reason": "R4 addresses confirming the active git branch before working; unrelated to matching the breadth of a requested change or including a named element.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R5",
+          "reason": "R5 revises R1 to cover premature completion claims plus documented changelog policy; still about claiming done prematurely, not about rewrite-vs-targeted-change scope mismatches.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R6",
+          "reason": "R6's own description centers on respecting user-stated negative exclusions during a task (e.g. 'no network') — a forbidden-action violation. This cluster is about a different concrete behavior: expanding a narrow positive ask into a full rewrite/rebuild, or dropping a specifically named element, with no stated prohibition involved. Both sit under the broad 'scope-deviation' taxonomy label, but the remedy text needed differs (respect stated prohibitions vs. match requested breadth/exact named elements), so kept as siblings pending clearer evidence they're the same instruction in practice.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R7",
+          "reason": "R7 addresses the agent solving an entirely different problem than the one asked (wrong problem), a low-confidence distinct failure from doing more-or-less of the *correct* problem's scope, which is what this cluster covers.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R8",
+          "reason": "R8 revises R2 to cover claiming a migration complete while its checks still fail — a completion-claim accuracy issue, not a request-scope mismatch.",
+          "verdict": "clear"
+        }
+      ],
+      "evidence": [
+        {
+          "incident_id": 9,
+          "quote": "That's not what I asked; the request was a one-file note."
+        },
+        {
+          "incident_id": 22,
+          "quote": "This is not what I asked; a rewrite was not requested."
+        },
+        {
+          "incident_id": 24,
+          "quote": "Why did you rebuild the fake UI when I asked for one switch?"
+        },
+        {
+          "incident_id": 26,
+          "quote": "You missed the only requested field in the payload."
+        },
+        {
+          "incident_id": 6,
+          "quote": "Try again with the small change I specified."
+        }
+      ],
+      "failure_statement": "When a request specifies a narrow, single-item change (one file, one switch, one field, a named workspace), the agent instead delivers a broader rewrite/rebuild than asked, or drops the one specific element the user explicitly named — producing output that doesn't match the request's literal scope in either direction.",
+      "remedy_content": {
+        "body": "Before delivering, re-read the request's literal scope. If it names a single file, a single switch/flag, a single field, or a specific workspace/path, deliver exactly that — do not substitute a broader rewrite, rebuild, or refactor, and do not drop or substitute the specific element named. If broader work genuinely seems warranted, say so and ask before doing it instead of just doing it.",
+        "heading": "Match the Requested Scope Literally",
+        "scope": "global"
+      },
+      "remedy_type": "claude-md",
+      "routing_rationale": "All five promoted incidents (cinder#9, lantern#22, lantern#24, lantern#26, aurora#6) share one concrete pattern: the agent's output breadth didn't match the request's stated breadth — it substituted a full rewrite/rebuild for a requested single switch or one-file note, or it dropped the one specific element (a field, a workspace path) the user explicitly named. This is a judgment call about literal scope-reading, not something a deterministic hook can check (no lint/test can verify \"was this a rewrite when a switch was asked\"), and it isn't procedural/multi-step enough to warrant a skill — it's a standing one-line discipline to re-read the request's scope before delivering. A short claude-md rule is the cheapest fix that addresses the root behavior directly. Scope is global because the pattern recurs across three unrelated projects (cinder, lantern, aurora), not one codebase's convention."
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 99,
+    "total_cost_usd": 0.1629417,
+    "ttft_ms": 54618,
+    "ttft_stream_ms": 1874,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 6382,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 6382,
+      "cache_read_input_tokens": 28519,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 6382,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 6382,
+          "cache_read_input_tokens": 28519,
+          "input_tokens": 6768,
+          "output_tokens": 6386,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 6386,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "ffbe0f5e-7c89-43d3-a667-99e2d185f74e"
+  }
+}

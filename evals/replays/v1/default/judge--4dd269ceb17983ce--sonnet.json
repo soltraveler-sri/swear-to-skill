@@ -1,0 +1,99 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "4dd269ceb17983ce",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Given one proposed remedy and one\nplanted incident context pack, decide whether the remedy plausibly would have\nprevented this incident had it been active beforehand. Return `prevented` only\nwhen the remedy directly addresses the failure, `partially` when it would help\nbut leaves a material gap, and `no` otherwise. Give concise evidence-based\nreasoning without inventing facts.\n\nPROPOSAL:\n{\n  \"confidence\": 0.82,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"fake-verify-before-claim triggers on verifying a completion claim after the fact (a post-hoc check); this cluster is about exceeding a stated scope constraint during the work itself — different phase, different trigger, no overlap.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"Fake Release Discipline is narrowly scoped to running a release's declared verification command before claiming a release complete; it says nothing about honoring explicit scope constraints like a single file, one switch, or a named workspace, so it doesn't cover this failure mode.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R3\",\n      \"reason\": \"Proposal #1 is my own earlier draft synthesizing this identical incident cluster (9, 22, 24, 25) into a claude-md remedy about honoring explicit scope constraints; it failed validation only for missing the text/global-project target fields. This submission is a corrected revision of that same proposal, not a new sibling.\",\n      \"verdict\": \"overlap\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 9,\n      \"quote\": \"That's not what I asked; the request was a one-file note.\"\n    },\n    {\n      \"incident_id\": 22,\n      \"quote\": \"This is not what I asked; a rewrite was not requested. / You did not use the /work/fake-lantern workspace requested.\"\n    },\n    {\n      \"incident_id\": 24,\n      \"quote\": \"Why did you rebuild the fake UI when I asked for one switch?\"\n    },\n    {\n      \"incident_id\": 25,\n      \"quote\": \"Why did you rebuild the fake UI when I asked for one switch?\"\n    }\n  ],\n  \"failure_statement\": \"When a request specifies a constrained, targeted scope (a single file, one specific change like flipping a switch, or a named workspace/path), the agent instead delivers broader work — full rewrites, rebuilt components, extra/unrequested files, or work done outside the specified location — rather than the narrow thing asked for.\",\n  \"overlap_action\": {\n    \"revises\": \"proposal #1\"\n  },\n  \"remedy_content\": {\n    \"file\": \"$HOME/.claude/CLAUDE.md\",\n    \"heading\": \"# Scope Discipline\",\n    \"target\": \"global\",\n    \"text\": \"When a request names an explicit constraint on scope — a single file, one specific change (e.g. \\\"just flip this switch\\\"), or a named workspace/path — do exactly and only that. Do not rewrite, rebuild, or expand adjacent components, and do not work outside the specified location, even if broader improvements seem obviously useful. If broader work genuinely seems warranted, say so and ask before expanding scope, rather than doing it unasked.\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"This is a plain \\\"did more than asked\\\" scope-deviation pattern (extra files, full rewrites/UI rebuilds instead of one switch, ignoring a named workspace) recurring across two unrelated projects (cinder, lantern) — it's a general behavioral tendency, not a project-specific quirk. There's no mechanical signal a hook could check (no static diff-size or file-count threshold reliably distinguishes \\\"asked for X, delivered Y\\\" from legitimate necessary changes), so `hook` is out. It's also not procedural/multi-step enough to justify a skill's context cost — the fix is a single standing instruction to take the request's stated scope literally and stop at its boundary, escalating instead of expanding. That makes a short global CLAUDE.md rule the cheapest sufficient remedy. This revises pending proposal R3, which was my own earlier draft synthesizing this same cluster but failed validation for omitting the required text/target fields on the claude-md remedy_content.\",\n  \"singleton\": false\n}\n\nINCIDENT CONTEXT PACK:\n{\n  \"agent_activity_digest\": \"\",\n  \"following_exchange\": \"Assistant: Synthetic acknowledgement.\\nUser: You did not use the /work/fake-lantern workspace requested.\",\n  \"frustrated_message\": \"This is not what I asked; a rewrite was not requested.\",\n  \"metadata\": {\n    \"cwd\": \"/work/fake-lantern\",\n    \"git_branch\": \"feat/fake-eval\",\n    \"project\": \"lantern\",\n    \"session_id\": \"claude-lantern-01\",\n    \"timestamp\": \"2026-07-09T13:30:00Z\"\n  },\n  \"preceding_request\": \"\"\n}\n",
+    "schema": {
+      "properties": {
+        "reasoning": {
+          "type": "string"
+        },
+        "verdict": {
+          "enum": [
+            "prevented",
+            "partially",
+            "no"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "verdict",
+        "reasoning"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 14648,
+    "duration_ms": 14842,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 4977,
+        "cacheReadInputTokens": 28139,
+        "contextWindow": 1000000,
+        "costUSD": 0.0783777,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 1318,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"reasoning\":\"The incident pack (session claude-lantern-01, cwd /work/fake-lantern, feat/fake-eval branch) matches incident_id 22 in the proposal's evidence exactly: frustrated_message \\\"This is not what I asked; a rewrite was not requested.\\\" and the follow-up \\\"You did not use the /work/fake-lantern workspace requested.\\\" Both are quoted verbatim in the proposal's evidence list for incident 22.\\n\\nThe remedy text directly targets both failure modes present in this incident: (1) delivering a rewrite when one wasn't requested (\\\"Do not rewrite, rebuild, or expand adjacent components\\\") and (2) not using the specified workspace/path (\\\"do not work outside the specified location\\\"). It also prescribes the correct alternative behavior (ask before expanding scope) rather than just naming the problem.\\n\\nSince the incident is a two-part scope violation (unwanted rewrite + wrong workspace) and the remedy explicitly enumerates both as prohibited behaviors with a clear directive to do \\\"exactly and only\\\" what was asked, this is a direct, well-matched fix rather than a partial or tangential one. No material gap is apparent — the remedy isn't just about rewrites (which alone would leave the workspace-path violation uncovered) but explicitly covers location/workspace scope too.\",\"verdict\":\"prevented\"}",
+    "session_id": "7480bf2e-aca8-4e74-b3bd-2745c1f9e38e",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "reasoning": "The incident pack (session claude-lantern-01, cwd /work/fake-lantern, feat/fake-eval branch) matches incident_id 22 in the proposal's evidence exactly: frustrated_message \"This is not what I asked; a rewrite was not requested.\" and the follow-up \"You did not use the /work/fake-lantern workspace requested.\" Both are quoted verbatim in the proposal's evidence list for incident 22.\n\nThe remedy text directly targets both failure modes present in this incident: (1) delivering a rewrite when one wasn't requested (\"Do not rewrite, rebuild, or expand adjacent components\") and (2) not using the specified workspace/path (\"do not work outside the specified location\"). It also prescribes the correct alternative behavior (ask before expanding scope) rather than just naming the problem.\n\nSince the incident is a two-part scope violation (unwanted rewrite + wrong workspace) and the remedy explicitly enumerates both as prohibited behaviors with a clear directive to do \"exactly and only\" what was asked, this is a direct, well-matched fix rather than a partial or tangential one. No material gap is apparent — the remedy isn't just about rewrites (which alone would leave the workspace-path violation uncovered) but explicitly covers location/workspace scope too.",
+      "verdict": "prevented"
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 99,
+    "total_cost_usd": 0.0783777,
+    "ttft_ms": 10188,
+    "ttft_stream_ms": 1307,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 4977,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 4977,
+      "cache_read_input_tokens": 28139,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 4977,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 4977,
+          "cache_read_input_tokens": 28139,
+          "input_tokens": 6768,
+          "output_tokens": 1318,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 1318,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "32b26485-23a8-4043-8230-9b6fcf84db4f"
+  }
+}

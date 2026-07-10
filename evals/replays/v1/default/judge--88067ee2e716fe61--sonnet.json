@@ -1,0 +1,99 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "88067ee2e716fe61",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Given one proposed remedy and one\nplanted incident context pack, decide whether the remedy plausibly would have\nprevented this incident had it been active beforehand. Return `prevented` only\nwhen the remedy directly addresses the failure, `partially` when it would help\nbut leaves a material gap, and `no` otherwise. Give concise evidence-based\nreasoning without inventing facts.\n\nPROPOSAL:\n{\n  \"confidence\": 0.85,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"fake-verify-before-claim (\\\"Use when a completion claim requires verification\\\") is the exact same trigger and phase as this cluster: claiming a fix/test/lint/check/release/repair succeeded without having run it. This cluster's recurrence across 6 projects shows R1 needs strengthening, not a sibling — this proposal revises R1.\",\n      \"verdict\": \"overlap\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"Fake Release Discipline is narrowly scoped to running a release's declared verification command before reporting a release complete. This cluster's incidents span tests, lint, generic checks, and repairs, not specifically releases, and the broader existing skill (R1) is the correct revision target, so R2 is left untouched.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R3\",\n      \"reason\": \"Proposal #1 addresses failing to honor a stated constraint during the work itself (a scope/instruction-following failure), a different phase and trigger than claiming unverified completion after the fact. No overlap.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R4\",\n      \"reason\": \"Proposal #2 revises proposal #1 on the same stated-constraint-honoring theme, still distinct from this cluster's verify-before-claiming failure mode. No overlap.\",\n      \"verdict\": \"clear\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 15,\n      \"quote\": \"That fix is not verified; the test command was never run.\"\n    },\n    {\n      \"incident_id\": 17,\n      \"quote\": \"Please stop claiming success without running the fake suite.\"\n    },\n    {\n      \"incident_id\": 13,\n      \"quote\": \"You did not run the fake lint before saying it passed.\"\n    },\n    {\n      \"incident_id\": 14,\n      \"quote\": \"You did not run the fake lint before saying it passed.\"\n    },\n    {\n      \"incident_id\": 21,\n      \"quote\": \"This is bogus: the checks were skipped.\"\n    },\n    {\n      \"incident_id\": 30,\n      \"quote\": \"You told me it was fixed before any fake check ran.\"\n    },\n    {\n      \"incident_id\": 31,\n      \"quote\": \"You told me it was fixed before any fake check ran.\"\n    },\n    {\n      \"incident_id\": 32,\n      \"quote\": \"Show me evidence before calling this repaired.\"\n    },\n    {\n      \"incident_id\": 34,\n      \"quote\": \"The report is not real until the fake test command completes.\"\n    },\n    {\n      \"incident_id\": 36,\n      \"quote\": \"Actually run the verification instead of guessing.\"\n    }\n  ],\n  \"failure_statement\": \"The agent claims a fix, test, lint pass, build, check, or repair succeeded (or that a release/task is complete) without having actually run the corresponding verification command in this session, so the claim isn't backed by observed evidence and can be silently wrong.\",\n  \"overlap_action\": {\n    \"revises\": \"skill:$HOME/.claude/skills/fake-verify-before-claim/SKILL.md\"\n  },\n  \"remedy_content\": {\n    \"body_markdown\": \"# Verify Before Claiming\\n\\n## When this applies\\nBefore stating that a fix, test suite, lint pass, build, check, repair, or release is complete or passing, the agent must have actually run the relevant verification command in this session and observed its output. This applies whether the claim is about a whole task or a small sub-step.\\n\\n## Procedure\\n1. Identify the concrete verification command implied by the task (test suite, lint, build, release check, etc.). If none is specified, infer it from project config (CI file, package.json scripts, README) or ask.\\n2. Run it in-session.\\n3. Report the literal result — pass/fail counts, exit code, or a relevant output snippet — not a paraphrase like \\\"it works\\\" or \\\"looks good.\\\"\\n4. If the command cannot be run (missing credentials, unavailable environment, out of scope for this turn), say so explicitly instead of asserting success or completion. Never imply verification happened when it didn't.\\n5. If a prior run's result is being reused, say so and give its age/context — don't present a stale or cached result as freshly confirmed.\\n\\n## Anti-patterns to avoid\\n- \\\"The fix is complete\\\" / \\\"tests pass\\\" / \\\"lint is clean\\\" / \\\"the check passed\\\" with no command actually run this session.\\n- Inferring success purely from reading the diff or code change.\\n- Treating a skipped, partial, or previously-run check as equivalent to a fresh pass.\\n- Softening a hedge (\\\"should work\\\") into a completion claim (\\\"it works\\\") without ever closing the gap by running something.\\n\\n## Examples\\n- Bad: \\\"Fixed the bug, all tests pass.\\\"\\n- Good: \\\"Changed X; ran `npm test` — 42 passed, 0 failed (log attached).\\\"\\n- Good (blocked): \\\"Made the change but couldn't run the test suite here (no runner configured) — verification is still outstanding, flagging before you rely on this.\\\"\",\n    \"description\": \"Use when about to claim that a fix, test, lint, build, check, or repair passed, or that a task/release is complete — run the actual verification command first and report only the observed result.\",\n    \"name\": \"fake-verify-before-claim\"\n  },\n  \"remedy_type\": \"skill\",\n  \"routing_rationale\": \"All 10 promoted incidents (harbor, cinder, fake-aurora, fake-cinder, fake-harbor, fake-lantern) share one failure mode: the agent asserted a fix/test/lint/check/release/repair was complete or passing without having actually run the verification command in-session. This is a direct hit on R1 (skill fake-verify-before-claim, \\\"Use when a completion claim requires verification\\\") — same trigger, same phase (claiming completion vs. verifying it). Merge bias is law, so this is a revision of R1, not a new sibling. R2 (Fake Release Discipline) is a narrower claude.md rule scoped only to running a release's declared verification command before reporting a release complete; it doesn't cover the broader set seen here (tests, lint, generic \\\"checks\\\", repairs), so it stays clear and untouched — R1 is the correct, broader revision target. R3/R4 are about honoring stated scope/constraints during the work itself, a different phase and trigger entirely, so both are clear. Because the existing skill R1 already targets this exact failure and the cluster kept recurring across six projects, the fix is to strengthen/broaden R1's body (explicit procedure, anti-patterns, and coverage beyond just \\\"tests\\\" to lint/build/release/repair) rather than downgrade to a claude.md one-liner — the prior attempt's validation error was purely a missing-field issue (name/description/body_markdown), not a wrong remedy type, so remedy_type stays skill to match the R1 it revises.\",\n  \"singleton\": false\n}\n\nINCIDENT CONTEXT PACK:\n{\n  \"agent_activity_digest\": \"\",\n  \"following_exchange\": \"Assistant: Synthetic acknowledgement.\\nUser: The fake competitor review calls its dashboard 'unusable'; summarize the review.\",\n  \"frustrated_message\": \"You did not run the fake lint before saying it passed.\",\n  \"metadata\": {\n    \"cwd\": \"/work/fake-cinder\",\n    \"git_branch\": \"feat/fake-eval\",\n    \"project\": \"cinder\",\n    \"session_id\": \"claude-cinder-04\",\n    \"timestamp\": \"2026-07-09T14:10:00Z\"\n  },\n  \"preceding_request\": \"\"\n}\n",
+    "schema": {
+      "properties": {
+        "reasoning": {
+          "type": "string"
+        },
+        "verdict": {
+          "enum": [
+            "prevented",
+            "partially",
+            "no"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "verdict",
+        "reasoning"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 13411,
+    "duration_ms": 13604,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 6005,
+        "cacheReadInputTokens": 28139,
+        "contextWindow": 1000000,
+        "costUSD": 0.08162069999999999,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 1123,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"reasoning\":\"The incident is a user rebuke for claiming a lint check passed without actually running it (\\\"You did not run the fake lint before saying it passed\\\"), which is also directly cited as one of the proposal's own supporting evidence quotes. The proposed remedy revises the existing \\\"fake-verify-before-claim\\\" skill to explicitly require: (1) identifying the concrete verification command (test suite, lint, build, etc.), (2) running it in-session before claiming success, (3) reporting literal output, and (4) explicitly flagging when verification could not be run rather than asserting success. Its anti-patterns section explicitly calls out \\\"'lint is clean' ... with no command actually run this session\\\" as a bad example — a near-exact match to this incident's failure mode. This is a direct, on-point match between remedy and failure (same phase: claiming completion before verification; same trigger: lint check), with concrete actionable procedure rather than a vague admonition. No material gap is evident for this specific incident.\",\"verdict\":\"prevented\"}",
+    "session_id": "e3a95278-34fa-4e02-a1a0-33c88c843932",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "reasoning": "The incident is a user rebuke for claiming a lint check passed without actually running it (\"You did not run the fake lint before saying it passed\"), which is also directly cited as one of the proposal's own supporting evidence quotes. The proposed remedy revises the existing \"fake-verify-before-claim\" skill to explicitly require: (1) identifying the concrete verification command (test suite, lint, build, etc.), (2) running it in-session before claiming success, (3) reporting literal output, and (4) explicitly flagging when verification could not be run rather than asserting success. Its anti-patterns section explicitly calls out \"'lint is clean' ... with no command actually run this session\" as a bad example — a near-exact match to this incident's failure mode. This is a direct, on-point match between remedy and failure (same phase: claiming completion before verification; same trigger: lint check), with concrete actionable procedure rather than a vague admonition. No material gap is evident for this specific incident.",
+      "verdict": "prevented"
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 101,
+    "total_cost_usd": 0.08162069999999999,
+    "ttft_ms": 10268,
+    "ttft_stream_ms": 1511,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 6005,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 6005,
+      "cache_read_input_tokens": 28139,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 6005,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 6005,
+          "cache_read_input_tokens": 28139,
+          "input_tokens": 6768,
+          "output_tokens": 1123,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 1123,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "704eb8d8-8b05-4734-be5f-755d4252a79a"
+  }
+}

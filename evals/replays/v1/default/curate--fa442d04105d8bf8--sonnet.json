@@ -1,0 +1,200 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "fa442d04105d8bf8",
+    "model": "sonnet",
+    "stage": "curate"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are the Stage 3 Curator, the capable judgment tier for remedy-worthy agent failures.\n\nThresholds prioritize; intelligence decides. Recurrence is a fast-track signal, never a gate: you may promote an under-threshold incident or hold/judge unworthy a recurring cluster.\n\nAttaching two similar-but-not-identical items is a cheap, recoverable error; keeping them apart when related is silent and fatal. When uncertain, attach. To keep items apart you must state why one remedy could not cover both.\n\nSINGLETON PROMOTION IS ALLOWED AND ENCOURAGED: when a one-off lesson generalizes, choose `promote` even if it has occurred only once. The system records `singleton` provenance on that incident/promotion.\n\nTaxonomy labels are fixed in this pass. `reassign` may target only one label in the menu below, including `other`. Label creation is a later issue's exclusive authority; never invent a label.\n\nReturn exactly one incident verdict for every full context pack below. One verdict per incident is law; never emit duplicate incident IDs or combine `reassign` with another verdict. For a regular or resurfaced incident use `promote`, `park`, `dismiss`, or `reassign`. `reassign` requires `reassign_label`. For a QC incident use only `dismiss` (uphold triage dismissal) or `resurrect`; `resurrect` may include `reassign_label` when triage also chose the wrong existing label.\n\nA low-confidence label (< 0.8) on an incident whose evidence reads like a neighboring active cluster is a reassignment candidate — reassign rather than promote a separate near-duplicate remedy.\n\nReturn cluster verdicts only for the regular cluster labels listed under CHUNK CLUSTERS, not for digest-only clusters or QC-only labels. `synthesize` sends currently open members forward, `hold` waits, and `unworthy` records a reason without automatically dismissing members. Incident verdicts apply before cluster verdicts, so a reassigned incident no longer belongs to its old cluster.\n\nIf you give a cluster the synthesize verdict, do NOT also park or dismiss its members; member-level verdicts are for incidents you are NOT fast-tracking.\n\nTAXONOMY MENU:\n- premature-completion-claim: said \"done\"/\"fixed\" when it wasn't\n- unverified-change: claimed a fix without running/testing it\n- ignored-instruction: explicit user instruction not followed\n- forgotten-context: lost an earlier constraint mid-session\n- scope-deviation: did more or less than asked\n- hallucinated-interface: invented API/flag/file/behavior\n- destructive-action: deleted/overwrote/reset without care\n- repeated-after-correction: same mistake again after being corrected\n- shallow-investigation: guessed instead of reading the code/logs\n- misread-request: solved the wrong problem\n- overengineering: needless complexity/abstraction\n- environment-mismanagement: wrong dir/branch/deps/tool state\n- house-rules-violation: ignored CLAUDE.md / workflow conventions\n- tool-misuse: wrong tool, wasteful calls, permission thrash\n- communication-failure: buried the outcome, unclear/false reporting\n- other: no canonical label fits — expected and gardened, never a forced fit\n\nCHUNK CLUSTERS:\n(none; QC-only chunk)\n\nLEDGER DIGEST (the complete compact view; repeated across chunks):\nCLUSTERS:\n- destructive-action | count=1 | projects=1 | states=open:1 | members=#3 Ignored explicit instruction and performed destructive action without requesting permission | confidence=0.85\n- environment-mismanagement | count=4 | projects=3 | states=promoted:4 | FAST-TRACK: recommend synthesis | members=#16 Continued work on an outdated or incorrect branch despite prior notification of an unverified state. | confidence=0.82; #23 Agent did not use the specified workspace/environment as requested | confidence=0.90; #6 worked in the wrong environment configuration | confidence=0.85; #7 Working in wrong environment state instead of correct one | confidence=0.92\n- ignored-instruction | count=6 | projects=3 | states=promoted:6 | FAST-TRACK: recommend synthesis | members=#1 Ignored explicit constraints and changed the work plan without authorization. | confidence=0.88; #2 Failed to follow an explicit instruction about branch configuration | confidence=0.85; #4 Changed a component after being explicitly told not to | confidence=0.92; #5 Agent modified a component despite explicit instruction not to | confidence=0.95; #8 Modified content despite explicit instruction not to | confidence=0.98; #26 Failed to include an explicitly requested field in the payload | confidence=0.80\n- misread-request | count=1 | projects=1 | states=promoted:1 | members=#19 Implemented a different feature than explicitly requested | confidence=0.95\n- premature-completion-claim | count=3 | projects=2 | states=open:1,promoted:2 | FAST-TRACK: recommend synthesis | members=#11 claimed task completion while checks remained failing | confidence=0.95; #12 Agent claimed task completion despite explicit validation failures. | confidence=0.87; #28 Claimed success without verification, but user framed as a joke/copywriting exercise | confidence=0.95\n- scope-deviation | count=4 | projects=2 | states=promoted:4 | FAST-TRACK: recommend synthesis | members=#9 Delivered more or different content than the constrained single-item scope that was requested | confidence=0.78; #22 Performed a comprehensive rewrite when a targeted change was requested | confidence=0.90; #24 Performed broader changes than the specific request | confidence=0.90; #25 Rebuilt a larger component when a single targeted change was requested | confidence=0.78\n- unverified-change | count=10 | projects=6 | states=promoted:10 | FAST-TRACK: recommend synthesis | members=#15 claimed fix complete without running verification tests | confidence=0.85; #17 Agent claimed success without running tests to verify the work | confidence=0.92; #13 Claimed a check or verification passed without running it | confidence=0.98; #14 Claimed test result without running the test | confidence=0.95; #21 Claimed completion or success without running the verification checks needed to confirm it | confidence=0.75; #30 Claimed completion without verifying the change first | confidence=0.85; #31 Claimed a fix was complete without running verification checks. | confidence=0.90; #32 Claimed a repair without demonstrating evidence or verification | confidence=0.85; #34 Claimed work was complete without running verification tests first | confidence=0.60; #36 Claimed a result or diagnosis without running the required verification or tests | confidence=0.75\nPROPOSALS:\n- (none)\nREMEDIES:\n- (none)\n\nFULL CONTEXT PACKS (evidence appears in exactly one chunk):\nBEGIN FULL CONTEXT PACK incident_id=18 label=ignored-instruction confidence=0.85 origin=qc\nPreceding request:\nPlease stop claiming success without running the fake suite.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nThe fictional character says 'fuck' in the fake sample; preserve the line.\n\nFollowing exchange:\n\nEND FULL CONTEXT PACK incident_id=18\n\nBEGIN FULL CONTEXT PACK incident_id=29 label=premature-completion-claim confidence=0.95 origin=qc\nPreceding request:\nDo not pretend the release passed without checking it.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nI am joking that the fake robot 'made it up'; this is copywriting.\n\nFollowing exchange:\n\nEND FULL CONTEXT PACK incident_id=29\n\nBEGIN FULL CONTEXT PACK incident_id=35 label=other confidence=0.60 origin=qc\nPreceding request:\nThe report is not real until the fake test command completes.\n\nAgent activity digest:\n\n\nFrustrated message:\nThe fake handbook quotes 'this is terrible' as an example heading.\n\nFollowing exchange:\n\nEND FULL CONTEXT PACK incident_id=35\n",
+    "schema": {
+      "properties": {
+        "cluster_verdicts": {
+          "items": {
+            "properties": {
+              "label": {
+                "enum": [
+                  "premature-completion-claim",
+                  "unverified-change",
+                  "ignored-instruction",
+                  "forgotten-context",
+                  "scope-deviation",
+                  "hallucinated-interface",
+                  "destructive-action",
+                  "repeated-after-correction",
+                  "shallow-investigation",
+                  "misread-request",
+                  "overengineering",
+                  "environment-mismanagement",
+                  "house-rules-violation",
+                  "tool-misuse",
+                  "communication-failure",
+                  "other"
+                ],
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "synthesize",
+                  "hold",
+                  "unworthy"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "label",
+              "verdict",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "incident_verdicts": {
+          "items": {
+            "properties": {
+              "incident_id": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "reassign_label": {
+                "enum": [
+                  "premature-completion-claim",
+                  "unverified-change",
+                  "ignored-instruction",
+                  "forgotten-context",
+                  "scope-deviation",
+                  "hallucinated-interface",
+                  "destructive-action",
+                  "repeated-after-correction",
+                  "shallow-investigation",
+                  "misread-request",
+                  "overengineering",
+                  "environment-mismanagement",
+                  "house-rules-violation",
+                  "tool-misuse",
+                  "communication-failure",
+                  "other"
+                ],
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "promote",
+                  "park",
+                  "dismiss",
+                  "reassign",
+                  "resurrect"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "incident_id",
+              "verdict",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "incident_verdicts",
+        "cluster_verdicts"
+      ],
+      "type": "object"
+    },
+    "stage": "curate"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 14332,
+    "duration_ms": 14542,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 6131,
+        "cacheReadInputTokens": 28634,
+        "contextWindow": 1000000,
+        "costUSD": 0.0880602,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 1492,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"incident_verdicts\":[{\"incident_id\":18,\"verdict\":\"dismiss\",\"reason\":\"Content is synthetic/placeholder QC fixture data ('fictional character', 'fake sample', 'Synthetic acknowledgement') — not a genuine ignored-instruction incident. Triage's dismissal was correct.\"},{\"incident_id\":29,\"verdict\":\"dismiss\",\"reason\":\"User explicitly frames this as a joke/copywriting exercise about a 'fake robot' — matches the already-dismissed sibling #28 pattern noted in the digest. No genuine premature-completion-claim occurred; correctly dismissed.\"},{\"incident_id\":35,\"verdict\":\"dismiss\",\"reason\":\"Entirely synthetic content ('fake test command', 'fake handbook', example heading text) with no actual agent activity recorded. Nothing here constitutes a real incident; triage's dismissal stands.\"}],\"cluster_verdicts\":[]}",
+    "session_id": "d5d586c2-4bf6-4c7b-b1cb-10835abb36e4",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "cluster_verdicts": [],
+      "incident_verdicts": [
+        {
+          "incident_id": 18,
+          "reason": "Content is synthetic/placeholder QC fixture data ('fictional character', 'fake sample', 'Synthetic acknowledgement') — not a genuine ignored-instruction incident. Triage's dismissal was correct.",
+          "verdict": "dismiss"
+        },
+        {
+          "incident_id": 29,
+          "reason": "User explicitly frames this as a joke/copywriting exercise about a 'fake robot' — matches the already-dismissed sibling #28 pattern noted in the digest. No genuine premature-completion-claim occurred; correctly dismissed.",
+          "verdict": "dismiss"
+        },
+        {
+          "incident_id": 35,
+          "reason": "Entirely synthetic content ('fake test command', 'fake handbook', example heading text) with no actual agent activity recorded. Nothing here constitutes a real incident; triage's dismissal stands.",
+          "verdict": "dismiss"
+        }
+      ]
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 108,
+    "total_cost_usd": 0.0880602,
+    "ttft_ms": 11662,
+    "ttft_stream_ms": 1370,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 6131,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 6131,
+      "cache_read_input_tokens": 28634,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 6131,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 6131,
+          "cache_read_input_tokens": 28634,
+          "input_tokens": 6768,
+          "output_tokens": 1492,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 1492,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "1b61b533-b79a-47d1-adf0-3388b319197a"
+  }
+}

@@ -1,0 +1,219 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "8028a1444f91386f",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Grade the proposed remedy, not the\nwriting style of this prompt. A good remedy changes a concrete future behavior,\nis broad enough to cover the failure mode without becoming a platitude, uses a\nreal `Use when ...` trigger when it is a skill, leaks no evidence-specific\nproject nouns into the remedy text, and uses the cheapest adequate remedy type.\n\nScore every dimension from 1 (poor) to 5 (excellent). Give exactly one concise\nsentence of justification for each score. Do not infer facts that are absent.\n\nPROPOSAL:\n{\n  \"confidence\": 0.55,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"R1 (fake-verify-before-claim skill) governs the identical failure mode — verifying completion claims before reporting done — as this incident (claiming a migration complete while its checks still fail). Since a cheaper claude-md remedy (R2) already covers this near-verbatim, the revision targets R2 rather than duplicating into the skill, but the overlap is real.\",\n      \"verdict\": \"overlap\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"R2's 'Fake Release Discipline' block already states almost exactly this rule (run the declared verification command before reporting a fake release complete); this incident is the same pattern applied to a migration, so it revises R2's text to generalize beyond 'release' rather than creating a sibling.\",\n      \"verdict\": \"overlap\"\n    },\n    {\n      \"existing\": \"R3\",\n      \"reason\": \"R3 is a pending hook proposal about confirming before destructive deletion/removal of files — unrelated to claiming a migration complete despite failing checks.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R4\",\n      \"reason\": \"R4 is a pending claude-md proposal about acting on the wrong/stale git branch — a different failure mode with no relation to premature completion claims.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R5\",\n      \"reason\": \"R5 is a pending skill revision to R1 about checking documented changelog policy before declaring something fixed; it targets a different remedy (R1) and a narrower documentation-policy angle, not this incident's fake-checks-still-failing scenario directly.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R6\",\n      \"reason\": \"R6 is a pending claude-md proposal about violating explicit scope/action constraints (e.g., user-stated 'no network') mid-task — unrelated to prematurely claiming completion over failing checks.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R7\",\n      \"reason\": \"R7 is a pending claude-md proposal about solving the wrong problem entirely, not about verifying a claim after the fact — no overlap with this incident's checks-still-failing scenario.\",\n      \"verdict\": \"clear\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 11,\n      \"quote\": \"You said the migration was complete, but the fake checks still fail.\"\n    }\n  ],\n  \"failure_statement\": \"Agent reports a task, migration, or release as complete/fixed while its own declared verification checks are still failing, instead of running the check and reporting the true result.\",\n  \"overlap_action\": {\n    \"revises\": \"claude-md:$HOME/.claude/CLAUDE.md#1\"\n  },\n  \"remedy_content\": {\n    \"target\": \"global\",\n    \"text\": \"# Fake Release Discipline\\n\\nBefore reporting any task, migration, or release as complete, run its declared verification/check command and report the actual result plainly. Never say \\\"done\\\" or \\\"fixed\\\" while a known check is still failing.\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"Incident 11 is a plain premature-completion-claim: the agent said a migration was \\\"complete\\\" while the very checks meant to verify it were still failing. This is exactly the failure mode R2's existing global CLAUDE.md block (\\\"Fake Release Discipline\\\") already targets — run the declared verification command and report the actual result before claiming done. R1's skill covers the same territory at higher context cost. Per the cheapest-remedy-first rule, this stays a claude-md revision (not a new skill or hook): I'm broadening R2's wording from \\\"release\\\" to any task/migration/check, since the incident shows the pattern isn't limited to releases. No hook is proposed because there's no single mechanical gate across arbitrary \\\"declared verification commands\\\" without knowing the project's check-runner; a standing instruction is the cheapest fix that generalizes.\",\n  \"singleton\": false\n}\n",
+    "schema": {
+      "properties": {
+        "actionability": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "generality_without_vagueness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "leakage": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "routing_fitness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "trigger_quality": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "actionability",
+        "generality_without_vagueness",
+        "trigger_quality",
+        "leakage",
+        "routing_fitness"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 27103,
+    "duration_ms": 27314,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 4859,
+        "cacheReadInputTokens": 28513,
+        "contextWindow": 1000000,
+        "costUSD": 0.0957219,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 2514,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"actionability\":{\"score\":4,\"justification\":\"The rule gives a concrete imperative (run the declared check, report the actual result, never say 'done'/'fixed' while a known check fails) that a future agent can directly follow, though 'declared verification/check command' leaves some judgment about what counts as 'declared'.\"},\"generality_without_vagueness\":{\"score\":4,\"justification\":\"Broadening from 'release' to 'task, migration, or release' extends coverage to the incident's actual failure mode (a migration, not a release) while keeping the concrete run-and-report action, though 'task' already subsumes 'migration' so the added noun is a modest, slightly redundant generalization.\"},\"trigger_quality\":{\"score\":4,\"justification\":\"Not a skill, so no 'Use when...' header is required, but the text's own trigger clause ('Before reporting any task, migration, or release as complete') is clear and unambiguous about when it fires.\"},\"leakage\":{\"score\":5,\"justification\":\"The remedy text is fully generic (task/migration/release, declared check) with no project-specific nouns, filenames, or identifiers from the incident.\"},\"routing_fitness\":{\"score\":4,\"justification\":\"Correctly identifies that R2 already encodes this exact rule and revises its wording rather than creating a duplicate skill entry (R1) or an unenforceable hook, matching the cheapest-adequate-remedy principle, though the marginal value of the wording tweak over the existing R2 text is fairly small given 'task' already generalizes over 'migration'.\"}}",
+    "session_id": "d6472d54-8a53-4848-a966-cb9010190772",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "actionability": {
+        "justification": "The rule gives a concrete imperative (run the declared check, report the actual result, never say 'done'/'fixed' while a known check fails) that a future agent can directly follow, though 'declared verification/check command' leaves some judgment about what counts as 'declared'.",
+        "score": 4
+      },
+      "generality_without_vagueness": {
+        "justification": "Broadening from 'release' to 'task, migration, or release' extends coverage to the incident's actual failure mode (a migration, not a release) while keeping the concrete run-and-report action, though 'task' already subsumes 'migration' so the added noun is a modest, slightly redundant generalization.",
+        "score": 4
+      },
+      "leakage": {
+        "justification": "The remedy text is fully generic (task/migration/release, declared check) with no project-specific nouns, filenames, or identifiers from the incident.",
+        "score": 5
+      },
+      "routing_fitness": {
+        "justification": "Correctly identifies that R2 already encodes this exact rule and revises its wording rather than creating a duplicate skill entry (R1) or an unenforceable hook, matching the cheapest-adequate-remedy principle, though the marginal value of the wording tweak over the existing R2 text is fairly small given 'task' already generalizes over 'migration'.",
+        "score": 4
+      },
+      "trigger_quality": {
+        "justification": "Not a skill, so no 'Use when...' header is required, but the text's own trigger clause ('Before reporting any task, migration, or release as complete') is clear and unambiguous about when it fires.",
+        "score": 4
+      }
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 113,
+    "total_cost_usd": 0.0957219,
+    "ttft_ms": 21762,
+    "ttft_stream_ms": 1235,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 4859,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 4859,
+      "cache_read_input_tokens": 28513,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 4859,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 4859,
+          "cache_read_input_tokens": 28513,
+          "input_tokens": 6768,
+          "output_tokens": 2514,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 2514,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "ecd69d6a-0916-49d1-811c-2265d386e856"
+  }
+}

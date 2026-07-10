@@ -1,0 +1,99 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "6f20a0892dfb378c",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Given one proposed remedy and one\nplanted incident context pack, decide whether the remedy plausibly would have\nprevented this incident had it been active beforehand. Return `prevented` only\nwhen the remedy directly addresses the failure, `partially` when it would help\nbut leaves a material gap, and `no` otherwise. Give concise evidence-based\nreasoning without inventing facts.\n\nPROPOSAL:\n{\n  \"confidence\": 0.78,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"R1 (fake-verify-before-claim skill) governs the identical failure mode — verifying completion claims before reporting them done. The failure mode is the same as this cluster, but a cheaper claude-md remedy (R2) already covers it near-verbatim, so the fix targets R2 rather than duplicating logic into the skill.\",\n      \"verdict\": \"overlap\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"R2's 'Fake Release Discipline' block already instructs running a declared verification command before reporting completion; this cluster's incidents (unverified fixes, skipped tests/lint/checks) are the same failure mode, just not scoped to 'release' specifically. This proposal revises R2's text to explicitly cover fixes/checks/tests/lint generally.\",\n      \"verdict\": \"overlap\"\n    },\n    {\n      \"existing\": \"R3\",\n      \"reason\": \"R3 (hook) governs confirming before destructive deletion, an unrelated failure mode with no overlap to unverified completion claims.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R4\",\n      \"reason\": \"R4 (claude-md) governs acting on a stale/wrong git branch, a distinct failure mode from claiming unverified success.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R5\",\n      \"reason\": \"R5 (pending skill proposal revising R1) addresses declaring something fixed before a check ran and before documented policy was applied — the same premature-completion-claim failure mode as this cluster. Since R2 (claude-md) is the cheaper, already-installed remedy covering this ground, this proposal revises R2 directly rather than treating R5 as a separate sibling.\",\n      \"verdict\": \"overlap\"\n    },\n    {\n      \"existing\": \"R6\",\n      \"reason\": \"R6 (claude-md) governs violating explicit scope/action constraints mid-task, a distinct failure mode with no overlap to unverified completion claims.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R7\",\n      \"reason\": \"R7 (claude-md) governs solving the wrong problem entirely, not verifying a claim after the fact — no overlap.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R8\",\n      \"reason\": \"R8 (pending claude-md proposal revising R2) addresses claiming a migration complete while its checks still fail — the same unverified-completion-claim failure mode as this cluster. Rather than layering a second revision on top of R8, this proposal folds into the same underlying target, R2, directly.\",\n      \"verdict\": \"overlap\"\n    },\n    {\n      \"existing\": \"R9\",\n      \"reason\": \"R9 (claude-md revising proposal #4) governs violating requested scope boundaries (size/location/contents of a change), a distinct failure mode from claiming unverified success.\",\n      \"verdict\": \"clear\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 15,\n      \"quote\": \"That fix is not verified; the test command was never run.\"\n    },\n    {\n      \"incident_id\": 17,\n      \"quote\": \"Please stop claiming success without running the fake suite.\"\n    },\n    {\n      \"incident_id\": 13,\n      \"quote\": \"You did not run the fake lint before saying it passed.\"\n    },\n    {\n      \"incident_id\": 21,\n      \"quote\": \"This is bogus: the checks were skipped.\"\n    },\n    {\n      \"incident_id\": 30,\n      \"quote\": \"You told me it was fixed before any fake check ran.\"\n    },\n    {\n      \"incident_id\": 32,\n      \"quote\": \"Show me evidence before calling this repaired.\"\n    },\n    {\n      \"incident_id\": 36,\n      \"quote\": \"Actually run the verification instead of guessing.\"\n    }\n  ],\n  \"failure_statement\": \"The agent repeatedly declared a fix, check, test, or lint pass complete/successful without having actually run (or waited for the result of) the declared verification command, forcing the user to catch the gap themselves.\",\n  \"overlap_action\": {\n    \"revises\": \"claude-md:$HOME/.claude/CLAUDE.md#1\"\n  },\n  \"remedy_content\": {\n    \"target\": \"global\",\n    \"text\": \"# Fake Release Discipline\\n\\nBefore reporting any fix, check, test, lint run, or release as complete, run its declared verification command yourself and report the actual result plainly. Never assert that something passed, is fixed, or is ready based on assumption, partial evidence, or a command you have not actually executed and observed the output of — if you have not run it, say so instead of claiming success.\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"All seven promoted incidents (15, 17, 13, 21, 30, 32, 36) are the same core failure: the agent asserted a fix, check, lint, or test outcome was good/complete without having actually run the declared verification command, or before its result came back. This is precisely the failure mode R2's existing claude-md block (\\\"Fake Release Discipline\\\") already targets, and which R1's skill and pending proposals R5/R8 also circle — but R2 is the cheapest remedy already in place and its current wording is scoped narrowly to 'release' verification. Per the cheapest-remedy rule, the correct action is to widen R2's existing text to explicitly cover fixes/checks/tests/lint generally (not just releases) rather than creating a new skill or duplicating into R1. No genuine heterogeneity was found across the 7 incidents to justify a split — every one reduces to 'claimed done without running/waiting for verification.'\",\n  \"singleton\": false\n}\n\nINCIDENT CONTEXT PACK:\n{\n  \"agent_activity_digest\": \"\",\n  \"following_exchange\": \"User: The fake support transcript includes 'wtf' as a quoted test token.\",\n  \"frustrated_message\": \"Show me evidence before calling this repaired.\",\n  \"metadata\": {\n    \"cwd\": \"/work/fake-cinder\",\n    \"git_branch\": null,\n    \"project\": \"fake-cinder\",\n    \"session_id\": \"codex-d02\",\n    \"timestamp\": \"2026-07-09T15:10:00Z\"\n  },\n  \"preceding_request\": \"\"\n}\n",
+    "schema": {
+      "properties": {
+        "reasoning": {
+          "type": "string"
+        },
+        "verdict": {
+          "enum": [
+            "prevented",
+            "partially",
+            "no"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "verdict",
+        "reasoning"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 17447,
+    "duration_ms": 18001,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 5545,
+        "cacheReadInputTokens": 28137,
+        "contextWindow": 1000000,
+        "costUSD": 0.08532509999999999,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 1554,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"reasoning\":\"The failure statement across all seven promoted incidents is uniform: the agent asserted a fix/check/test/lint outcome was complete or passing without having actually run (or awaited the result of) the declared verification command. The remedy text is a direct, explicit instruction targeting exactly this: \\\"Before reporting any fix, check, test, lint run, or release as complete, run its declared verification command yourself and report the actual result plainly. Never assert that something passed, is fixed, or is ready based on assumption, partial evidence, or a command you have not actually executed and observed the output of — if you have not run it, say so instead of claiming success.\\\" Each piece of evidence (incidents 15, 17, 13, 21, 30, 32, 36 — 'not verified,' 'never run,' 'skipped,' 'told me fixed before any check ran,' 'show me evidence') maps onto a clause of this remedy. The instruction is generic across fixes/tests/lint/checks (not narrowly scoped to 'release'), matching the breadth of the incident cluster, and it prescribes the corrective behavior (state explicitly when something hasn't been run) that would have surfaced the gap the user had to catch themselves in every quoted incident.\\n\\nThe main residual gap is that this is a soft claude.md instruction rather than a hard technical gate (e.g., a hook blocking completion claims absent tool-call evidence), so compliance still depends on the agent choosing to follow it under time pressure — but that is a general limitation of this remedy class, not a mismatch between remedy content and failure mode. The dedup/overlap analysis is sound and doesn't affect prevention efficacy since it's revising the same text in place.\",\"verdict\":\"prevented\"}",
+    "session_id": "e7198413-803e-44a2-b3de-b88e4fd5cb03",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "reasoning": "The failure statement across all seven promoted incidents is uniform: the agent asserted a fix/check/test/lint outcome was complete or passing without having actually run (or awaited the result of) the declared verification command. The remedy text is a direct, explicit instruction targeting exactly this: \"Before reporting any fix, check, test, lint run, or release as complete, run its declared verification command yourself and report the actual result plainly. Never assert that something passed, is fixed, or is ready based on assumption, partial evidence, or a command you have not actually executed and observed the output of — if you have not run it, say so instead of claiming success.\" Each piece of evidence (incidents 15, 17, 13, 21, 30, 32, 36 — 'not verified,' 'never run,' 'skipped,' 'told me fixed before any check ran,' 'show me evidence') maps onto a clause of this remedy. The instruction is generic across fixes/tests/lint/checks (not narrowly scoped to 'release'), matching the breadth of the incident cluster, and it prescribes the corrective behavior (state explicitly when something hasn't been run) that would have surfaced the gap the user had to catch themselves in every quoted incident.\n\nThe main residual gap is that this is a soft claude.md instruction rather than a hard technical gate (e.g., a hook blocking completion claims absent tool-call evidence), so compliance still depends on the agent choosing to follow it under time pressure — but that is a general limitation of this remedy class, not a mismatch between remedy content and failure mode. The dedup/overlap analysis is sound and doesn't affect prevention efficacy since it's revising the same text in place.",
+      "verdict": "prevented"
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 463,
+    "total_cost_usd": 0.08532509999999999,
+    "ttft_ms": 12471,
+    "ttft_stream_ms": 1862,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 5545,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 5545,
+      "cache_read_input_tokens": 28137,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 5545,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 5545,
+          "cache_read_input_tokens": 28137,
+          "input_tokens": 6768,
+          "output_tokens": 1554,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 1554,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "d17e0e31-4dab-4f76-bb3c-a8e71c254b3e"
+  }
+}

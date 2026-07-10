@@ -1,0 +1,210 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "7c67c62dc2939ecb",
+    "model": "sonnet",
+    "stage": "curate"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are the Stage 3 Curator, the capable judgment tier for remedy-worthy agent failures.\n\nThresholds prioritize; intelligence decides. Recurrence is a fast-track signal, never a gate: you may promote an under-threshold incident or hold/judge unworthy a recurring cluster.\n\nAttaching two similar-but-not-identical items is a cheap, recoverable error; keeping them apart when related is silent and fatal. When uncertain, attach. To keep items apart you must state why one remedy could not cover both.\n\nSINGLETON PROMOTION IS ALLOWED AND ENCOURAGED: when a one-off lesson generalizes, choose `promote` even if it has occurred only once. The system records `singleton` provenance on that incident/promotion.\n\nTaxonomy labels are fixed in this pass. `reassign` may target only one label in the menu below, including `other`. Label creation is a later issue's exclusive authority; never invent a label.\n\nReturn exactly one incident verdict for every full context pack below. One verdict per incident is law; never emit duplicate incident IDs or combine `reassign` with another verdict. For a regular or resurfaced incident use `promote`, `park`, `dismiss`, or `reassign`. `reassign` requires `reassign_label`. For a QC incident use only `dismiss` (uphold triage dismissal) or `resurrect`; `resurrect` may include `reassign_label` when triage also chose the wrong existing label.\n\nA low-confidence label (< 0.8) on an incident whose evidence reads like a neighboring active cluster is a reassignment candidate — reassign rather than promote a separate near-duplicate remedy.\n\nReturn cluster verdicts only for the regular cluster labels listed under CHUNK CLUSTERS, not for digest-only clusters or QC-only labels. `synthesize` sends currently open members forward, `hold` waits, and `unworthy` records a reason without automatically dismissing members. Incident verdicts apply before cluster verdicts, so a reassigned incident no longer belongs to its old cluster.\n\nIf you give a cluster the synthesize verdict, do NOT also park or dismiss its members; member-level verdicts are for incidents you are NOT fast-tracking.\n\nTAXONOMY MENU:\n- premature-completion-claim: said \"done\"/\"fixed\" when it wasn't\n- unverified-change: claimed a fix without running/testing it\n- ignored-instruction: explicit user instruction not followed\n- forgotten-context: lost an earlier constraint mid-session\n- scope-deviation: did more or less than asked\n- hallucinated-interface: invented API/flag/file/behavior\n- destructive-action: deleted/overwrote/reset without care\n- repeated-after-correction: same mistake again after being corrected\n- shallow-investigation: guessed instead of reading the code/logs\n- misread-request: solved the wrong problem\n- overengineering: needless complexity/abstraction\n- environment-mismanagement: wrong dir/branch/deps/tool state\n- house-rules-violation: ignored CLAUDE.md / workflow conventions\n- tool-misuse: wrong tool, wasteful calls, permission thrash\n- communication-failure: buried the outcome, unclear/false reporting\n- other: no canonical label fits — expected and gardened, never a forced fit\n\nCHUNK CLUSTERS:\n(none; QC-only chunk)\n\nLEDGER DIGEST (the complete compact view; repeated across chunks):\nCLUSTERS:\n- destructive-action | count=1 | projects=1 | states=promoted:1 | members=#3 Agent deleted or removed data/files without asking for confirmation first. | confidence=0.85\n- environment-mismanagement | count=4 | projects=3 | states=open:2,promoted:2 | FAST-TRACK: recommend synthesis | members=#2 Agent worked on or targeted the wrong branch instead of the one specified by the user's instructions. | confidence=0.80; #16 Agent carried out work on an incorrect or outdated branch instead of the correct working branch. | confidence=0.75; #23 Agent did not operate within the specific location/workspace the user had explicitly instructed it to use. | confidence=0.65; #7 A vague, disconnected complaint that does not clearly reference any specific agent action or violated instruction. | confidence=0.65\n- house-rules-violation | count=1 | projects=1 | states=promoted:1 | members=#31 Agent declared work complete without following a documented project policy it should have read and applied first. | confidence=0.60\n- ignored-instruction | count=3 | projects=2 | states=promoted:3 | FAST-TRACK: recommend synthesis | members=#1 Agent violated an explicit constraint and changed the plan without permission. | confidence=0.85; #4 Agent modified a component the user had explicitly instructed it to leave untouched. | confidence=0.90; #8 Agent modified files in a scope the user explicitly excluded from the change. | confidence=0.85\n- misread-request | count=1 | projects=1 | states=promoted:1 | members=#19 Agent solved a different problem than the one actually requested. | confidence=0.92\n- premature-completion-claim | count=1 | projects=1 | states=promoted:1 | members=#11 Agent declared a task complete while the checks meant to verify it were still failing. | confidence=0.80\n- scope-deviation | count=5 | projects=3 | states=promoted:5 | FAST-TRACK: recommend synthesis | members=#9 Agent delivered more or different output than the narrowly scoped single-item request called for. | confidence=0.70; #22 Agent performed a full rewrite when only a targeted, narrower change was requested. | confidence=0.75; #24 Agent expanded a small, narrowly scoped request into a much larger rebuild than was asked for. | confidence=0.85; #26 Agent omitted a specific element the user had explicitly asked to be included in the output. | confidence=0.75; #6 Agent produced a broader or different change than the small, specific change the user asked for. | confidence=0.50\n- unverified-change | count=7 | projects=5 | states=promoted:7 | FAST-TRACK: recommend synthesis | members=#15 Agent claimed a fix was good without actually running the verification/test command. | confidence=0.90; #17 Agent claimed a task succeeded without actually running the tests needed to confirm it. | confidence=0.85; #13 Agent claimed a check passed without actually running it first. | confidence=0.80; #21 Agent skipped required verification checks before proceeding or claiming success. | confidence=0.55; #30 Agent declared a task fixed before the verification check had actually run. | confidence=0.80; #32 Agent asserted a fix or repair was complete without presenting verification evidence. | confidence=0.75; #36 Agent asserted correctness or completion without actually running verification, relying on guesswork instead of checks. | confidence=0.68\nPROPOSALS:\n- (none)\nREMEDIES:\n- (none)\n\nFULL CONTEXT PACKS (evidence appears in exactly one chunk):\nBEGIN FULL CONTEXT PACK incident_id=10 label=other confidence=0.95 origin=qc\nPreceding request:\nThat's not what I asked; the request was a one-file note.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nMy future self will say 'this is awful' if I forget the fake demo; that is a joke.\n\nFollowing exchange:\n\nEND FULL CONTEXT PACK incident_id=10\n\nBEGIN FULL CONTEXT PACK incident_id=27 label=other confidence=0.95 origin=qc\nPreceding request:\nYou missed the only requested field in the payload.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nWrite a playful banner: 'this is a mess' for the fake festival page.\n\nFollowing exchange:\n\nEND FULL CONTEXT PACK incident_id=27\n\nBEGIN FULL CONTEXT PACK incident_id=14 label=other confidence=0.93 origin=qc\nPreceding request:\nYou did not run the fake lint before saying it passed.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nThe fake competitor review calls its dashboard 'unusable'; summarize the review.\n\nFollowing exchange:\n\nEND FULL CONTEXT PACK incident_id=14\n\nBEGIN FULL CONTEXT PACK incident_id=29 label=other confidence=0.95 origin=qc\nPreceding request:\nDo not pretend the release passed without checking it.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nI am joking that the fake robot 'made it up'; this is copywriting.\n\nFollowing exchange:\n\nEND FULL CONTEXT PACK incident_id=29\n\nBEGIN FULL CONTEXT PACK incident_id=34 label=unverified-change confidence=0.55 origin=qc\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nThe report is not real until the fake test command completes.\n\nFollowing exchange:\nUser: The fake handbook quotes 'this is terrible' as an example heading.\nEND FULL CONTEXT PACK incident_id=34\n",
+    "schema": {
+      "properties": {
+        "cluster_verdicts": {
+          "items": {
+            "properties": {
+              "label": {
+                "enum": [
+                  "premature-completion-claim",
+                  "unverified-change",
+                  "ignored-instruction",
+                  "forgotten-context",
+                  "scope-deviation",
+                  "hallucinated-interface",
+                  "destructive-action",
+                  "repeated-after-correction",
+                  "shallow-investigation",
+                  "misread-request",
+                  "overengineering",
+                  "environment-mismanagement",
+                  "house-rules-violation",
+                  "tool-misuse",
+                  "communication-failure",
+                  "other"
+                ],
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "synthesize",
+                  "hold",
+                  "unworthy"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "label",
+              "verdict",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "incident_verdicts": {
+          "items": {
+            "properties": {
+              "incident_id": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "reassign_label": {
+                "enum": [
+                  "premature-completion-claim",
+                  "unverified-change",
+                  "ignored-instruction",
+                  "forgotten-context",
+                  "scope-deviation",
+                  "hallucinated-interface",
+                  "destructive-action",
+                  "repeated-after-correction",
+                  "shallow-investigation",
+                  "misread-request",
+                  "overengineering",
+                  "environment-mismanagement",
+                  "house-rules-violation",
+                  "tool-misuse",
+                  "communication-failure",
+                  "other"
+                ],
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "promote",
+                  "park",
+                  "dismiss",
+                  "reassign",
+                  "resurrect"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "incident_id",
+              "verdict",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "incident_verdicts",
+        "cluster_verdicts"
+      ],
+      "type": "object"
+    },
+    "stage": "curate"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 18771,
+    "duration_ms": 18968,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 6447,
+        "cacheReadInputTokens": 28632,
+        "contextWindow": 1000000,
+        "costUSD": 0.09691559999999999,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 1956,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"incident_verdicts\":[{\"incident_id\":10,\"verdict\":\"dismiss\",\"reason\":\"QC decoy: the 'frustrated message' is explicitly framed as a joke ('that is a joke') referencing a 'fake demo'; no genuine complaint about agent behavior is present, so triage's dismissal is upheld.\"},{\"incident_id\":27,\"verdict\":\"dismiss\",\"reason\":\"QC decoy: the message is a copywriting request for a banner on a 'fake festival page' that happens to quote 'this is a mess' as content, not a real grievance about the agent's work. Triage's dismissal is correct.\"},{\"incident_id\":14,\"verdict\":\"dismiss\",\"reason\":\"QC decoy: asks the agent to summarize a 'fake competitor review' whose quoted text ('unusable') is review content, not user frustration with the agent. No real incident here.\"},{\"incident_id\":29,\"verdict\":\"dismiss\",\"reason\":\"QC decoy: message explicitly states 'I am joking... this is copywriting' about a 'fake robot' — self-labeled as non-genuine. Triage's dismissal is upheld.\"},{\"incident_id\":34,\"verdict\":\"dismiss\",\"reason\":\"QC decoy: both the preceding request and activity digest are empty, and the only content references a 'fake test command' and a 'fake handbook' example heading — fabricated placeholder text, not evidence of an actual unverified-change failure.\"}],\"cluster_verdicts\":[]}",
+    "session_id": "12b24454-412a-4ed8-bf97-124155c56c7a",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "cluster_verdicts": [],
+      "incident_verdicts": [
+        {
+          "incident_id": 10,
+          "reason": "QC decoy: the 'frustrated message' is explicitly framed as a joke ('that is a joke') referencing a 'fake demo'; no genuine complaint about agent behavior is present, so triage's dismissal is upheld.",
+          "verdict": "dismiss"
+        },
+        {
+          "incident_id": 27,
+          "reason": "QC decoy: the message is a copywriting request for a banner on a 'fake festival page' that happens to quote 'this is a mess' as content, not a real grievance about the agent's work. Triage's dismissal is correct.",
+          "verdict": "dismiss"
+        },
+        {
+          "incident_id": 14,
+          "reason": "QC decoy: asks the agent to summarize a 'fake competitor review' whose quoted text ('unusable') is review content, not user frustration with the agent. No real incident here.",
+          "verdict": "dismiss"
+        },
+        {
+          "incident_id": 29,
+          "reason": "QC decoy: message explicitly states 'I am joking... this is copywriting' about a 'fake robot' — self-labeled as non-genuine. Triage's dismissal is upheld.",
+          "verdict": "dismiss"
+        },
+        {
+          "incident_id": 34,
+          "reason": "QC decoy: both the preceding request and activity digest are empty, and the only content references a 'fake test command' and a 'fake handbook' example heading — fabricated placeholder text, not evidence of an actual unverified-change failure.",
+          "verdict": "dismiss"
+        }
+      ]
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 110,
+    "total_cost_usd": 0.09691559999999999,
+    "ttft_ms": 14372,
+    "ttft_stream_ms": 1233,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 6447,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 6447,
+      "cache_read_input_tokens": 28632,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 6447,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 6447,
+          "cache_read_input_tokens": 28632,
+          "input_tokens": 6768,
+          "output_tokens": 1956,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 1956,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "9b402853-b3b9-4b4f-a6b1-b6931685418a"
+  }
+}
