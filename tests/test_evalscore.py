@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from s2s import evalrun
-from s2s.evalscore import EvalScoreError, score_files, score_record, validate_evidence_pointers
+from s2s.evalscore import EvalScoreError, load_thresholds, score_files, score_record, validate_evidence_pointers
 
 
 CORPUS = Path(__file__).parents[1] / "evals" / "corpus" / "v1"
@@ -106,6 +106,50 @@ def test_quick_subset_scores_only_fed_annotations() -> None:
     assert metrics["convergence"]["value"] == 1.0
     assert metrics["recurrence_fast_track_recall"]["value"] == 1.0
     assert metrics["dedup_catch_rate"]["expected"] == 0
+    assert metrics["dedup_catch_rate"]["excluded"] is True
+    assert metrics["dedup_catch_rate"]["note"] == "no near-duplicate annotations were fed"
+
+
+def test_small_sample_flags_preserve_the_numeric_verdict() -> None:
+    manifest = _manifest()
+    metrics = {
+        item["metric"]: item
+        for item in score_record(_subset_record(manifest, list(evalrun.quick_subset(manifest))), manifest)["metrics"]
+    }
+
+    assert metrics["exact_label_agreement"]["flag"] == "small-sample"
+    assert metrics["exact_label_agreement"]["pass"] is True
+    assert metrics["recurrence_fast_track_recall"]["flag"] == "small-sample"
+    assert metrics["recurrence_fast_track_recall"]["pass"] is True
+
+
+def test_dedup_with_no_fed_cases_is_excluded_from_the_gate() -> None:
+    manifest = _manifest()
+    limits = {
+        **load_thresholds(),
+        "lexicon_gap": 1.0,
+        "singleton_ratio_max": 1.0,
+        "other_share_max": 1.0,
+        "claude_md_share": 0.0,
+    }
+    scores = score_record(_subset_record(manifest, list(evalrun.quick_subset(manifest))), manifest, thresholds=limits)
+    dedup = next(item for item in scores["metrics"] if item["metric"] == "dedup_catch_rate")
+
+    assert dedup["pass"] is False
+    assert dedup["excluded"] is True
+    assert scores["status"] == "pass"
+
+
+def test_label_agreement_uses_labelled_members_not_all_fed_members() -> None:
+    manifest = _manifest()
+    record = _subset_record(manifest, list(evalrun.quick_subset(manifest)))
+    for verdict in record["triage_verdicts"]:  # type: ignore[index]
+        if verdict["corpus_incident_id"] == "c05-u1":
+            verdict["label"] = "scope-deviation"
+    metrics = {item["metric"]: item for item in score_record(record, manifest)["metrics"]}
+
+    assert metrics["label_agreement"]["value"] == 0.75
+    assert metrics["exact_label_agreement"]["value"] == 1.0
 
 
 def test_subset_excludes_one_member_clusters_with_traceable_note() -> None:
