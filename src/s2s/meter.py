@@ -6,6 +6,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from html import escape
+import json
 from pathlib import Path
 import re
 
@@ -53,6 +54,28 @@ class CostTotal:
 
 
 @dataclass(frozen=True)
+class RemedyOutcome:
+    """The latest compact, per-remedy audit reading for status/dashboard surfaces."""
+
+    remedy_id: int
+    label: str
+    installed_at: str
+    pre_rate: float | None
+    post_rate: float | None
+    verdict: str | None
+
+
+@dataclass(frozen=True)
+class PendingProposal:
+    """A compact, safe-to-display view of a human-review proposal."""
+
+    proposal_id: int
+    remedy_type: str
+    confidence: float | None
+    content: str
+
+
+@dataclass(frozen=True)
 class DashboardData:
     """All durable facts needed by the static dashboard and status command."""
 
@@ -61,6 +84,7 @@ class DashboardData:
     hit_messages: int
     weeks: tuple[WeeklyRate, ...]
     models: tuple[Rate, ...]
+    sources: tuple[Rate, ...]
     projects: tuple[Rate, ...]
     categories: tuple[tuple[str, int], ...]
     incident_states: tuple[tuple[str, int], ...]
@@ -72,6 +96,9 @@ class DashboardData:
     date_end: date | None
     last_scan: str | None
     cost_totals: tuple[CostTotal, ...]
+    pending_proposals: tuple[PendingProposal, ...]
+    remedy_outcomes: tuple[RemedyOutcome, ...]
+    revision_proposal_count: int
 
     @property
     def rate(self) -> float:
@@ -105,8 +132,23 @@ def collect_dashboard_data(ledger: Ledger) -> DashboardData:
     stats = ledger.session_stats()
     incident_counts, categories, state_counts = _incident_aggregates(ledger)
     cost_totals = _cost_totals(ledger)
+    remedy_outcomes = tuple(
+        RemedyOutcome(
+            remedy_id=remedy.id,
+            label=", ".join(ledger.remedy_labels(remedy.id)) or "unlabelled",
+            installed_at=remedy.installed_at,
+            pre_rate=remedy.outcome_pre_rate,
+            post_rate=remedy.outcome_post_rate,
+            verdict=remedy.outcome_verdict,
+        )
+        for remedy in ledger.installed_remedies()
+    )
+    proposals = ledger.pending_proposals()
+    pending_proposals = tuple(_pending_proposal_view(proposal) for proposal in proposals)
+    revision_proposal_count = sum(proposal.proposal_kind == "revision" for proposal in proposals)
     weekly: dict[date, list[int]] = defaultdict(lambda: [0, 0])
     models: dict[str, list[int]] = defaultdict(lambda: [0, 0])
+    sources: dict[str, list[int]] = defaultdict(lambda: [0, 0])
     projects: dict[str, list[int]] = defaultdict(lambda: [0, 0])
     dates: list[date] = []
     scan_times: list[tuple[datetime, str]] = []
@@ -122,6 +164,11 @@ def collect_dashboard_data(ledger: Ledger) -> DashboardData:
         model = friendly_model_name(session.dominant_model)
         models[model][0] += messages
         models[model][1] += hits
+        source_label = (
+            "Codex" if session.source == "codex" else "Claude Code" if session.source == "claude-code" else session.source
+        )
+        sources[source_label][0] += messages
+        sources[source_label][1] += hits
         projects[session.project][0] += messages
         projects[session.project][1] += hits
 
@@ -152,6 +199,7 @@ def collect_dashboard_data(ledger: Ledger) -> DashboardData:
             for week_start, counts in sorted(weekly.items())
         ),
         models=_rates_from_counts(models),
+        sources=_rates_from_counts(sources),
         projects=_rates_from_counts(projects),
         categories=tuple(sorted(categories.items(), key=lambda item: (-item[1], item[0]))),
         incident_states=tuple(
@@ -167,6 +215,9 @@ def collect_dashboard_data(ledger: Ledger) -> DashboardData:
         date_end=max(dates) if dates else None,
         last_scan=max(scan_times)[1] if scan_times else None,
         cost_totals=cost_totals,
+        pending_proposals=pending_proposals,
+        remedy_outcomes=remedy_outcomes,
+        revision_proposal_count=revision_proposal_count,
     )
 
 
@@ -253,6 +304,23 @@ def render_status(data: DashboardData, *, archived_sessions: int) -> str:
     ]
     if not data.cost_totals:
         cost_lines.append("  no LLM runs recorded")
+    outcome_counts = Counter(
+        outcome.verdict for outcome in data.remedy_outcomes if outcome.verdict is not None
+    )
+    summary_parts = [
+        f"{count} {verdict}"
+        for verdict, count in sorted(outcome_counts.items())
+        if verdict != "persisting" or data.revision_proposal_count == 0
+    ]
+    if data.revision_proposal_count:
+        summary_parts.append(f"{data.revision_proposal_count} revision proposed")
+    remedy_summary = ", ".join(summary_parts) or "not yet audited"
+    remedy_lines = tuple(
+        "remedy "
+        f"#{outcome.remedy_id} [{outcome.label}]: {outcome.verdict or 'not audited'} "
+        f"(pre {_audit_rate(outcome.pre_rate)}, post {_audit_rate(outcome.post_rate)})"
+        for outcome in data.remedy_outcomes
+    )
     return "\n".join(
         (
             "s2s status",
@@ -263,10 +331,16 @@ def render_status(data: DashboardData, *, archived_sessions: int) -> str:
                 f"{data.hit_messages} detected message(s)"
             ),
             f"incidents: {incidents or 'none'}",
+            "sources: " + (
+                ", ".join(f"{rate.label}={_percentage(rate.percentage)}" for rate in data.sources)
+                or "none"
+            ),
             f"queue depth: {data.queue_depth}",
             f"singleton ratio: {_percentage(data.singleton_ratio * 100)}",
             f"other share: {_percentage(data.other_share * 100)}",
             f"last scan: {data.last_scan or 'none'}",
+            f"remedies installed: {len(data.remedy_outcomes)} ({remedy_summary})",
+            *remedy_lines,
             *cost_lines,
         )
     )
@@ -390,12 +464,16 @@ def _render_meter(data: DashboardData) -> str:
   <div class="legend"><span><i class="key bar-key"></i>Direct-message volume</span><span><i class="key"></i>Frustration rate</span></div>
 </div>
 <div class="split">
+  {_render_rates_table('By source', data.sources, 'source')}
   {_render_rates_table('By model', data.models, 'model')}
+</div>
+<div class="split">
   {_render_rates_table('By project', data.projects, 'project')}
+  {_render_weekly_table(data.weeks)}
 </div>
 <div class="split">
   {_render_categories(data.categories)}
-  {_render_weekly_table(data.weeks)}
+  <div class="placeholder"><strong>Cross-agent comparison</strong><br>Compare Claude Code and Codex rates above; each rate uses that source's own direct-message denominator.</div>
 </div>
 """
 
@@ -510,10 +588,30 @@ def _render_health(data: DashboardData) -> str:
 </div>
 <div class="split">
   {_render_cost_log(data.cost_totals)}
-  <div id="proposals-digest" class="placeholder"><strong>Proposals digest</strong><br>TODO — issue #13 will add review-ready remedies here.</div>
+  {_render_proposals_digest(data.pending_proposals)}
 </div>
-<div id="remedy-outcomes" class="placeholder" style="margin-top:12px"><strong>Remedy outcomes</strong><br>TODO — issue #16 will add post-install outcome measurement here.</div>
+{_render_remedy_outcomes(data.remedy_outcomes)}
 """
+
+
+def _render_remedy_outcomes(outcomes: tuple[RemedyOutcome, ...]) -> str:
+    rows = "".join(
+        "<tr>"
+        f"<td>#{outcome.remedy_id} · {escape(outcome.label)}</td>"
+        f"<td>{escape(outcome.installed_at[:10])}</td>"
+        f"<td>{_audit_rate(outcome.pre_rate)}</td>"
+        f"<td>{_audit_rate(outcome.post_rate)}</td>"
+        f"<td>{escape(outcome.verdict or 'not audited')}</td>"
+        "</tr>"
+        for outcome in outcomes
+    ) or '<tr><td colspan="5" class="muted">No installed remedies yet.</td></tr>'
+    return f"""<div id="remedy-outcomes" class="table-card" style="margin-top:12px">
+<h3>Remedy outcomes</h3><table><thead><tr><th>Remedy</th><th>Installed</th><th>Pre rate</th><th>Post rate</th><th>Verdict</th></tr></thead>
+<tbody>{rows}</tbody></table></div>"""
+
+
+def _audit_rate(value: float | None) -> str:
+    return "n/a" if value is None else f"{value:.3f}/session"
 
 
 def _render_cost_log(cost_totals: tuple[CostTotal, ...]) -> str:
@@ -527,3 +625,46 @@ def _render_cost_log(cost_totals: tuple[CostTotal, ...]) -> str:
     return f'''<div id="cost-log" class="table-card"><h3>Cost log</h3><table>
 <thead><tr><th>Stage</th><th>Model</th><th>Calls</th><th>Tokens</th><th>Cost</th></tr></thead>
 <tbody>{rows}</tbody></table></div>'''
+
+
+def _pending_proposal_view(proposal: object) -> PendingProposal:
+    """Extract a bounded display summary without exposing raw evidence packs."""
+
+    from .ledger import Proposal
+
+    assert isinstance(proposal, Proposal)
+    try:
+        payload = json.loads(proposal.drafted_content)
+    except json.JSONDecodeError:
+        payload = {}
+    payload = payload if isinstance(payload, dict) else {}
+    content = payload.get("remedy_content", proposal.drafted_content)
+    if isinstance(content, dict):
+        content = content.get("text") or content.get("note") or content.get("command_sketch") or ""
+    confidence = payload.get("confidence")
+    return PendingProposal(
+        proposal_id=proposal.id,
+        remedy_type=proposal.remedy_type,
+        confidence=float(confidence) if isinstance(confidence, int | float) else None,
+        content=_one_line(str(content), limit=180),
+    )
+
+
+def _render_proposals_digest(proposals: tuple[PendingProposal, ...]) -> str:
+    if not proposals:
+        body = 'No pending proposals. Run <code>s2s status</code> to check the pipeline.'
+    else:
+        rows = "".join(
+            "<li>"
+            f"<strong>#{proposal.proposal_id} · {escape(proposal.remedy_type)}</strong>"
+            f"{(' · confidence ' + format(proposal.confidence, '.2f')) if proposal.confidence is not None else ''}"
+            f"<br>{escape(proposal.content)}"
+            "</li>"
+            for proposal in proposals
+        )
+        body = f"<ul>{rows}</ul><p>Review with <code>s2s proposals</code> or <code>/s2s</code>.</p>"
+    return f'<div id="proposals-digest" class="placeholder"><strong>Proposals digest</strong><br>{body}</div>'
+
+
+def _one_line(value: str, *, limit: int) -> str:
+    return " ".join(value.split())[:limit]

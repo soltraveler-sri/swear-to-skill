@@ -12,6 +12,7 @@ from pathlib import Path
 import random
 
 from .config import Config, load_config
+from .auditor import AuditOutcome, audit_remedies
 from .ledger import Incident, Ledger, LedgerError
 from .llm import call, estimate_and_confirm, load_prompt
 from .paths import resolve_paths
@@ -63,6 +64,7 @@ class CuratorPassResult:
     applied_cluster_verdicts: int
     rejected_verdicts: int
     skipped: bool = False
+    audit_outcomes: tuple[AuditOutcome, ...] = ()
 
 
 def pass_due(ledger: Ledger, config: Config) -> bool:
@@ -128,7 +130,16 @@ def run_pass(ledger: Ledger, *, assume_yes: bool = False) -> CuratorPassResult:
 
     garden_initially_needed = gardening_needed(ledger)
     if not selected and not garden_initially_needed:
-        return CuratorPassResult(None, 0, (), 0, 0, 0, skipped=True)
+        audit_outcomes = audit_remedies(ledger)
+        revision_calls = _synthesize_audit_revisions(ledger, audit_outcomes, assume_yes=assume_yes)
+        if not audit_outcomes:
+            return CuratorPassResult(None, 0, (), 0, 0, 0, skipped=True)
+        completed_at = datetime.now(timezone.utc)
+        report_path = _write_report(completed_at, render_ledger_digest(ledger), (), [], audit_outcomes)
+        ledger.set_meta(LAST_PASS_META_KEY, completed_at.isoformat())
+        return CuratorPassResult(
+            report_path, revision_calls, (), 0, 0, 0, audit_outcomes=audit_outcomes
+        )
 
     entries = tuple(_build_pack_entry(incident, origin) for incident, origin in selected)
     digest = render_ledger_digest(ledger)
@@ -178,16 +189,19 @@ def run_pass(ledger: Ledger, *, assume_yes: bool = False) -> CuratorPassResult:
     garden_records, garden_calls = _run_gardening(ledger, model=model)
     records.extend(garden_records)
 
+    audit_outcomes = audit_remedies(ledger)
+    audit_calls = _synthesize_audit_revisions(ledger, audit_outcomes, assume_yes=assume_yes)
     completed_at = datetime.now(timezone.utc)
-    report_path = _write_report(completed_at, digest, entries, records)
+    report_path = _write_report(completed_at, digest, entries, records, audit_outcomes)
     ledger.set_meta(LAST_PASS_META_KEY, completed_at.isoformat())
     return CuratorPassResult(
         report_path=report_path,
-        calls=len(chunks) + garden_calls,
+        calls=len(chunks) + garden_calls + audit_calls,
         full_context_incident_ids=tuple(entry.incident.id for entry in entries),
         applied_incident_verdicts=applied_incident,
         applied_cluster_verdicts=applied_cluster,
         rejected_verdicts=rejected,
+        audit_outcomes=audit_outcomes,
     )
 
 
@@ -733,6 +747,7 @@ def _write_report(
     digest: str,
     entries: tuple[_PackEntry, ...],
     records: list[_ReportVerdict],
+    audit_outcomes: tuple[AuditOutcome, ...] = (),
 ) -> Path:
     reports_dir = resolve_paths().home / "reports" / "curator"
     reports_dir.mkdir(parents=True, exist_ok=True)
@@ -756,6 +771,59 @@ def _write_report(
             f"- {record.kind} `{record.subject}` — **{record.verdict}** — "
             f"{reason} _[{record.status}]_"
         )
+    lines.extend(["", "## Audit", ""])
+    if not audit_outcomes:
+        lines.append("- (no installed remedies to audit)")
+    for outcome in audit_outcomes:
+        proposal = f"; proposal #{outcome.proposal_id}" if outcome.proposal_id else ""
+        lines.append(
+            f"- remedy #{outcome.remedy_id} / `{outcome.label}` — **{outcome.verdict}** — "
+            f"pre={_format_audit_rate(outcome.pre_rate)} ({outcome.pre_incidents}/{outcome.pre_sessions}), "
+            f"post={_format_audit_rate(outcome.post_rate)} ({outcome.post_incidents}/{outcome.post_sessions})"
+            f"{proposal}"
+        )
     lines.extend(["", "## Ledger digest shown", "", "```text", digest, "```", ""])
     path.write_text("\n".join(lines), encoding="utf-8")
     return path
+
+
+def _synthesize_audit_revisions(
+    ledger: Ledger, outcomes: tuple[AuditOutcome, ...], *, assume_yes: bool
+) -> int:
+    """Use Stage 4 only for persisting counter-evidence, never for uncertainty."""
+
+    pending = [
+        outcome
+        for outcome in outcomes
+        if outcome.verdict == "persisting"
+        and not ledger.audit_proposal_exists(outcome.remedy_id, "revision")
+    ]
+    if not pending:
+        return 0
+    model = load_config().models.synthesize
+    if not estimate_and_confirm(len(pending), model, assume_yes=assume_yes):
+        return 0
+    from .synthesist import synthesize_audit_revision
+
+    calls = 0
+    for outcome in pending:
+        remedy = ledger.get_remedy(outcome.remedy_id)
+        if remedy is None:
+            continue
+        incidents = [
+            ledger.get_incident(incident_id)
+            for incident_id in outcome.counter_evidence_ids
+        ]
+        proposal_id = synthesize_audit_revision(
+            ledger,
+            remedy=remedy,
+            label=outcome.label,
+            incidents=[incident for incident in incidents if incident is not None],
+        )
+        if proposal_id is not None:
+            calls += 1
+    return calls
+
+
+def _format_audit_rate(value: float | None) -> str:
+    return "n/a" if value is None else f"{value:.3f}/session"

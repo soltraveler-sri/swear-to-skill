@@ -20,7 +20,17 @@ STATUS_MAX_AGE_SECONDS = 7 * 24 * 60 * 60
 MAX_FIELD_CHARS = 200
 NOTIFY_LOG_NAME = "notify.log"
 _SAFE_FIELD_SUFFIXES = ("_count", "_id", "_title")
-_SAFE_FIELD_NAMES = {"count", "id", "title", "remedy_type"}
+_SAFE_FIELD_NAMES = {
+    "action",
+    "confidence",
+    "count",
+    "evidence_ids",
+    "id",
+    "provenance",
+    "reason",
+    "remedy_type",
+    "title",
+}
 
 
 def sessionstart_digest() -> str:
@@ -157,9 +167,17 @@ def _event_text(event: str, fields: dict[str, object]) -> str:
         noun = "proposal" if count == 1 else "proposals"
         return f"s2s: {count} remedy {noun} awaiting review"
     if event == "autonomous_action":
-        title = fields.get("title")
-        suffix = f": {title}" if isinstance(title, str) else ""
-        return _one_line(f"s2s: autonomous action completed{suffix}")
+        action = fields.get("action", "completed")
+        proposal_id = fields.get("proposal_id")
+        remedy_id = fields.get("remedy_id")
+        subject = (
+            f"remedy {remedy_id}"
+            if remedy_id is not None
+            else f"proposal {proposal_id}"
+            if proposal_id is not None
+            else "pump"
+        )
+        return _one_line(f"s2s: autonomous action {action}: {subject}")
     return _one_line(f"s2s: {event}")
 
 

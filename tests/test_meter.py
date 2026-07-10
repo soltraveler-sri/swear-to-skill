@@ -190,6 +190,29 @@ def test_dashboard_is_self_contained_and_contains_fixture_values(ledger: Ledger)
     assert "https://" not in document
 
 
+def test_dashboard_renders_pending_proposals_without_a_placeholder(ledger: Ledger) -> None:
+    incident_id = ledger.create_scanned_incident(
+        source="claude-code",
+        session_id="proposal-session",
+        project="alpha",
+        occurred_at="2026-01-05T09:30:00+00:00",
+        message="This needs verification.",
+    )
+    ledger.create_proposal(
+        remedy_type="claude-md",
+        drafted_content='{"confidence": 0.9, "remedy_content": {"text": "Verify before claiming success."}}',
+        evidence_incident_ids=[incident_id],
+        dedup_verdict="clear",
+        gate_status="pending",
+    )
+
+    document = write_dashboard(ledger).read_text(encoding="utf-8")
+
+    assert "#1 · claude-md" in document
+    assert "Verify before claiming success." in document
+    assert "TODO" not in document
+
+
 def test_dashboard_interprets_fragmentation_and_taxonomy_gap_thresholds(ledger: Ledger) -> None:
     for index in range(10):
         _record_detection(

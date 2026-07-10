@@ -21,11 +21,14 @@ import subprocess
 import sys
 from typing import Iterator
 
-from .config import Config, load_config
+from .config import Config, effective_autonomy_state, load_config, set_autonomy_state
 from .curator import LAST_PASS_META_KEY, pass_due, run_pass
+from .gate import adjudicate_pending_autonomously, record_autonomy_pause
 from .ledger import Ledger
+from .llm import LLMError
 from .paths import resolve_paths
 from .scanner import scan_pending_queue
+from .synthesist import synthesize_pending
 from .triager import triage_pending
 
 
@@ -45,6 +48,10 @@ class PumpResult:
     scanned: int = 0
     triaged: int = 0
     curator_calls: int = 0
+    synthesized: int = 0
+    auto_installed: int = 0
+    auto_queued: int = 0
+    autonomy_paused: bool = False
     locked: bool = False
     background: bool = False
 
@@ -62,7 +69,9 @@ def run_pump(*, background: bool = False) -> PumpResult:
             return PumpResult(locked=True)
 
         notes: list[str] = []
-        scanned = triaged = curator_calls = 0
+        scanned = triaged = curator_calls = synthesized = auto_installed = auto_queued = 0
+        autonomy_paused = False
+        config = load_config()
         try:
             with Ledger() as ledger:
                 scan_results = scan_pending_queue(ledger)
@@ -70,7 +79,6 @@ def run_pump(*, background: bool = False) -> PumpResult:
                 now = _utc_now()
                 ledger.set_meta(LAST_SCAN_META_KEY, now)
 
-                config = load_config()
                 if _triage_due(ledger, config):
                     pending = len(ledger.untriaged_incidents())
                     cap = max(0, config.thresholds.triage_per_run_cap)
@@ -84,12 +92,54 @@ def run_pump(*, background: bool = False) -> PumpResult:
                 if pass_due(ledger, config):
                     curator_calls = run_pass(ledger, assume_yes=False).calls
 
+                promoted_before = len(ledger.incidents_in_state("promoted"))
+                if promoted_before:
+                    synthesis_results = synthesize_pending(ledger, assume_yes=False)
+                    synthesized = sum(len(result.proposal_ids) for result in synthesis_results)
+                    if not synthesis_results and ledger.incidents_in_state("promoted"):
+                        notes.append(
+                            f"{promoted_before} promoted incidents deferred by synthesis cost confirmation"
+                        )
+
+                if effective_autonomy_state(config).enabled:
+                    autonomy = adjudicate_pending_autonomously(ledger, config=config)
+                    auto_installed = autonomy.installed
+                    auto_queued = autonomy.queued_for_human
+                    autonomy_paused = autonomy.paused
+                    if auto_installed:
+                        noun = "remedy" if auto_installed == 1 else "remedies"
+                        notes.append(
+                            f"autonomous action installed {auto_installed} {noun} since the last pump — "
+                            "'s2s log' to inspect"
+                        )
+                    if auto_queued:
+                        notes.append(
+                            f"autonomous action queued {auto_queued} proposal(s) for human review"
+                        )
+
                 ledger.set_meta(LAST_PUMP_META_KEY, _utc_now())
+        except LLMError as error:
+            if not effective_autonomy_state(config).enabled:
+                raise
+            set_autonomy_state("paused", paused_reason=str(error))
+            record_autonomy_pause(f"Claude call failed during unattended pump: {error}")
+            autonomy_paused = True
+            notes.append(
+                "autonomy paused after a Claude call failed — run 's2s autonomy on' to resume"
+            )
         finally:
             # A failed stage still leaves a current durable health snapshot;
             # queued items remain untouched for the next pump.
             _write_status(notes)
-        return PumpResult(scanned=scanned, triaged=triaged, curator_calls=curator_calls)
+        return PumpResult(
+            scanned=scanned,
+            triaged=triaged,
+            curator_calls=curator_calls,
+            synthesized=synthesized,
+            auto_installed=auto_installed,
+            auto_queued=auto_queued,
+            autonomy_paused=autonomy_paused,
+        )
 
 
 def spawn_background_pump() -> None:

@@ -23,6 +23,8 @@ from .adapters.claude_code import (
     extract_user_messages,
     iter_archived_sessions,
 )
+from .adapters import codex
+from .config import load_config
 from .ledger import Ledger
 from .paths import resolve_paths
 
@@ -302,6 +304,7 @@ def scan_transcript(
     ledger: Ledger,
     *,
     lexicon: dict[str, Any] | None = None,
+    source: str = SOURCE,
 ) -> ScanResult:
     """Scan a Claude Code transcript and persist label-free detection leads.
 
@@ -317,12 +320,19 @@ def scan_transcript(
 
     active_lexicon = lexicon if lexicon is not None else load_lexicon()
     patterns = compile_patterns(active_lexicon)
-    metadata = extract_session_metadata(transcript_path)
+    if source == SOURCE:
+        extract_messages = extract_user_messages
+        metadata = extract_session_metadata(transcript_path)
+    elif source == "codex":
+        extract_messages = codex.extract_user_messages
+        metadata = codex.extract_session_metadata(transcript_path)
+    else:
+        raise ValueError(f"unsupported transcript source: {source}")
     detections: list[Detection] = []
     incidents_created = 0
     duplicates_skipped = 0
 
-    for user_message in extract_user_messages(transcript_path):
+    for user_message in extract_messages(transcript_path):
         hits = tuple(match_message(user_message.message, patterns))
         if not hits:
             continue
@@ -337,7 +347,7 @@ def scan_transcript(
         else:
             try:
                 incident_id = ledger.create_scanned_incident(
-                    source=SOURCE,
+                    source=source,
                     session_id=user_message.session_id,
                     project=user_message.project,
                     message=user_message.message,
@@ -358,7 +368,7 @@ def scan_transcript(
         detections.append(Detection(message=user_message, hits=hits, incident_id=incident_id))
 
     ledger.upsert_session_stats(
-        source=SOURCE,
+        source=source,
         session_id=metadata.session_id,
         project=metadata.project,
         dominant_model=metadata.dominant_model,
@@ -380,16 +390,76 @@ def scan_transcript(
 
 
 def scan_pending_queue(ledger: Ledger) -> list[ScanResult]:
-    """Process queued Claude Code transcripts, marking each only after a scan succeeds."""
+    """Process queued adapter transcripts, marking each only after a scan succeeds."""
 
     results: list[ScanResult] = []
+    codex_enabled = load_config().sources.codex
     for item in ledger.pending_queue_items():
-        if item.source != SOURCE:
+        if item.source not in {SOURCE, "codex"}:
             continue
-        result = scan_transcript(Path(item.item_path), ledger)
+        if item.source == "codex" and not codex_enabled:
+            continue
+        result = scan_transcript(Path(item.item_path), ledger, source=item.source)
         ledger.mark_queue_item_processed(item.id)
         results.append(result)
     return results
+
+
+def scan_codex_history(ledger: Ledger, *, root: Path | None = None, lexicon: dict[str, Any] | None = None) -> int:
+    """Scan Codex's flat prompt index and archive hit rollouts for durable triage.
+
+    This is intentionally separate from queue scanning: history is the fast,
+    all-session detection source, while queue items are durable rollout copies
+    used for metadata and context. Re-scanning an archived rollout is harmless
+    because the ledger's scan key deduplicates it.
+    """
+
+    history = codex.history_path(root)
+    if not history.is_file():
+        return 0
+    patterns = compile_patterns(lexicon if lexicon is not None else load_lexicon())
+    created = 0
+    metadata_by_session: dict[str, Any] = {}
+    for message in codex.extract_user_messages(history, root=root):
+        if not match_message(message.message, patterns):
+            continue
+        rollout = codex.find_rollout(message.session_id, root=root)
+        if rollout is None:
+            continue
+        metadata = metadata_by_session.get(message.session_id)
+        if metadata is None:
+            metadata = codex.extract_session_metadata(rollout, root=root)
+            metadata_by_session[message.session_id] = metadata
+            ledger.upsert_session_stats(
+                source="codex",
+                session_id=metadata.session_id,
+                project=metadata.project,
+                dominant_model=metadata.dominant_model,
+                direct_message_count=metadata.direct_message_count,
+                hit_count=0,
+                first_timestamp=metadata.first_timestamp,
+                last_timestamp=metadata.last_timestamp,
+            )
+        if ledger.has_incident_scan_key(
+            session_id=message.session_id, occurred_at=message.timestamp or "", message=message.message
+        ):
+            continue
+        try:
+            ledger.create_scanned_incident(
+                source="codex",
+                session_id=message.session_id,
+                project=metadata.project,
+                message=message.message,
+                occurred_at=message.timestamp or "",
+            )
+        except sqlite3.IntegrityError:
+            continue
+        created += 1
+        # A local import avoids the archiver -> pump -> scanner import cycle.
+        from .archiver import archive_transcript
+
+        archive_transcript(rollout, source="codex")
+    return created
 
 
 def mine_candidate_phrases(records: Iterable[tuple[str, bool]]) -> list[CandidatePhrase]:

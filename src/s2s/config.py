@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
+import json
+import os
 from pathlib import Path
+import tempfile
 import tomllib
 
 from .paths import resolve_paths
@@ -27,6 +31,26 @@ class Autonomy:
     mode: str = "review"
     max_auto_remedies_per_week: int = 3
     max_active_auto_skills: int = 15
+    claude_md_confidence_bar: float = 0.8
+    skill_confidence_bar: float = 0.9
+
+
+@dataclass(frozen=True)
+class AutonomyState:
+    """Effective Gate policy after the local kill-switch override is applied."""
+
+    mode: str
+    source: str
+    paused_reason: str | None = None
+    updated_at: str | None = None
+
+    @property
+    def enabled(self) -> bool:
+        return self.mode == "autonomous"
+
+    @property
+    def paused(self) -> bool:
+        return self.mode == "paused"
 
 
 @dataclass(frozen=True)
@@ -65,6 +89,23 @@ class Curator:
 
 
 @dataclass(frozen=True)
+class Sources:
+    """Transcript sources enabled for scheduled and historical scans."""
+
+    codex: bool = False
+
+
+@dataclass(frozen=True)
+class Auditor:
+    """Evidence thresholds for deterministic remedy outcome measurement."""
+
+    min_post_install_sessions: int = 20
+    min_post_install_days: int = 30
+    silent_days: int = 90
+    meaningful_drop_fraction: float = 0.20
+
+
+@dataclass(frozen=True)
 class Config:
     """Complete configuration available before any optional features exist."""
 
@@ -74,6 +115,8 @@ class Config:
     models: Models = Models()
     costs: Costs = Costs()
     curator: Curator = Curator()
+    sources: Sources = Sources()
+    auditor: Auditor = Auditor()
 
 
 def _section(document: dict[str, object], name: str) -> dict[str, object]:
@@ -124,7 +167,12 @@ def load_config(config_path: Path | None = None) -> Config:
     models = _section(document, "models")
     costs = _section(document, "costs")
     curator = _section(document, "curator")
+    sources = _section(document, "sources")
+    auditor = _section(document, "auditor")
     defaults = Config()
+    # Codex is opt-out when its normal rollout root exists; otherwise preserve a
+    # quiet default for machines that have never used Codex.
+    codex_default = (Path.home() / ".codex" / "sessions").is_dir()
 
     return Config(
         thresholds=Thresholds(
@@ -165,6 +213,16 @@ def load_config(config_path: Path | None = None) -> Config:
                 autonomy,
                 "max_active_auto_skills",
                 defaults.autonomy.max_active_auto_skills,
+            ),
+            claude_md_confidence_bar=_float(
+                autonomy,
+                "claude_md_confidence_bar",
+                defaults.autonomy.claude_md_confidence_bar,
+            ),
+            skill_confidence_bar=_float(
+                autonomy,
+                "skill_confidence_bar",
+                defaults.autonomy.skill_confidence_bar,
             ),
         ),
         notifications=Notifications(
@@ -208,4 +266,109 @@ def load_config(config_path: Path | None = None) -> Config:
                 defaults.curator.context_char_budget,
             ),
         ),
+        sources=Sources(codex=_bool(sources, "codex", codex_default)),
+        auditor=Auditor(
+            min_post_install_sessions=_int(
+                auditor,
+                "min_post_install_sessions",
+                defaults.auditor.min_post_install_sessions,
+            ),
+            min_post_install_days=_int(
+                auditor,
+                "min_post_install_days",
+                defaults.auditor.min_post_install_days,
+            ),
+            silent_days=_int(auditor, "silent_days", defaults.auditor.silent_days),
+            meaningful_drop_fraction=_float(
+                auditor,
+                "meaningful_drop_fraction",
+                defaults.auditor.meaningful_drop_fraction,
+            ),
+        ),
+    )
+
+
+AUTONOMY_STATE_NAME = "autonomy-state.json"
+AUTONOMY_MODES = frozenset({"review", "autonomous", "paused"})
+
+
+def autonomy_state_path() -> Path:
+    """Return the comment-preserving override used by ``s2s autonomy``."""
+
+    return resolve_paths().home / AUTONOMY_STATE_NAME
+
+
+def effective_autonomy_state(config: Config | None = None) -> AutonomyState:
+    """Resolve the atomic local override before the user's TOML default.
+
+    The override intentionally lives outside ``config.toml``: rewriting TOML with
+    stdlib ``tomllib`` would destroy comments.  Removing the override restores the
+    configured ``[autonomy].mode`` value.
+    """
+
+    path = autonomy_state_path()
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, OSError, UnicodeError, json.JSONDecodeError):
+        payload = None
+    if isinstance(payload, dict) and payload.get("mode") in AUTONOMY_MODES:
+        return AutonomyState(
+            mode=str(payload["mode"]),
+            source="override",
+            paused_reason=(
+                str(payload["paused_reason"])
+                if isinstance(payload.get("paused_reason"), str)
+                else None
+            ),
+            updated_at=(
+                str(payload["updated_at"])
+                if isinstance(payload.get("updated_at"), str)
+                else None
+            ),
+        )
+    configured = config or load_config()
+    mode = configured.autonomy.mode
+    if mode not in {"review", "autonomous"}:
+        mode = "review"
+    return AutonomyState(mode=mode, source="config")
+
+
+def set_autonomy_state(
+    mode: str,
+    *,
+    paused_reason: str | None = None,
+    timestamp: datetime | None = None,
+) -> AutonomyState:
+    """Atomically set the instant local policy override."""
+
+    if mode not in AUTONOMY_MODES:
+        raise ValueError(f"unknown autonomy mode: {mode}")
+    now = timestamp or datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    payload = {
+        "mode": mode,
+        "paused_reason": paused_reason if mode == "paused" else None,
+        "updated_at": now.astimezone(timezone.utc).isoformat(),
+    }
+    path = autonomy_state_path()
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    descriptor, raw_temp = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
+    )
+    temp = Path(raw_temp)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as output:
+            json.dump(payload, output, sort_keys=True, separators=(",", ":"))
+            output.write("\n")
+            output.flush()
+            os.fsync(output.fileno())
+        os.replace(temp, path)
+    finally:
+        temp.unlink(missing_ok=True)
+    return AutonomyState(
+        mode=mode,
+        source="override",
+        paused_reason=payload["paused_reason"],
+        updated_at=str(payload["updated_at"]),
     )
