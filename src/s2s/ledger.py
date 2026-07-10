@@ -18,7 +18,7 @@ import sqlite3
 from .paths import resolve_paths
 
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 BUSY_TIMEOUT_MS = 5_000
 PROPOSAL_STATES = ("pending", "approved", "installed", "rejected")
 
@@ -184,6 +184,8 @@ class Proposal:
     rejection_reason: str | None
     approved_at: str | None
     decided_at: str | None
+    autonomy_decision: str | None
+    autonomy_decided_at: str | None
     created_at: str
     proposal_kind: str
     target_remedy_id: int | None
@@ -208,6 +210,7 @@ class Remedy:
     outcome_pre_rate: float | None
     outcome_post_rate: float | None
     outcome_assessed_at: str | None
+    provenance: str
 
 
 def _utc_now() -> str:
@@ -479,6 +482,20 @@ def _migration_6(connection: sqlite3.Connection) -> None:
     )
 
 
+def _migration_7(connection: sqlite3.Connection) -> None:
+    """Tag review-approved and autonomous remedies without changing install semantics."""
+
+    connection.execute(
+        "ALTER TABLE remedy ADD COLUMN provenance TEXT NOT NULL DEFAULT 'human' "
+        "CHECK (provenance IN ('human', 'auto'))"
+    )
+    connection.execute(
+        "CREATE INDEX remedy_provenance_idx ON remedy(provenance, state, installed_at)"
+    )
+    connection.execute("ALTER TABLE proposal ADD COLUMN autonomy_decision TEXT")
+    connection.execute("ALTER TABLE proposal ADD COLUMN autonomy_decided_at TEXT")
+
+
 MIGRATIONS: dict[int, Callable[[sqlite3.Connection], None]] = {
     1: _migration_1,
     2: _migration_2,
@@ -486,6 +503,7 @@ MIGRATIONS: dict[int, Callable[[sqlite3.Connection], None]] = {
     4: _migration_4,
     5: _migration_5,
     6: _migration_6,
+    7: _migration_7,
 }
 
 
@@ -917,6 +935,37 @@ class Ledger:
             "SELECT * FROM proposal WHERE gate_status = 'pending' ORDER BY id"
         ).fetchall()
         return [self._proposal_from_row(row) for row in rows]
+
+    def autonomy_pending_proposals(self) -> list[Proposal]:
+        """Return pending proposals not already handed to the human queue by autonomy."""
+
+        rows = self.connection.execute(
+            "SELECT * FROM proposal "
+            "WHERE gate_status = 'pending' AND autonomy_decision IS NULL ORDER BY id"
+        ).fetchall()
+        return [self._proposal_from_row(row) for row in rows]
+
+    def mark_proposal_autonomy_deferred(
+        self,
+        proposal_id: int,
+        decision: str,
+        *,
+        timestamp: str | datetime | None = None,
+    ) -> None:
+        """Permanently hand one guarded proposal to review without rejecting it."""
+
+        if decision not in {"fallback-to-human", "cap-hit"}:
+            raise LedgerError(f"unknown autonomy deferral {decision!r}")
+        with self._write_transaction():
+            result = self.connection.execute(
+                "UPDATE proposal SET autonomy_decision = ?, autonomy_decided_at = ? "
+                "WHERE id = ? AND gate_status = 'pending' AND autonomy_decision IS NULL",
+                (decision, _timestamp(timestamp), proposal_id),
+            )
+            if result.rowcount != 1:
+                raise LedgerError(
+                    f"proposal {proposal_id} is not awaiting an autonomous decision"
+                )
 
     def get_proposal(self, proposal_id: int) -> Proposal | None:
         """Return one proposal, including rejected and installed audit records."""
@@ -1515,19 +1564,22 @@ class Ledger:
         managed_remedy_id: int | None = None,
         revises_remedy_id: int | None = None,
         state_record_ref: str | None = None,
+        provenance: str = "human",
     ) -> int:
         """Append an installed-remedy record linked back to its proposal provenance."""
 
         with self._write_transaction():
             if state not in {"approved", "installed", "rolled-back"}:
                 raise LedgerError(f"unknown remedy state {state!r}")
+            if provenance not in {"human", "auto"}:
+                raise LedgerError(f"unknown remedy provenance {provenance!r}")
             cursor = self.connection.execute(
                 """
                 INSERT INTO remedy (
                     artifact_type, artifact_path, artifact_digest, proposal_id,
                     installed_at, state, managed_remedy_id, revises_remedy_id,
-                    state_record_ref
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    state_record_ref, provenance
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     artifact_type,
@@ -1539,6 +1591,7 @@ class Ledger:
                     managed_remedy_id,
                     revises_remedy_id,
                     state_record_ref,
+                    provenance,
                 ),
             )
             remedy_id = int(cursor.lastrowid)
@@ -1854,6 +1907,8 @@ class Ledger:
             rejection_reason=row["rejection_reason"],
             approved_at=row["approved_at"],
             decided_at=row["decided_at"],
+            autonomy_decision=row["autonomy_decision"],
+            autonomy_decided_at=row["autonomy_decided_at"],
             created_at=str(row["created_at"]),
             proposal_kind=str(row["proposal_kind"]),
             target_remedy_id=(
@@ -1894,6 +1949,7 @@ class Ledger:
                 else None
             ),
             outcome_assessed_at=row["outcome_assessed_at"],
+            provenance=str(row["provenance"]),
         )
 
     @staticmethod
