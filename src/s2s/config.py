@@ -67,7 +67,9 @@ class Notifications:
 class Models:
     """LLM policy defaults from North Star §§4 and 7."""
 
-    triage: str = "haiku"
+    # Measured on the golden corpus: Sonnet is safer for remedy evidence;
+    # Haiku remains the frugal option.
+    triage: str = "sonnet"
     curate: str = "sonnet"
     synthesize: str = "sonnet"
     parallelism: int = 2

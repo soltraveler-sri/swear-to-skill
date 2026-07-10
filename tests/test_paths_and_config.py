@@ -36,7 +36,7 @@ def test_missing_config_returns_documented_defaults(monkeypatch, tmp_path) -> No
     assert config.notifications.desktop is False
     assert config.notifications.webhook_url == ""
     assert config.notifications.events == ("proposal_pending", "autonomous_action")
-    assert config.models.triage == "haiku"
+    assert config.models.triage == "sonnet"
     assert config.models.curate == "sonnet"
     assert config.models.synthesize == "sonnet"
     assert config.models.parallelism == 2

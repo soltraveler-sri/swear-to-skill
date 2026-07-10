@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented here.
 
+## 0.3.0 — Unreleased
+
+- Changed the default triage model to Sonnet after measured golden-corpus results
+  showed cleaner remedy evidence; Haiku remains the explicitly selectable frugal arm.
+- Documented the live golden-corpus comparison and the Codex CLI transport arm for
+  `codex:gpt-5.6-luna`.
+
 ## 0.2.1 — 2026-07-10
 
 - Live-eval hardening: subscription-auth transport fixes (claude subprocess now

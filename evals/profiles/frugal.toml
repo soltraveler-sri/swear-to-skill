@@ -1,5 +1,5 @@
 [profile]
-description = "A cheaper arm that deliberately uses Haiku for more pipeline judgment."
+description = "A cheaper arm that pins Haiku for triage and more pipeline judgment."
 
 [triage]
 model = "haiku"
