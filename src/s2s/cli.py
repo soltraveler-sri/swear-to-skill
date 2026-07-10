@@ -79,6 +79,7 @@ def build_parser() -> argparse.ArgumentParser:
     eval_parser.add_argument("--stages")
     eval_parser.add_argument("--keep", action="store_true")
     eval_parser.add_argument("--corpus", type=Path)
+    eval_parser.add_argument("--repeat", type=int, default=1)
 
     hook_parser = subparsers.add_parser("hook")
     hook_subparsers = hook_parser.add_subparsers(dest="hook_event")
@@ -439,6 +440,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 quick=args.quick,
                 stages=parse_stages(args.stages),
                 keep=args.keep,
+                judge_repeat=args.repeat,
             )
             result = run_eval(config)
         except (EvalRunError, ValueError, OSError) as error:
@@ -452,6 +454,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"triaged: {result.triaged}")
         print(f"proposals: {result.proposals}")
         print(f"record: {result.record_path}")
+        print(f"judge results: {result.judge_results_path}")
         print(
             f"sandbox: preserved at {result.sandbox_path}"
             if result.sandbox_path is not None

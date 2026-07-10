@@ -1,0 +1,5 @@
+{
+  "id": "bad-vague-platitude",
+  "expected_band": "bad",
+  "proposal": {"remedy_type": "claude-md", "failure_statement": "Things went wrong.", "routing_rationale": "It is good to have guidance.", "remedy_content": {"target": "global", "text": "Be better and avoid mistakes."}}
+}

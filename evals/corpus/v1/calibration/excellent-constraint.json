@@ -1,0 +1,5 @@
+{
+  "id": "excellent-constraint",
+  "expected_band": "excellent",
+  "proposal": {"remedy_type": "claude-md", "failure_statement": "Explicit task constraints were lost during implementation.", "routing_rationale": "A standing one-line instruction is cheaper than a procedural skill.", "remedy_content": {"target": "global", "text": "Before making changes, restate and preserve every explicit scope, file, and tool constraint from the request."}}
+}

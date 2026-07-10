@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "required": ["actionability", "generality_without_vagueness", "trigger_quality", "leakage", "routing_fitness"],
+  "properties": {
+    "actionability": {"type": "object", "required": ["score", "justification"], "properties": {"score": {"type": "integer", "enum": [1, 2, 3, 4, 5]}, "justification": {"type": "string"}}},
+    "generality_without_vagueness": {"type": "object", "required": ["score", "justification"], "properties": {"score": {"type": "integer", "enum": [1, 2, 3, 4, 5]}, "justification": {"type": "string"}}},
+    "trigger_quality": {"type": "object", "required": ["score", "justification"], "properties": {"score": {"type": "integer", "enum": [1, 2, 3, 4, 5]}, "justification": {"type": "string"}}},
+    "leakage": {"type": "object", "required": ["score", "justification"], "properties": {"score": {"type": "integer", "enum": [1, 2, 3, 4, 5]}, "justification": {"type": "string"}}},
+    "routing_fitness": {"type": "object", "required": ["score", "justification"], "properties": {"score": {"type": "integer", "enum": [1, 2, 3, 4, 5]}, "justification": {"type": "string"}}}
+  }
+}

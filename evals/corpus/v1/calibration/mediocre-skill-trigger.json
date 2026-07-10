@@ -1,0 +1,5 @@
+{
+  "id": "mediocre-skill-trigger",
+  "expected_band": "mediocre",
+  "proposal": {"remedy_type": "skill", "failure_statement": "Small requested changes expanded into rewrites.", "routing_rationale": "A skill can guide scope management.", "remedy_content": {"name": "scope-check", "description": "Use for tasks.", "body": "Compare the work with the request before responding."}}
+}

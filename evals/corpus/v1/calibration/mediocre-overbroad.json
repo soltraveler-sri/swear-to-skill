@@ -1,0 +1,5 @@
+{
+  "id": "mediocre-overbroad",
+  "expected_band": "mediocre",
+  "proposal": {"remedy_type": "claude-md", "failure_statement": "Instructions were missed.", "routing_rationale": "A rule may help.", "remedy_content": {"target": "global", "text": "Always carefully follow instructions and do high quality work."}}
+}
