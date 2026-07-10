@@ -1,0 +1,2 @@
+{"type":"user","uuid":"c15-u1","parentUuid":null,"timestamp":"2026-07-09T14:20:00Z","sessionId":"claude-harbor-04","cwd":"/work/fake-harbor","gitBranch":"feat/fake-eval","version":"synthetic-1.0","message":{"role":"user","content":"This is bogus: the checks were skipped."}}
+{"type":"assistant","uuid":"c15-a1","parentUuid":"c15-u1","timestamp":"2026-07-09T14:21:00Z","sessionId":"claude-harbor-04","cwd":"/work/fake-harbor","gitBranch":"feat/fake-eval","message":{"role":"assistant","model":"synthetic-claude","content":[{"type":"text","text":"Synthetic acknowledgement."}]}}

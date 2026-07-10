@@ -1,0 +1,5 @@
+{
+  "id": "bad-leaky-wrong-shape",
+  "expected_band": "bad",
+  "proposal": {"remedy_type": "skill", "failure_statement": "A request was ignored.", "routing_rationale": "Every problem deserves a skill.", "remedy_content": {"name": "aurora-branch-fix", "description": "Use when working on the Aurora release branch.", "body": "Never repeat the Aurora branch incident."}}
+}

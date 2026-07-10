@@ -54,6 +54,31 @@ triage = "haiku"
 curate = "sonnet"
 synthesize = "sonnet"
 parallelism = 2
+# The installed Claude CLI's --effort flag is passed through when set.
+# triage_effort = "low"
+# curate_effort = "medium"
+# synthesize_effort = "high"
+
+[prompts]
+# Prompt versions are published assets under src/s2s/prompts. Adding a version
+# means adding its .md and .schema.json files; callers read these pins directly.
+triage = "v1"
+curate = "v1"
+garden = "v1"
+synthesize = "v1"
+judge_remedy = "v1"
+judge_counterfactual = "v1"
 
 [costs]
 confirm_threshold_usd = 1.0
+
+[eval]
+# "auto" selects replay when this corpus/profile has recordings, otherwise mock.
+# Live mode is intentionally CLI-only so it can never become an implicit spend.
+mode = "auto"
+
+[eval.judge]
+# Use a model distinct from [models].synthesize where possible. Matching it emits
+# a self-grading-bias warning in judge-results.json.
+model = "sonnet"
+# effort = "high"

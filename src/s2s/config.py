@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import json
 import os
@@ -71,6 +71,21 @@ class Models:
     curate: str = "sonnet"
     synthesize: str = "sonnet"
     parallelism: int = 2
+    triage_effort: str | None = None
+    curate_effort: str | None = None
+    synthesize_effort: str | None = None
+
+
+@dataclass(frozen=True)
+class Prompts:
+    """Published prompt versions used by each judgment surface."""
+
+    triage: str = "v1"
+    curate: str = "v1"
+    garden: str = "v1"
+    synthesize: str = "v1"
+    judge_remedy: str = "v1"
+    judge_counterfactual: str = "v1"
 
 
 @dataclass(frozen=True)
@@ -106,6 +121,22 @@ class Auditor:
 
 
 @dataclass(frozen=True)
+class EvalSettings:
+    """Eval transport default; ``auto`` prefers replay only when cache exists."""
+
+    mode: str = "auto"
+    judge: EvalJudgeSettings = field(default_factory=lambda: EvalJudgeSettings())
+
+
+@dataclass(frozen=True)
+class EvalJudgeSettings:
+    """Independent model arm for eval-only remedy judging."""
+
+    model: str = "sonnet"
+    effort: str | None = None
+
+
+@dataclass(frozen=True)
 class Config:
     """Complete configuration available before any optional features exist."""
 
@@ -113,10 +144,12 @@ class Config:
     autonomy: Autonomy = Autonomy()
     notifications: Notifications = Notifications()
     models: Models = Models()
+    prompts: Prompts = Prompts()
     costs: Costs = Costs()
     curator: Curator = Curator()
     sources: Sources = Sources()
     auditor: Auditor = Auditor()
+    eval: EvalSettings = EvalSettings()
 
 
 def _section(document: dict[str, object], name: str) -> dict[str, object]:
@@ -132,6 +165,11 @@ def _int(section: dict[str, object], name: str, default: int) -> int:
 def _str(section: dict[str, object], name: str, default: str) -> str:
     value = section.get(name, default)
     return value if isinstance(value, str) else default
+
+
+def _optional_str(section: dict[str, object], name: str, default: str | None) -> str | None:
+    value = section.get(name, default)
+    return value if value is None or isinstance(value, str) else default
 
 
 def _bool(section: dict[str, object], name: str, default: bool) -> bool:
@@ -165,10 +203,13 @@ def load_config(config_path: Path | None = None) -> Config:
     autonomy = _section(document, "autonomy")
     notifications = _section(document, "notifications")
     models = _section(document, "models")
+    prompts = _section(document, "prompts")
     costs = _section(document, "costs")
     curator = _section(document, "curator")
     sources = _section(document, "sources")
     auditor = _section(document, "auditor")
+    eval_section = _section(document, "eval")
+    eval_judge = _section(eval_section, "judge")
     defaults = Config()
     # Codex is opt-out when its normal rollout root exists; otherwise preserve a
     # quiet default for machines that have never used Codex.
@@ -248,6 +289,17 @@ def load_config(config_path: Path | None = None) -> Config:
             curate=_str(models, "curate", defaults.models.curate),
             synthesize=_str(models, "synthesize", defaults.models.synthesize),
             parallelism=_int(models, "parallelism", defaults.models.parallelism),
+            triage_effort=_optional_str(models, "triage_effort", defaults.models.triage_effort),
+            curate_effort=_optional_str(models, "curate_effort", defaults.models.curate_effort),
+            synthesize_effort=_optional_str(models, "synthesize_effort", defaults.models.synthesize_effort),
+        ),
+        prompts=Prompts(
+            triage=_str(prompts, "triage", defaults.prompts.triage),
+            curate=_str(prompts, "curate", defaults.prompts.curate),
+            garden=_str(prompts, "garden", defaults.prompts.garden),
+            synthesize=_str(prompts, "synthesize", defaults.prompts.synthesize),
+            judge_remedy=_str(prompts, "judge_remedy", defaults.prompts.judge_remedy),
+            judge_counterfactual=_str(prompts, "judge_counterfactual", defaults.prompts.judge_counterfactual),
         ),
         costs=Costs(
             confirm_threshold_usd=_float(
@@ -283,6 +335,23 @@ def load_config(config_path: Path | None = None) -> Config:
                 auditor,
                 "meaningful_drop_fraction",
                 defaults.auditor.meaningful_drop_fraction,
+            ),
+        ),
+        eval=EvalSettings(
+            mode=(
+                configured_mode
+                if (configured_mode := _str(eval_section, "mode", defaults.eval.mode))
+                in {"auto", "mock", "replay"}
+                else defaults.eval.mode
+            ),
+            judge=EvalJudgeSettings(
+                model=_str(eval_judge, "model", defaults.eval.judge.model),
+                effort=(
+                    configured_effort
+                    if (configured_effort := eval_judge.get("effort")) is None
+                    or isinstance(configured_effort, str)
+                    else defaults.eval.judge.effort
+                ),
             ),
         ),
     )

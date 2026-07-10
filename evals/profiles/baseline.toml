@@ -1,0 +1,18 @@
+[profile]
+description = "Production-default comparison arm."
+
+[triage]
+model = "haiku"
+prompt_version = "v1"
+
+[curate]
+model = "sonnet"
+prompt_version = "v1"
+
+[synthesize]
+model = "sonnet"
+prompt_version = "v1"
+
+[judge]
+model = "sonnet"
+prompt_version = "v1"

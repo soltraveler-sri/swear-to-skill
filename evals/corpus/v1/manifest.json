@@ -1,0 +1,62 @@
+{
+  "version": "v1",
+  "synthetic": true,
+  "cluster_definitions": {
+    "ignored-instruction": "Explicit constraint or request was not followed.",
+    "premature-completion-claim": "Completion or repair was claimed without evidence.",
+    "scope-deviation": "The work solved a different or broader problem than requested.",
+    "unverified-change": "A change was reported without the declared verification.",
+    "environment-mismanagement": "The wrong fake workspace, branch, or execution target was used."
+  },
+  "expected_convergence": "Each of the five named clusters should converge across fake projects and both adapters; singleton and decoy annotations must not become clusters or remedies.",
+  "pre_existing_remedies": [
+    {"id": "fake-release-discipline", "path": "fixtures/claude-md/CLAUDE.md", "shape": "claude-md", "near_duplicate_incidents": ["c07-u1"]},
+    {"id": "fake-verify-before-claim", "path": "fixtures/skills/verify-before-claim/SKILL.md", "shape": "skill", "near_duplicate_incidents": ["codex-d02:1"]}
+  ],
+  "incidents": [
+    {"source":"claude-code","session":"claude/aurora-01.jsonl","uuid":"c01-u1","authentic":true,"cluster_id":"ignored-instruction","remedy_worthy":true,"expected_remedy_shape":"claude-md","lexicon_hit_expected":true,"rationale":"Direct ignored no-network constraint."},
+    {"source":"claude-code","session":"claude/aurora-02.jsonl","uuid":"c02-u1","authentic":true,"cluster_id":"ignored-instruction","remedy_worthy":true,"expected_remedy_shape":"claude-md","lexicon_hit_expected":false,"rationale":"Known miss: authentic constraint loss with no shipped term."},
+    {"source":"claude-code","session":"claude/aurora-03.jsonl","uuid":"c03-u1","authentic":true,"cluster_id":"ignored-instruction","remedy_worthy":true,"expected_remedy_shape":"claude-md","lexicon_hit_expected":true,"rationale":"Directly states a prior instruction was changed."},
+    {"source":"claude-code","session":"claude/cinder-01.jsonl","uuid":"c04-u1","authentic":true,"cluster_id":"ignored-instruction","remedy_worthy":true,"expected_remedy_shape":"claude-md","lexicon_hit_expected":true,"rationale":"Explicit workflow instruction was ignored."},
+    {"source":"claude-code","session":"claude/cinder-02.jsonl","uuid":"c05-u1","authentic":true,"cluster_id":"ignored-instruction","remedy_worthy":true,"expected_remedy_shape":"claude-md","lexicon_hit_expected":true,"rationale":"One-file request was not followed."},
+
+    {"source":"claude-code","session":"claude/cinder-03.jsonl","uuid":"c06-u1","authentic":true,"cluster_id":"premature-completion-claim","remedy_worthy":true,"expected_remedy_shape":"claude-md","lexicon_hit_expected":true,"rationale":"Completion was claimed while fake checks fail."},
+    {"source":"claude-code","session":"claude/harbor-01.jsonl","uuid":"c07-u1","authentic":true,"cluster_id":"premature-completion-claim","remedy_worthy":true,"expected_remedy_shape":"claude-md","lexicon_hit_expected":true,"pre_existing_remedy_id":"fake-release-discipline","rationale":"Near duplicate of the pre-existing fake CLAUDE.md remedy."},
+    {"source":"claude-code","session":"claude/harbor-02.jsonl","uuid":"c08-u1","authentic":true,"cluster_id":"premature-completion-claim","remedy_worthy":true,"expected_remedy_shape":"claude-md","lexicon_hit_expected":true,"rationale":"Requests evidence before a success claim."},
+    {"source":"codex","session":"codex/sessions/rollout-d01.jsonl","uuid":"codex-d01:1","authentic":true,"cluster_id":"premature-completion-claim","remedy_worthy":true,"expected_remedy_shape":"claude-md","lexicon_hit_expected":true,"rationale":"Fix claim precedes a fake check."},
+    {"source":"codex","session":"codex/sessions/rollout-d02.jsonl","uuid":"codex-d02:1","authentic":true,"cluster_id":"premature-completion-claim","remedy_worthy":true,"expected_remedy_shape":"skill","lexicon_hit_expected":true,"pre_existing_remedy_id":"fake-verify-before-claim","rationale":"Near duplicate of the pre-existing fake skill."},
+
+    {"source":"claude-code","session":"claude/harbor-03.jsonl","uuid":"c09-u1","authentic":true,"cluster_id":"scope-deviation","remedy_worthy":true,"expected_remedy_shape":"claude-md","lexicon_hit_expected":true,"rationale":"Different problem was solved."},
+    {"source":"claude-code","session":"claude/lantern-01.jsonl","uuid":"c10-u1","authentic":true,"cluster_id":"scope-deviation","remedy_worthy":true,"expected_remedy_shape":"claude-md","lexicon_hit_expected":true,"rationale":"Unrequested rewrite replaced the requested change."},
+    {"source":"claude-code","session":"claude/lantern-02.jsonl","uuid":"c11-u1","authentic":true,"cluster_id":"scope-deviation","remedy_worthy":true,"expected_remedy_shape":"claude-md","lexicon_hit_expected":true,"rationale":"A small switch became a fake UI rebuild."},
+    {"source":"claude-code","session":"claude/lantern-03.jsonl","uuid":"c12-u1","authentic":true,"cluster_id":"scope-deviation","remedy_worthy":true,"expected_remedy_shape":"claude-md","lexicon_hit_expected":true,"rationale":"The only requested payload field was omitted."},
+    {"source":"claude-code","session":"claude/aurora-04.jsonl","uuid":"c13-u1","authentic":true,"cluster_id":"scope-deviation","remedy_worthy":true,"expected_remedy_shape":"claude-md","lexicon_hit_expected":true,"rationale":"Requests a return to the stated small scope."},
+
+    {"source":"claude-code","session":"claude/cinder-04.jsonl","uuid":"c14-u1","authentic":true,"cluster_id":"unverified-change","remedy_worthy":true,"expected_remedy_shape":"claude-md","lexicon_hit_expected":true,"rationale":"A fake lint was not run before reporting pass."},
+    {"source":"claude-code","session":"claude/harbor-04.jsonl","uuid":"c15-u1","authentic":true,"cluster_id":"unverified-change","remedy_worthy":true,"expected_remedy_shape":"claude-md","lexicon_hit_expected":true,"rationale":"Verification was skipped."},
+    {"source":"claude-code","session":"claude/lantern-04.jsonl","uuid":"c16-u1","authentic":true,"cluster_id":"unverified-change","remedy_worthy":true,"expected_remedy_shape":"claude-md","lexicon_hit_expected":true,"rationale":"A release claim was made without checking."},
+    {"source":"codex","session":"codex/sessions/rollout-d03.jsonl","uuid":"codex-d03:1","authentic":true,"cluster_id":"unverified-change","remedy_worthy":true,"expected_remedy_shape":"claude-md","lexicon_hit_expected":true,"rationale":"The report needs a completed fake test command."},
+    {"source":"codex","session":"codex/sessions/rollout-d04.jsonl","uuid":"codex-d04:1","authentic":true,"cluster_id":"unverified-change","remedy_worthy":true,"expected_remedy_shape":"claude-md","lexicon_hit_expected":true,"rationale":"Requests real verification instead of a guess."},
+
+    {"source":"claude-code","session":"claude/aurora-01.jsonl","uuid":"c01-u2","authentic":true,"cluster_id":"environment-mismanagement","remedy_worthy":true,"expected_remedy_shape":"claude-md","lexicon_hit_expected":true,"rationale":"Fake branch instruction was not followed."},
+    {"source":"claude-code","session":"claude/cinder-01.jsonl","uuid":"c04-u2","authentic":true,"cluster_id":"environment-mismanagement","remedy_worthy":true,"expected_remedy_shape":"claude-md","lexicon_hit_expected":false,"rationale":"Known miss: fake shell target drift has no shipped term."},
+    {"source":"claude-code","session":"claude/harbor-01.jsonl","uuid":"c07-u2","authentic":true,"cluster_id":"environment-mismanagement","remedy_worthy":true,"expected_remedy_shape":"claude-md","lexicon_hit_expected":true,"rationale":"Stale fake branch was used."},
+    {"source":"claude-code","session":"claude/lantern-01.jsonl","uuid":"c10-u2","authentic":true,"cluster_id":"environment-mismanagement","remedy_worthy":true,"expected_remedy_shape":"claude-md","lexicon_hit_expected":true,"rationale":"Wrong fake workspace was used."},
+    {"source":"claude-code","session":"claude/aurora-04.jsonl","uuid":"c13-u2","authentic":true,"cluster_id":"environment-mismanagement","remedy_worthy":true,"expected_remedy_shape":"claude-md","lexicon_hit_expected":true,"rationale":"Fake environment differs from the prompt."},
+
+    {"source":"claude-code","session":"claude/aurora-02.jsonl","uuid":"c02-u2","authentic":true,"cluster_id":"singleton","remedy_worthy":true,"expected_remedy_shape":"hook","lexicon_hit_expected":true,"rationale":"Isolated destructive fake migration removal merits a guard hook."},
+    {"source":"claude-code","session":"claude/cinder-03.jsonl","uuid":"c06-u2","authentic":true,"cluster_id":"singleton","remedy_worthy":false,"expected_remedy_shape":"benchmark-only","lexicon_hit_expected":true,"rationale":"A mild, context-specific fake draft complaint is not a remedy candidate."},
+    {"source":"codex","session":"codex/sessions/rollout-d01.jsonl","uuid":"codex-d01:3","authentic":true,"cluster_id":"singleton","remedy_worthy":true,"expected_remedy_shape":"claude-md","lexicon_hit_expected":true,"rationale":"A single fake house-rule violation has a clear CLAUDE.md shape."},
+
+    {"source":"claude-code","session":"claude/aurora-03.jsonl","uuid":"c03-u2","authentic":false,"cluster_id":"decoy","remedy_worthy":false,"expected_remedy_shape":"none","lexicon_hit_expected":true,"rationale":"Quoted fake vendor text, not user frustration."},
+    {"source":"claude-code","session":"claude/cinder-02.jsonl","uuid":"c05-u2","authentic":false,"cluster_id":"decoy","remedy_worthy":false,"expected_remedy_shape":"none","lexicon_hit_expected":true,"rationale":"Playful self-directed joke."},
+    {"source":"claude-code","session":"claude/harbor-02.jsonl","uuid":"c08-u2","authentic":false,"cluster_id":"decoy","remedy_worthy":false,"expected_remedy_shape":"none","lexicon_hit_expected":true,"rationale":"Quoted fictional fake character dialogue."},
+    {"source":"claude-code","session":"claude/harbor-03.jsonl","uuid":"c09-u2","authentic":false,"cluster_id":"decoy","remedy_worthy":false,"expected_remedy_shape":"none","lexicon_hit_expected":true,"rationale":"Quoted fake training-card prompt."},
+    {"source":"claude-code","session":"claude/lantern-02.jsonl","uuid":"c11-u2","authentic":false,"cluster_id":"decoy","remedy_worthy":false,"expected_remedy_shape":"none","lexicon_hit_expected":true,"rationale":"Third-party fake monitoring label."},
+    {"source":"claude-code","session":"claude/lantern-03.jsonl","uuid":"c12-u2","authentic":false,"cluster_id":"decoy","remedy_worthy":false,"expected_remedy_shape":"none","lexicon_hit_expected":true,"rationale":"Playful fake festival copy."},
+    {"source":"claude-code","session":"claude/cinder-04.jsonl","uuid":"c14-u2","authentic":false,"cluster_id":"decoy","remedy_worthy":false,"expected_remedy_shape":"none","lexicon_hit_expected":true,"rationale":"Third-party fake competitor review."},
+    {"source":"claude-code","session":"claude/lantern-04.jsonl","uuid":"c16-u2","authentic":false,"cluster_id":"decoy","remedy_worthy":false,"expected_remedy_shape":"none","lexicon_hit_expected":true,"rationale":"Playful fake robot copywriting."},
+    {"source":"codex","session":"codex/sessions/rollout-d02.jsonl","uuid":"codex-d02:2","authentic":false,"cluster_id":"decoy","remedy_worthy":false,"expected_remedy_shape":"none","lexicon_hit_expected":true,"rationale":"Quoted fake support transcript token."},
+    {"source":"codex","session":"codex/sessions/rollout-d03.jsonl","uuid":"codex-d03:2","authentic":false,"cluster_id":"decoy","remedy_worthy":false,"expected_remedy_shape":"none","lexicon_hit_expected":true,"rationale":"Quoted fake handbook heading."}
+  ]
+}

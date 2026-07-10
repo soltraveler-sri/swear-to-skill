@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "required": ["verdict", "reasoning"],
+  "properties": {
+    "verdict": {"type": "string", "enum": ["prevented", "partially", "no"]},
+    "reasoning": {"type": "string"}
+  }
+}

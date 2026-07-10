@@ -1,0 +1,1 @@
+{"status":"pass","metrics":[{"metric":"detection_recall","value":1.0,"threshold":0.95,"op":">=","pass":true,"evidence":[]}]}

@@ -1,0 +1,12 @@
+{
+  "type": "object",
+  "required": ["authentic", "reason", "label", "one_liner", "severity", "confidence"],
+  "properties": {
+    "authentic": {"type": "boolean"},
+    "reason": {"type": "string"},
+    "label": {"type": "string", "enum": []},
+    "one_liner": {"type": "string"},
+    "severity": {"type": "integer", "enum": [1, 2, 3]},
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+  }
+}

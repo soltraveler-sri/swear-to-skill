@@ -1,0 +1,5 @@
+{
+  "id": "excellent-verification",
+  "expected_band": "excellent",
+  "proposal": {"remedy_type": "skill", "failure_statement": "Completion was claimed without a relevant verification result.", "routing_rationale": "Verification needs a repeatable multi-step procedure, so a skill is justified.", "remedy_content": {"name": "verify-before-claim", "description": "Use when reporting a completed code change or fix.", "body": "Run the relevant checks, record their outcome, and report any unavailable check before making a success claim."}}
+}

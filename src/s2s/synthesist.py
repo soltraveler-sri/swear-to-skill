@@ -56,6 +56,7 @@ def synthesize_pending(
     skills_dir: Path | None = None,
     global_claude_md_path: Path | None = None,
     project_claude_md_paths: Mapping[str, Path] | Iterable[Path] | None = None,
+    surface_reference_root: Path | None = None,
 ) -> list[SynthesisResult]:
     """Synthesize each promoted label group once, preserving all-or-nothing resume safety."""
 
@@ -67,10 +68,11 @@ def synthesize_pending(
     if not groups:
         return []
 
-    model = load_config().models.synthesize
+    config = load_config()
+    model = config.models.synthesize
     if not estimate_and_confirm(len(groups), model, assume_yes=assume_yes):
         return []
-    template, schema = load_prompt(PROMPT_NAME, PROMPT_VERSION)
+    template, schema = load_prompt(PROMPT_NAME, config.prompts.synthesize)
     default_project_paths = project_claude_md_paths
     if default_project_paths is None:
         default_project_paths = _incident_project_claude_md_paths(groups.values())
@@ -83,11 +85,13 @@ def synthesize_pending(
             skills_dir=skills_dir,
             global_claude_md_path=global_claude_md_path,
             project_claude_md_paths=default_project_paths,
+            reference_root=surface_reference_root,
         )
         response = _call_validated(
             render_synthesis_prompt(template, label, incidents, surface),
             schema=schema,
             model=model,
+            effort=config.models.synthesize_effort,
             incident_ids={incident.id for incident in incidents},
             surface_references=set(surface.references),
         )
@@ -126,7 +130,8 @@ def synthesize_audit_revision(
     if original is None:
         raise SynthesisValidationError(f"remedy {remedy.id} has no source proposal")
     surface = collect_remedy_surface(ledger)
-    template, schema = load_prompt(PROMPT_NAME, PROMPT_VERSION)
+    config = load_config()
+    template, schema = load_prompt(PROMPT_NAME, config.prompts.synthesize)
     prompt = render_synthesis_prompt(template, label, incidents, surface)
     prompt += (
         "\n\nAUDIT REVISION BRIEF\n"
@@ -140,7 +145,8 @@ def synthesize_audit_revision(
     response = _call_validated(
         prompt,
         schema=schema,
-        model=load_config().models.synthesize,
+        model=config.models.synthesize,
+        effort=config.models.synthesize_effort,
         incident_ids={incident.id for incident in incidents},
         surface_references=set(surface.references),
     )
@@ -170,6 +176,7 @@ def collect_remedy_surface(
     skills_dir: Path | None = None,
     global_claude_md_path: Path | None = None,
     project_claude_md_paths: Mapping[str, Path] | Iterable[Path] | None = None,
+    reference_root: Path | None = None,
 ) -> RemedySurface:
     """Read only digest-safe existing remedy metadata, with injectable paths for tests."""
 
@@ -183,7 +190,12 @@ def collect_remedy_surface(
                 frontmatter, _ = parse_skill_markdown(path.read_text(encoding="utf-8"))
             except (OSError, SynthesisValidationError):
                 continue
-            skill_rows.append((f"skill:{path}", f"name={frontmatter['name']} | description={frontmatter['description']}"))
+            skill_rows.append(
+                (
+                    f"skill:{_surface_path(path, reference_root)}",
+                    f"name={frontmatter['name']} | description={frontmatter['description']}",
+                )
+            )
 
     paths = [global_path, *_project_paths(project_claude_md_paths)]
     block_rows: list[tuple[str, str]] = []
@@ -199,7 +211,9 @@ def collect_remedy_surface(
         for index, block in enumerate(blocks, start=1):
             compact = block.strip()
             if compact:
-                block_rows.append((f"claude-md:{path}#{index}", compact))
+                block_rows.append(
+                    (f"claude-md:{_surface_path(path, reference_root)}#{index}", compact)
+                )
     return RemedySurface(tuple(skill_rows), tuple(block_rows), tuple(ledger.proposal_surface_rows()))
 
 
@@ -265,6 +279,7 @@ def _call_validated(
     *,
     schema: dict[str, object],
     model: str,
+    effort: str | None = None,
     incident_ids: set[int],
     surface_references: set[str],
 ) -> dict[str, object]:
@@ -278,6 +293,7 @@ def _call_validated(
             schema=schema,
             model=model,
             stage="synthesize",
+            effort=effort,
         )
         try:
             _validate_response(response, incident_ids=incident_ids, surface_references=surface_references)
@@ -466,6 +482,18 @@ def _project_paths(paths: Mapping[str, Path] | Iterable[Path] | None) -> list[Pa
     if isinstance(paths, Mapping):
         return [Path(path) for path in paths.values()]
     return [Path(path) for path in paths]
+
+
+def _surface_path(path: Path, reference_root: Path | None) -> str:
+    """Render stable eval references while preserving production path identity."""
+
+    if reference_root is None:
+        return str(path)
+    try:
+        relative = path.resolve().relative_to(reference_root.resolve())
+    except ValueError:
+        return str(path)
+    return f"$HOME/{relative.as_posix()}"
 
 
 def _incident_project_claude_md_paths(groups: Iterable[Sequence[Incident]]) -> list[Path]:

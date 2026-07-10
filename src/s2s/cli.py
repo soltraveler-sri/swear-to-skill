@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from importlib.metadata import PackageNotFoundError, version
 import json
 import os
+from pathlib import Path
 import sys
 
 
@@ -26,7 +27,7 @@ COMMAND_ISSUES = {
     "autonomy": 17,
 }
 
-IMPLEMENTED_COMMANDS = ("init", "backfill", "review")
+IMPLEMENTED_COMMANDS = ("init", "backfill", "review", "eval")
 
 
 def _distribution_version() -> str:
@@ -70,6 +71,23 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.choices["triage"].add_argument("--yes", action="store_true")
     subparsers.choices["review"].add_argument("--yes", action="store_true")
     subparsers.choices["init"].add_argument("--uninstall", action="store_true")
+    eval_parser = subparsers.choices["eval"]
+    eval_parser.description = "Run the synthetic eval and write a local greenlight report."
+    eval_parser.epilog = (
+        "Exit codes: 0 greenlight PASS (and mock wiring checks); 1 FAIL; 2 PARTIAL. "
+        "Mock mode never produces a greenlight verdict."
+    )
+    eval_parser.add_argument("--mode", choices=("mock", "replay", "live"))
+    eval_parser.add_argument("--record", action="store_true")
+    eval_parser.add_argument("--yes", action="store_true")
+    eval_parser.add_argument("--quick", action="store_true")
+    eval_parser.add_argument("--stages")
+    eval_parser.add_argument("--keep", action="store_true")
+    eval_parser.add_argument("--corpus", type=Path)
+    eval_parser.add_argument("--thresholds", type=Path)
+    eval_parser.add_argument("--repeat", type=int, default=1)
+    eval_parser.add_argument("--cycles", type=int, default=1)
+    eval_parser.add_argument("--matrix", help="Comma-separated, baseline-first profile names from evals/profiles.")
 
     hook_parser = subparsers.add_parser("hook")
     hook_subparsers = hook_parser.add_subparsers(dest="hook_event")
@@ -417,6 +435,73 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         result = backfill()
         return 1 if result.failed else 0
+
+    if args.command == "eval":
+        from .evalrun import DEFAULT_CORPUS, EvalRunConfig, EvalRunError, load_profile, parse_matrix_profiles, parse_stages, run_eval, run_matrix
+        from .evalreport import EvalReportError, exit_code_for_verdict, write_report
+        from .evalscore import EvalScoreError, score_files
+
+        try:
+            config = EvalRunConfig.production_defaults(
+                corpus=args.corpus or DEFAULT_CORPUS,
+                mode=args.mode,
+                record=args.record,
+                assume_yes=args.yes,
+                quick=args.quick,
+                stages=parse_stages(args.stages),
+                keep=args.keep,
+                judge_repeat=args.repeat,
+                repeat=args.repeat,
+                cycles=args.cycles,
+            )
+            if args.matrix:
+                profiles = tuple(load_profile(name) for name in parse_matrix_profiles(args.matrix))
+                matrix = run_matrix(config, profiles, thresholds_path=args.thresholds)
+                print(f"matrix: {matrix.root}")
+                print(f"comparative report: {matrix.report_html_path.resolve().as_uri()}")
+                for profile, result in zip(profiles, matrix.arms, strict=True):
+                    print(f"arm {profile.name}: record={result.record_path}")
+                return 0
+            result = run_eval(config)
+            scores = score_files(
+                result.record_path,
+                (args.corpus or DEFAULT_CORPUS) / "manifest.json",
+                thresholds_path=args.thresholds,
+            )
+            report = write_report(result.record_path, thresholds_path=args.thresholds)
+        except (EvalRunError, EvalScoreError, EvalReportError, ValueError, OSError) as error:
+            print(f"eval failed: {error}", file=sys.stderr)
+            return 1
+        if result.mode == "mock":
+            print("eval mode: mock — canned manifest-derived responses; scores are meaningless")
+        else:
+            print(f"eval mode: {result.mode}")
+        print(f"detections: {result.detections}")
+        print(f"triaged: {result.triaged}")
+        print(f"proposals: {result.proposals}")
+        print(f"record: {result.record_path}")
+        print(f"judge results: {result.judge_results_path}")
+        print(f"scores: {result.record_path.with_name('scores.json')}")
+        print(f"report: {report.html_path.resolve().as_uri()}")
+        print(
+            f"sandbox: preserved at {result.sandbox_path}"
+            if result.sandbox_path is not None
+            else "sandbox: removed"
+        )
+        if scores["status"] != "withheld":
+            for metric in scores["metrics"]:  # type: ignore[union-attr]
+                print(
+                    f"{metric['metric']}: {metric['value']} {metric['op']} "
+                    f"{metric['threshold']} {'PASS' if metric['pass'] else 'FAIL'}"
+                )
+        if report.verdict == "WIRING CHECK ONLY":
+            print("greenlight: WIRING CHECK ONLY — not an evaluation")
+        else:
+            print(
+                f"greenlight: {report.verdict} "
+                f"(exit {exit_code_for_verdict(report.verdict)})"
+            )
+        return exit_code_for_verdict(report.verdict)
 
     if args.command == "hook":
         if args.hook_event == "session-end":
