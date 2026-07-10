@@ -161,7 +161,7 @@ def call(
     model: str,
     stage: str,
     effort: str | None = None,
-    timeout_s: float = 120,
+    timeout_s: float = 300,
 ) -> dict[str, object]:
     """Run one structured Claude request, retrying malformed output exactly once.
 
