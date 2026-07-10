@@ -744,7 +744,7 @@ def _matrix_live_estimate(config: EvalRunConfig, profiles: Sequence[EvalProfile]
     counts = estimate_call_counts(manifest, selected, judge_repeat=config.judge_repeat)
     stage_counts = {"triage": counts.triage, "curate": counts.curate, "synthesize": counts.synthesize, "judge": counts.judge}
     return sum(
-        stage_counts[stage] * llm.ESTIMATED_CALL_COST_USD.get(profile_stage.model, llm.ESTIMATED_CALL_COST_USD["sonnet"])
+        stage_counts[stage] * llm.estimated_call_cost(profile_stage.model)
         for profile in profiles
         for stage, profile_stage in (("triage", profile.triage), ("curate", profile.curate), ("synthesize", profile.synthesize), ("judge", profile.judge))
         if stage in config.stages or stage == "judge"
@@ -1251,8 +1251,9 @@ def _capture_run_log(record: dict[str, object]) -> None:
                 "id": int(row["id"]),
                 "stage": str(row["stage"]),
                 "model": str(row["model"]),
-                "tokens": int(row["tokens"]),
-                "cost_usd": float(row["cost_usd"]),
+                "transport": str(row["transport"]),
+                "tokens": int(row["tokens"]) if row["tokens"] is not None else None,
+                "cost_usd": float(row["cost_usd"]) if row["cost_usd"] is not None else None,
                 "duration_ms": int(row["duration_ms"]),
                 "input_digest": str(row["input_digest"]),
                 "created_at": str(row["created_at"]),

@@ -18,7 +18,7 @@ import sqlite3
 from .paths import resolve_paths
 
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 BUSY_TIMEOUT_MS = 5_000
 PROPOSAL_STATES = ("pending", "approved", "installed", "rejected")
 
@@ -496,6 +496,37 @@ def _migration_7(connection: sqlite3.Connection) -> None:
     connection.execute("ALTER TABLE proposal ADD COLUMN autonomy_decided_at TEXT")
 
 
+def _migration_8(connection: sqlite3.Connection) -> None:
+    """Record the model transport and allow CLIs with no usage data to log nulls."""
+
+    connection.execute("ALTER TABLE run_log RENAME TO run_log_v7")
+    connection.execute(
+        """
+        CREATE TABLE run_log (
+            id INTEGER PRIMARY KEY,
+            stage TEXT NOT NULL,
+            model TEXT NOT NULL,
+            transport TEXT NOT NULL CHECK (transport IN ('claude', 'codex')),
+            tokens INTEGER,
+            cost_usd REAL,
+            duration_ms INTEGER NOT NULL,
+            input_digest TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    connection.execute(
+        """
+        INSERT INTO run_log (
+            id, stage, model, transport, tokens, cost_usd, duration_ms, input_digest, created_at
+        )
+        SELECT id, stage, model, 'claude', tokens, cost_usd, duration_ms, input_digest, created_at
+        FROM run_log_v7
+        """
+    )
+    connection.execute("DROP TABLE run_log_v7")
+
+
 MIGRATIONS: dict[int, Callable[[sqlite3.Connection], None]] = {
     1: _migration_1,
     2: _migration_2,
@@ -504,6 +535,7 @@ MIGRATIONS: dict[int, Callable[[sqlite3.Connection], None]] = {
     5: _migration_5,
     6: _migration_6,
     7: _migration_7,
+    8: _migration_8,
 }
 
 
@@ -1237,10 +1269,11 @@ class Ledger:
         *,
         stage: str,
         model: str,
-        tokens: int,
-        cost_usd: float,
+        tokens: int | None,
+        cost_usd: float | None,
         duration_ms: int,
         input_digest: str,
+        transport: str = "claude",
         created_at: str | datetime | None = None,
     ) -> int:
         """Append accounting for one LLM call."""
@@ -1248,10 +1281,20 @@ class Ledger:
         with self._write_transaction():
             cursor = self.connection.execute(
                 """
-                INSERT INTO run_log (stage, model, tokens, cost_usd, duration_ms, input_digest, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO run_log (
+                    stage, model, transport, tokens, cost_usd, duration_ms, input_digest, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (stage, model, tokens, cost_usd, duration_ms, input_digest, _timestamp(created_at)),
+                (
+                    stage,
+                    model,
+                    transport,
+                    tokens,
+                    cost_usd,
+                    duration_ms,
+                    input_digest,
+                    _timestamp(created_at),
+                ),
             )
             return int(cursor.lastrowid)
 
