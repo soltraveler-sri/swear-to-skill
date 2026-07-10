@@ -1,0 +1,371 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "d41d8723f935a66d",
+    "model": "sonnet",
+    "stage": "curate"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are the Stage 3 Curator, the capable judgment tier for remedy-worthy agent failures.\n\nThresholds prioritize; intelligence decides. Recurrence is a fast-track signal, never a gate: you may promote an under-threshold incident or hold/judge unworthy a recurring cluster.\n\nAttaching two similar-but-not-identical items is a cheap, recoverable error; keeping them apart when related is silent and fatal. When uncertain, attach. To keep items apart you must state why one remedy could not cover both.\n\nSINGLETON PROMOTION IS ALLOWED AND ENCOURAGED: when a one-off lesson generalizes, choose `promote` even if it has occurred only once. The system records `singleton` provenance on that incident/promotion.\n\nTaxonomy labels are fixed in this pass. `reassign` may target only one label in the menu below, including `other`. Label creation is a later issue's exclusive authority; never invent a label.\n\nReturn exactly one incident verdict for every full context pack below. One verdict per incident is law; never emit duplicate incident IDs or combine `reassign` with another verdict. For a regular or resurfaced incident use `promote`, `park`, `dismiss`, or `reassign`. `reassign` requires `reassign_label`. For a QC incident use only `dismiss` (uphold triage dismissal) or `resurrect`; `resurrect` may include `reassign_label` when triage also chose the wrong existing label.\n\nA low-confidence label (< 0.8) on an incident whose evidence reads like a neighboring active cluster is a reassignment candidate — reassign rather than promote a separate near-duplicate remedy.\n\nReturn cluster verdicts only for the regular cluster labels listed under CHUNK CLUSTERS, not for digest-only clusters or QC-only labels. `synthesize` sends currently open members forward, `hold` waits, and `unworthy` records a reason without automatically dismissing members. Incident verdicts apply before cluster verdicts, so a reassigned incident no longer belongs to its old cluster.\n\nIf you give a cluster the synthesize verdict, do NOT also park or dismiss its members; member-level verdicts are for incidents you are NOT fast-tracking.\n\nTAXONOMY MENU:\n- premature-completion-claim: said \"done\"/\"fixed\" when it wasn't\n- unverified-change: claimed a fix without running/testing it\n- ignored-instruction: explicit user instruction not followed\n- forgotten-context: lost an earlier constraint mid-session\n- scope-deviation: did more or less than asked\n- hallucinated-interface: invented API/flag/file/behavior\n- destructive-action: deleted/overwrote/reset without care\n- repeated-after-correction: same mistake again after being corrected\n- shallow-investigation: guessed instead of reading the code/logs\n- misread-request: solved the wrong problem\n- overengineering: needless complexity/abstraction\n- environment-mismanagement: wrong dir/branch/deps/tool state\n- house-rules-violation: ignored CLAUDE.md / workflow conventions\n- tool-misuse: wrong tool, wasteful calls, permission thrash\n- communication-failure: buried the outcome, unclear/false reporting\n- other: no canonical label fits — expected and gardened, never a forced fit\n\nCHUNK CLUSTERS:\n- ignored-instruction\n- destructive-action\n- misread-request\n- premature-completion-claim\n- unverified-change\n- environment-mismanagement\n- scope-deviation\n- other\n- shallow-investigation\n\nLEDGER DIGEST (the complete compact view; repeated across chunks):\nCLUSTERS:\n- destructive-action | count=1 | projects=1 | states=open:1 | members=#3 Deleted or overwrote content without authorization. | confidence=0.99\n- environment-mismanagement | count=5 | projects=3 | states=open:5 | FAST-TRACK: recommend synthesis | members=#16 Worked from stale or incorrect environment state. | confidence=0.99; #22 Used the wrong working environment while making an unrequested change. | confidence=0.98; #23 Worked in the wrong workspace instead of the requested environment. | confidence=0.99; #6 Worked in the wrong environment instead of applying the requested change. | confidence=0.94; #7 Used the wrong execution environment instead of following the requested context. | confidence=0.98\n- ignored-instruction | count=6 | projects=4 | states=open:6 | FAST-TRACK: recommend synthesis | members=#1 The agent failed to follow explicit execution constraints. | confidence=0.99; #2 The agent failed to follow an explicit workflow instruction. | confidence=0.99; #4 An explicit instruction was not followed. | confidence=0.99; #8 Failed to follow an explicit file-scope constraint. | confidence=0.98; #24 Expanded the change instead of following the explicitly requested minimal edit. | confidence=0.99; #31 Failed to follow an explicit workflow requirement. | confidence=0.98\n- misread-request | count=2 | projects=2 | states=open:2 | members=#9 Delivered a different outcome than the one requested. | confidence=0.99; #19 The agent addressed the wrong task instead of the requested outcome. | confidence=0.99\n- other | count=1 | projects=1 | states=open:1 | members=#21 Required validation was skipped. | confidence=0.96\n- premature-completion-claim | count=1 | projects=1 | states=open:1 | members=#11 Declared work complete despite unresolved failing checks. | confidence=0.99\n- scope-deviation | count=1 | projects=1 | states=open:1 | members=#26 Left out the only requested piece of output. | confidence=0.97\n- shallow-investigation | count=1 | projects=1 | states=open:1 | members=#36 The agent guessed instead of performing the requested verification. | confidence=0.96\n- unverified-change | count=5 | projects=4 | states=open:5 | FAST-TRACK: recommend synthesis | members=#15 Claimed a fix without running the required verification. | confidence=0.99; #17 Claimed success without running the required validation. | confidence=0.99; #13 Claimed success without performing the required verification. | confidence=0.99; #30 Claimed a fix before running the required verification. | confidence=0.99; #32 Demanded verification before accepting an unsupported repair claim. | confidence=0.86\nPROPOSALS:\n- (none)\nREMEDIES:\n- (none)\n\nFULL CONTEXT PACKS (evidence appears in exactly one chunk):\nBEGIN FULL CONTEXT PACK incident_id=1 label=ignored-instruction confidence=0.99 origin=new\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nYou ignored the no-network constraint; stop changing the plan.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: You are not following the branch instruction in /work/fake-aurora.\nEND FULL CONTEXT PACK incident_id=1\n\nBEGIN FULL CONTEXT PACK incident_id=2 label=ignored-instruction confidence=0.99 origin=new\nPreceding request:\nYou ignored the no-network constraint; stop changing the plan.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nYou are not following the branch instruction in /work/fake-aurora.\n\nFollowing exchange:\n\nEND FULL CONTEXT PACK incident_id=2\n\nBEGIN FULL CONTEXT PACK incident_id=3 label=destructive-action confidence=0.99 origin=new\nPreceding request:\nThe constraint from the opening note was discarded again.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nWhat are you doing? You deleted the fake migration without asking.\n\nFollowing exchange:\n\nEND FULL CONTEXT PACK incident_id=3\n\nBEGIN FULL CONTEXT PACK incident_id=4 label=ignored-instruction confidence=0.99 origin=new\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nI told you to leave the formatter alone, and it was changed.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: The fake vendor error says 'what the hell'; quote it verbatim in the fixture.\nEND FULL CONTEXT PACK incident_id=4\n\nBEGIN FULL CONTEXT PACK incident_id=8 label=ignored-instruction confidence=0.98 origin=new\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nFollow the instructions: this patch must not touch tests.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: The shell target drifted after the handoff.\nEND FULL CONTEXT PACK incident_id=8\n\nBEGIN FULL CONTEXT PACK incident_id=9 label=misread-request confidence=0.99 origin=new\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nThat's not what I asked; the request was a one-file note.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: My future self will say 'this is awful' if I forget the fake demo; that is a joke.\nEND FULL CONTEXT PACK incident_id=9\n\nBEGIN FULL CONTEXT PACK incident_id=11 label=premature-completion-claim confidence=0.99 origin=new\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nYou said the migration was complete, but the fake checks still fail.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: This is annoying, but the fake theme is only a draft.\nEND FULL CONTEXT PACK incident_id=11\n\nBEGIN FULL CONTEXT PACK incident_id=15 label=unverified-change confidence=0.99 origin=new\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nThat fix is not verified; the test command was never run.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: Why are you doing this from the stale fake branch?\nEND FULL CONTEXT PACK incident_id=15\n\nBEGIN FULL CONTEXT PACK incident_id=16 label=environment-mismanagement confidence=0.99 origin=new\nPreceding request:\nThat fix is not verified; the test command was never run.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nWhy are you doing this from the stale fake branch?\n\nFollowing exchange:\n\nEND FULL CONTEXT PACK incident_id=16\n\nBEGIN FULL CONTEXT PACK incident_id=17 label=unverified-change confidence=0.99 origin=new\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nPlease stop claiming success without running the fake suite.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: The fictional character says 'fuck' in the fake sample; preserve the line.\nEND FULL CONTEXT PACK incident_id=17\n\nBEGIN FULL CONTEXT PACK incident_id=19 label=misread-request confidence=0.99 origin=new\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nYou solved a different problem; I asked for the export only.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: The fake training card asks, 'Why did you stop?' Do not treat it as feedback.\nEND FULL CONTEXT PACK incident_id=19\n\nBEGIN FULL CONTEXT PACK incident_id=22 label=environment-mismanagement confidence=0.98 origin=new\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nThis is not what I asked; a rewrite was not requested.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: You did not use the /work/fake-lantern workspace requested.\nEND FULL CONTEXT PACK incident_id=22\n\nBEGIN FULL CONTEXT PACK incident_id=23 label=environment-mismanagement confidence=0.99 origin=new\nPreceding request:\nThis is not what I asked; a rewrite was not requested.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nYou did not use the /work/fake-lantern workspace requested.\n\nFollowing exchange:\n\nEND FULL CONTEXT PACK incident_id=23\n\nBEGIN FULL CONTEXT PACK incident_id=24 label=ignored-instruction confidence=0.99 origin=new\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nWhy did you rebuild the fake UI when I asked for one switch?\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: Our fake monitoring bot labels retries 'not working at all'; keep that label.\nEND FULL CONTEXT PACK incident_id=24\n\nBEGIN FULL CONTEXT PACK incident_id=26 label=scope-deviation confidence=0.97 origin=new\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nYou missed the only requested field in the payload.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: Write a playful banner: 'this is a mess' for the fake festival page.\nEND FULL CONTEXT PACK incident_id=26\n\nBEGIN FULL CONTEXT PACK incident_id=6 label=environment-mismanagement confidence=0.94 origin=new\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nTry again with the small change I specified.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: Read the prompt: this is the wrong fake environment.\nEND FULL CONTEXT PACK incident_id=6\n\nBEGIN FULL CONTEXT PACK incident_id=7 label=environment-mismanagement confidence=0.98 origin=new\nPreceding request:\nTry again with the small change I specified.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nRead the prompt: this is the wrong fake environment.\n\nFollowing exchange:\n\nEND FULL CONTEXT PACK incident_id=7\n\nBEGIN FULL CONTEXT PACK incident_id=13 label=unverified-change confidence=0.99 origin=new\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nYou did not run the fake lint before saying it passed.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: The fake competitor review calls its dashboard 'unusable'; summarize the review.\nEND FULL CONTEXT PACK incident_id=13\n\nBEGIN FULL CONTEXT PACK incident_id=21 label=other confidence=0.96 origin=new\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nThis is bogus: the checks were skipped.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nEND FULL CONTEXT PACK incident_id=21\n\nBEGIN FULL CONTEXT PACK incident_id=30 label=unverified-change confidence=0.99 origin=new\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nYou told me it was fixed before any fake check ran.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: Read the prompt: fake repository policy requires a changelog.\nEND FULL CONTEXT PACK incident_id=30\n\nBEGIN FULL CONTEXT PACK incident_id=31 label=ignored-instruction confidence=0.98 origin=new\nPreceding request:\nYou told me it was fixed before any fake check ran.\n\nAgent activity digest:\n\n\nFrustrated message:\nRead the prompt: fake repository policy requires a changelog.\n\nFollowing exchange:\n\nEND FULL CONTEXT PACK incident_id=31\n\nBEGIN FULL CONTEXT PACK incident_id=32 label=unverified-change confidence=0.86 origin=new\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nShow me evidence before calling this repaired.\n\nFollowing exchange:\nUser: The fake support transcript includes 'wtf' as a quoted test token.\nEND FULL CONTEXT PACK incident_id=32\n\nBEGIN FULL CONTEXT PACK incident_id=36 label=shallow-investigation confidence=0.96 origin=new\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nActually run the verification instead of guessing.\n\nFollowing exchange:\n\nEND FULL CONTEXT PACK incident_id=36\n\nBEGIN FULL CONTEXT PACK incident_id=5 label=other confidence=0.99 origin=qc\nPreceding request:\nI told you to leave the formatter alone, and it was changed.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nThe fake vendor error says 'what the hell'; quote it verbatim in the fixture.\n\nFollowing exchange:\n\nEND FULL CONTEXT PACK incident_id=5\n\nBEGIN FULL CONTEXT PACK incident_id=10 label=other confidence=0.99 origin=qc\nPreceding request:\nThat's not what I asked; the request was a one-file note.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nMy future self will say 'this is awful' if I forget the fake demo; that is a joke.\n\nFollowing exchange:\n\nEND FULL CONTEXT PACK incident_id=10\n\nBEGIN FULL CONTEXT PACK incident_id=18 label=other confidence=0.99 origin=qc\nPreceding request:\nPlease stop claiming success without running the fake suite.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nThe fictional character says 'fuck' in the fake sample; preserve the line.\n\nFollowing exchange:\n\nEND FULL CONTEXT PACK incident_id=18\n\nBEGIN FULL CONTEXT PACK incident_id=25 label=other confidence=0.98 origin=qc\nPreceding request:\nWhy did you rebuild the fake UI when I asked for one switch?\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nOur fake monitoring bot labels retries 'not working at all'; keep that label.\n\nFollowing exchange:\n\nEND FULL CONTEXT PACK incident_id=25\n\nBEGIN FULL CONTEXT PACK incident_id=35 label=other confidence=0.99 origin=qc\nPreceding request:\nThe report is not real until the fake test command completes.\n\nAgent activity digest:\n\n\nFrustrated message:\nThe fake handbook quotes 'this is terrible' as an example heading.\n\nFollowing exchange:\n\nEND FULL CONTEXT PACK incident_id=35\n",
+    "schema": {
+      "properties": {
+        "cluster_verdicts": {
+          "items": {
+            "properties": {
+              "label": {
+                "enum": [
+                  "premature-completion-claim",
+                  "unverified-change",
+                  "ignored-instruction",
+                  "forgotten-context",
+                  "scope-deviation",
+                  "hallucinated-interface",
+                  "destructive-action",
+                  "repeated-after-correction",
+                  "shallow-investigation",
+                  "misread-request",
+                  "overengineering",
+                  "environment-mismanagement",
+                  "house-rules-violation",
+                  "tool-misuse",
+                  "communication-failure",
+                  "other"
+                ],
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "synthesize",
+                  "hold",
+                  "unworthy"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "label",
+              "verdict",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "incident_verdicts": {
+          "items": {
+            "properties": {
+              "incident_id": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "reassign_label": {
+                "enum": [
+                  "premature-completion-claim",
+                  "unverified-change",
+                  "ignored-instruction",
+                  "forgotten-context",
+                  "scope-deviation",
+                  "hallucinated-interface",
+                  "destructive-action",
+                  "repeated-after-correction",
+                  "shallow-investigation",
+                  "misread-request",
+                  "overengineering",
+                  "environment-mismanagement",
+                  "house-rules-violation",
+                  "tool-misuse",
+                  "communication-failure",
+                  "other"
+                ],
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "promote",
+                  "park",
+                  "dismiss",
+                  "reassign",
+                  "resurrect"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "incident_id",
+              "verdict",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "incident_verdicts",
+        "cluster_verdicts"
+      ],
+      "type": "object"
+    },
+    "stage": "curate"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 115981,
+    "duration_ms": 116172,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 15184,
+        "cacheReadInputTokens": 23218,
+        "contextWindow": 1000000,
+        "costUSD": 0.29946839999999997,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 12073,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"incident_verdicts\":[{\"incident_id\":1,\"verdict\":\"promote\",\"reason\":\"Clear, high-confidence (0.99) ignored-instruction case (no-network constraint violated); part of the fast-tracked cluster being synthesized, so it moves forward rather than being parked.\"},{\"incident_id\":2,\"verdict\":\"promote\",\"reason\":\"Same conversation thread as #1, continuing with a second explicit instruction violated (branch instruction); distinct evidence line, high confidence, belongs in the synthesized ignored-instruction cluster.\"},{\"incident_id\":3,\"verdict\":\"promote\",\"reason\":\"Unauthorized deletion of a migration, described as a recurrence ('discarded again'); singleton in destructive-action but a clean, generalizable, high-severity lesson worth sending forward.\"},{\"incident_id\":4,\"verdict\":\"promote\",\"reason\":\"Explicit 'leave the formatter alone' instruction violated, 0.99 confidence; fast-tracked ignored-instruction cluster member.\"},{\"incident_id\":8,\"verdict\":\"promote\",\"reason\":\"Explicit file-scope constraint ('must not touch tests') violated; high confidence, fits the synthesized ignored-instruction cluster.\"},{\"incident_id\":9,\"verdict\":\"promote\",\"reason\":\"Clean misread-request case — delivered a different outcome than requested, 0.99 confidence, cross-project pattern with #19.\"},{\"incident_id\":11,\"verdict\":\"promote\",\"reason\":\"Canonical premature-completion-claim: declared a migration complete while checks still failed; strong singleton that clearly generalizes.\"},{\"incident_id\":15,\"verdict\":\"promote\",\"reason\":\"Fix claimed without running the required test command — textbook unverified-change, fast-tracked cluster member.\"},{\"incident_id\":16,\"verdict\":\"promote\",\"reason\":\"Same conversation as #15 but a distinct complaint — working from a stale/wrong branch; legitimate separate environment-mismanagement instance, fast-tracked cluster member.\"},{\"incident_id\":17,\"verdict\":\"promote\",\"reason\":\"Claimed success without running the required suite; high-confidence unverified-change cluster member.\"},{\"incident_id\":19,\"verdict\":\"promote\",\"reason\":\"Solved the wrong problem (export requested, different work delivered); pairs with #9 to form a solid cross-project misread-request pattern.\"},{\"incident_id\":22,\"verdict\":\"promote\",\"reason\":\"Did an unrequested rewrite instead of using the requested /work/fake-lantern workspace; environment-mismanagement cluster member, fast-tracked.\"},{\"incident_id\":23,\"verdict\":\"promote\",\"reason\":\"Continuation of #22's conversation, reiterating the wrong-workspace complaint; same fast-tracked cluster.\"},{\"incident_id\":24,\"verdict\":\"promote\",\"reason\":\"Rebuilt UI when only one switch was requested — explicit-instruction violation, ignored-instruction cluster member.\"},{\"incident_id\":26,\"verdict\":\"promote\",\"reason\":\"Missed the single requested payload field; clean, generalizable scope-deviation singleton.\"},{\"incident_id\":6,\"verdict\":\"promote\",\"reason\":\"Worked in the wrong environment despite explicit instruction to make only a small specified change; environment-mismanagement cluster member (conf 0.94, still solid).\"},{\"incident_id\":7,\"verdict\":\"promote\",\"reason\":\"Continuation of #6's thread, confirming wrong-environment execution; same fast-tracked cluster.\"},{\"incident_id\":13,\"verdict\":\"promote\",\"reason\":\"Claimed lint passed without running it — clear unverified-change, fast-tracked cluster member.\"},{\"incident_id\":21,\"verdict\":\"park\",\"reason\":\"Vague, context-free complaint ('checks were skipped') with no preceding/following exchange; plausible but too thin to promote standalone and the 'other' cluster itself lacks enough signal yet — keep open for future corroboration rather than dismiss.\"},{\"incident_id\":30,\"verdict\":\"promote\",\"reason\":\"Told the user it was fixed before any check ran — clean unverified-change, fast-tracked cluster member.\"},{\"incident_id\":31,\"verdict\":\"promote\",\"reason\":\"Continuation of #30's thread — a changelog policy instruction was ignored; distinct ignored-instruction evidence, fast-tracked cluster member.\"},{\"incident_id\":32,\"verdict\":\"promote\",\"reason\":\"User demanded evidence before accepting a repair claim — fits unverified-change squarely despite 0.86 confidence; no better-fitting neighboring cluster, so no reassignment warranted.\"},{\"incident_id\":36,\"verdict\":\"promote\",\"reason\":\"Agent guessed instead of running actual verification — clean, generalizable shallow-investigation singleton.\"},{\"incident_id\":5,\"verdict\":\"dismiss\",\"reason\":\"The 'frustrated message' is a benign instruction to quote a vendor error string verbatim in a fixture, not genuine frustration about agent behavior — triage correctly filtered this noise.\"},{\"incident_id\":10,\"verdict\":\"dismiss\",\"reason\":\"User explicitly flags the quoted line as 'a joke'; not a real complaint, correctly dismissed.\"},{\"incident_id\":18,\"verdict\":\"dismiss\",\"reason\":\"Instruction to preserve a fictional character's line in a sample fixture, not an actual grievance about agent conduct — correctly dismissed.\"},{\"incident_id\":25,\"verdict\":\"dismiss\",\"reason\":\"Instruction to keep a monitoring-bot label string as-is; quoted content mistaken for frustration, correctly dismissed.\"},{\"incident_id\":35,\"verdict\":\"dismiss\",\"reason\":\"Quoted example heading from a fake handbook, not genuine user frustration — correctly dismissed.\"}],\"cluster_verdicts\":[{\"label\":\"ignored-instruction\",\"verdict\":\"synthesize\",\"reason\":\"6 members, 4 projects, all open, confidences 0.98-0.99, consistent pattern of explicit instructions (branch, formatter, test-scope, UI-scope, changelog) being overridden — strong, well-evidenced remedy candidate.\"},{\"label\":\"destructive-action\",\"verdict\":\"synthesize\",\"reason\":\"Singleton but unambiguous and high-severity (unauthorized deletion described as a recurrence); a clear, generalizable lesson worth sending forward now rather than waiting for more incidents.\"},{\"label\":\"misread-request\",\"verdict\":\"synthesize\",\"reason\":\"2 members across 2 projects, both 0.99 confidence, same clear pattern of solving a different problem than requested — sufficient signal despite not being flagged fast-track.\"},{\"label\":\"premature-completion-claim\",\"verdict\":\"synthesize\",\"reason\":\"Singleton but a textbook, unambiguous example (declared complete while checks failed) that clearly generalizes to a reusable remedy.\"},{\"label\":\"unverified-change\",\"verdict\":\"synthesize\",\"reason\":\"5 members, 4 projects, consistently high confidence, all describing the same core failure of claiming success without running verification.\"},{\"label\":\"environment-mismanagement\",\"verdict\":\"synthesize\",\"reason\":\"5 members, 3 projects, consistent theme of wrong workspace/branch/environment used for changes — solid fast-tracked pattern.\"},{\"label\":\"scope-deviation\",\"verdict\":\"synthesize\",\"reason\":\"Singleton but clean and generalizable (dropped the one requested field); worth sending forward.\"},{\"label\":\"other\",\"verdict\":\"hold\",\"reason\":\"Only one open member (#21), and it's vague and context-free (no preceding/following exchange); not enough signal to build a remedy yet, and 'other' should stay a rarely-forced bucket — wait for corroborating incidents.\"},{\"label\":\"shallow-investigation\",\"verdict\":\"synthesize\",\"reason\":\"Singleton but a clean, unambiguous 'guessed instead of verifying' case that generalizes well as a remedy.\"}]}",
+    "session_id": "75f49112-2fa3-4056-a642-b11ce319411c",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "cluster_verdicts": [
+        {
+          "label": "ignored-instruction",
+          "reason": "6 members, 4 projects, all open, confidences 0.98-0.99, consistent pattern of explicit instructions (branch, formatter, test-scope, UI-scope, changelog) being overridden — strong, well-evidenced remedy candidate.",
+          "verdict": "synthesize"
+        },
+        {
+          "label": "destructive-action",
+          "reason": "Singleton but unambiguous and high-severity (unauthorized deletion described as a recurrence); a clear, generalizable lesson worth sending forward now rather than waiting for more incidents.",
+          "verdict": "synthesize"
+        },
+        {
+          "label": "misread-request",
+          "reason": "2 members across 2 projects, both 0.99 confidence, same clear pattern of solving a different problem than requested — sufficient signal despite not being flagged fast-track.",
+          "verdict": "synthesize"
+        },
+        {
+          "label": "premature-completion-claim",
+          "reason": "Singleton but a textbook, unambiguous example (declared complete while checks failed) that clearly generalizes to a reusable remedy.",
+          "verdict": "synthesize"
+        },
+        {
+          "label": "unverified-change",
+          "reason": "5 members, 4 projects, consistently high confidence, all describing the same core failure of claiming success without running verification.",
+          "verdict": "synthesize"
+        },
+        {
+          "label": "environment-mismanagement",
+          "reason": "5 members, 3 projects, consistent theme of wrong workspace/branch/environment used for changes — solid fast-tracked pattern.",
+          "verdict": "synthesize"
+        },
+        {
+          "label": "scope-deviation",
+          "reason": "Singleton but clean and generalizable (dropped the one requested field); worth sending forward.",
+          "verdict": "synthesize"
+        },
+        {
+          "label": "other",
+          "reason": "Only one open member (#21), and it's vague and context-free (no preceding/following exchange); not enough signal to build a remedy yet, and 'other' should stay a rarely-forced bucket — wait for corroborating incidents.",
+          "verdict": "hold"
+        },
+        {
+          "label": "shallow-investigation",
+          "reason": "Singleton but a clean, unambiguous 'guessed instead of verifying' case that generalizes well as a remedy.",
+          "verdict": "synthesize"
+        }
+      ],
+      "incident_verdicts": [
+        {
+          "incident_id": 1,
+          "reason": "Clear, high-confidence (0.99) ignored-instruction case (no-network constraint violated); part of the fast-tracked cluster being synthesized, so it moves forward rather than being parked.",
+          "verdict": "promote"
+        },
+        {
+          "incident_id": 2,
+          "reason": "Same conversation thread as #1, continuing with a second explicit instruction violated (branch instruction); distinct evidence line, high confidence, belongs in the synthesized ignored-instruction cluster.",
+          "verdict": "promote"
+        },
+        {
+          "incident_id": 3,
+          "reason": "Unauthorized deletion of a migration, described as a recurrence ('discarded again'); singleton in destructive-action but a clean, generalizable, high-severity lesson worth sending forward.",
+          "verdict": "promote"
+        },
+        {
+          "incident_id": 4,
+          "reason": "Explicit 'leave the formatter alone' instruction violated, 0.99 confidence; fast-tracked ignored-instruction cluster member.",
+          "verdict": "promote"
+        },
+        {
+          "incident_id": 8,
+          "reason": "Explicit file-scope constraint ('must not touch tests') violated; high confidence, fits the synthesized ignored-instruction cluster.",
+          "verdict": "promote"
+        },
+        {
+          "incident_id": 9,
+          "reason": "Clean misread-request case — delivered a different outcome than requested, 0.99 confidence, cross-project pattern with #19.",
+          "verdict": "promote"
+        },
+        {
+          "incident_id": 11,
+          "reason": "Canonical premature-completion-claim: declared a migration complete while checks still failed; strong singleton that clearly generalizes.",
+          "verdict": "promote"
+        },
+        {
+          "incident_id": 15,
+          "reason": "Fix claimed without running the required test command — textbook unverified-change, fast-tracked cluster member.",
+          "verdict": "promote"
+        },
+        {
+          "incident_id": 16,
+          "reason": "Same conversation as #15 but a distinct complaint — working from a stale/wrong branch; legitimate separate environment-mismanagement instance, fast-tracked cluster member.",
+          "verdict": "promote"
+        },
+        {
+          "incident_id": 17,
+          "reason": "Claimed success without running the required suite; high-confidence unverified-change cluster member.",
+          "verdict": "promote"
+        },
+        {
+          "incident_id": 19,
+          "reason": "Solved the wrong problem (export requested, different work delivered); pairs with #9 to form a solid cross-project misread-request pattern.",
+          "verdict": "promote"
+        },
+        {
+          "incident_id": 22,
+          "reason": "Did an unrequested rewrite instead of using the requested /work/fake-lantern workspace; environment-mismanagement cluster member, fast-tracked.",
+          "verdict": "promote"
+        },
+        {
+          "incident_id": 23,
+          "reason": "Continuation of #22's conversation, reiterating the wrong-workspace complaint; same fast-tracked cluster.",
+          "verdict": "promote"
+        },
+        {
+          "incident_id": 24,
+          "reason": "Rebuilt UI when only one switch was requested — explicit-instruction violation, ignored-instruction cluster member.",
+          "verdict": "promote"
+        },
+        {
+          "incident_id": 26,
+          "reason": "Missed the single requested payload field; clean, generalizable scope-deviation singleton.",
+          "verdict": "promote"
+        },
+        {
+          "incident_id": 6,
+          "reason": "Worked in the wrong environment despite explicit instruction to make only a small specified change; environment-mismanagement cluster member (conf 0.94, still solid).",
+          "verdict": "promote"
+        },
+        {
+          "incident_id": 7,
+          "reason": "Continuation of #6's thread, confirming wrong-environment execution; same fast-tracked cluster.",
+          "verdict": "promote"
+        },
+        {
+          "incident_id": 13,
+          "reason": "Claimed lint passed without running it — clear unverified-change, fast-tracked cluster member.",
+          "verdict": "promote"
+        },
+        {
+          "incident_id": 21,
+          "reason": "Vague, context-free complaint ('checks were skipped') with no preceding/following exchange; plausible but too thin to promote standalone and the 'other' cluster itself lacks enough signal yet — keep open for future corroboration rather than dismiss.",
+          "verdict": "park"
+        },
+        {
+          "incident_id": 30,
+          "reason": "Told the user it was fixed before any check ran — clean unverified-change, fast-tracked cluster member.",
+          "verdict": "promote"
+        },
+        {
+          "incident_id": 31,
+          "reason": "Continuation of #30's thread — a changelog policy instruction was ignored; distinct ignored-instruction evidence, fast-tracked cluster member.",
+          "verdict": "promote"
+        },
+        {
+          "incident_id": 32,
+          "reason": "User demanded evidence before accepting a repair claim — fits unverified-change squarely despite 0.86 confidence; no better-fitting neighboring cluster, so no reassignment warranted.",
+          "verdict": "promote"
+        },
+        {
+          "incident_id": 36,
+          "reason": "Agent guessed instead of running actual verification — clean, generalizable shallow-investigation singleton.",
+          "verdict": "promote"
+        },
+        {
+          "incident_id": 5,
+          "reason": "The 'frustrated message' is a benign instruction to quote a vendor error string verbatim in a fixture, not genuine frustration about agent behavior — triage correctly filtered this noise.",
+          "verdict": "dismiss"
+        },
+        {
+          "incident_id": 10,
+          "reason": "User explicitly flags the quoted line as 'a joke'; not a real complaint, correctly dismissed.",
+          "verdict": "dismiss"
+        },
+        {
+          "incident_id": 18,
+          "reason": "Instruction to preserve a fictional character's line in a sample fixture, not an actual grievance about agent conduct — correctly dismissed.",
+          "verdict": "dismiss"
+        },
+        {
+          "incident_id": 25,
+          "reason": "Instruction to keep a monitoring-bot label string as-is; quoted content mistaken for frustration, correctly dismissed.",
+          "verdict": "dismiss"
+        },
+        {
+          "incident_id": 35,
+          "reason": "Quoted example heading from a fake handbook, not genuine user frustration — correctly dismissed.",
+          "verdict": "dismiss"
+        }
+      ]
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 98,
+    "total_cost_usd": 0.29946839999999997,
+    "ttft_ms": 92435,
+    "ttft_stream_ms": 1287,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 15184,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 15184,
+      "cache_read_input_tokens": 23218,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 15184,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 15184,
+          "cache_read_input_tokens": 23218,
+          "input_tokens": 6768,
+          "output_tokens": 12073,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 12073,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "9451ecb9-ee59-4716-bc3d-cc015951fc76"
+  }
+}

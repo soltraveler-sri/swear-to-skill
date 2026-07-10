@@ -69,10 +69,10 @@
   "response": {
     "result": {
       "authentic": true,
-      "confidence": 0.98,
+      "confidence": 0.99,
       "label": "ignored-instruction",
-      "one_liner": "The agent failed to follow an explicit user instruction.",
-      "reason": "The user directly expresses frustration that the agent failed to follow an explicit branch instruction.",
+      "one_liner": "The agent failed to follow an explicit workflow instruction.",
+      "reason": "The user directly expresses frustration at the agent for not following an explicit branch instruction.",
       "severity": 2
     }
   }

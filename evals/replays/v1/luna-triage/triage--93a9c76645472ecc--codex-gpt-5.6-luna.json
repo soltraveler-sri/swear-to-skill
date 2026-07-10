@@ -69,10 +69,10 @@
   "response": {
     "result": {
       "authentic": true,
-      "confidence": 0.86,
-      "label": "unverified-change",
-      "one_liner": "Claimed progress without running the required verification.",
-      "reason": "The message expresses frustration that the agent skipped required checks.",
+      "confidence": 0.96,
+      "label": "other",
+      "one_liner": "Required validation was skipped.",
+      "reason": "The message expresses frustration at the agent for skipping required checks. No explicit instruction or fix claim is present, so no canonical label fits precisely.",
       "severity": 2
     }
   }

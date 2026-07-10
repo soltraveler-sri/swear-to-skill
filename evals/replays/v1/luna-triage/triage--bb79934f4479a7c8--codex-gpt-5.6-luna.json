@@ -71,8 +71,8 @@
       "authentic": true,
       "confidence": 0.99,
       "label": "environment-mismanagement",
-      "one_liner": "Worked from the wrong branch or environment state.",
-      "reason": "The message directly criticizes the agent for working from an incorrect, stale branch; this is an environment-state failure.",
+      "one_liner": "Worked from stale or incorrect environment state.",
+      "reason": "Direct frustration at the agent working from an outdated or incorrect branch.",
       "severity": 2
     }
   }

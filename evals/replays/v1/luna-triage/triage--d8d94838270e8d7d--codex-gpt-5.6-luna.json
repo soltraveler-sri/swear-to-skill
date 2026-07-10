@@ -71,8 +71,8 @@
       "authentic": false,
       "confidence": 0.99,
       "label": "other",
-      "one_liner": "No genuine frustration at the agent is expressed.",
-      "reason": "The message explicitly describes joking copywriting about a fictional robot, not genuine frustration at the agent's behavior.",
+      "one_liner": "No genuine agent-directed failure is expressed.",
+      "reason": "The message explicitly frames the statement as a joke and copywriting, not genuine frustration at the agent.",
       "severity": 1
     }
   }

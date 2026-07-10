@@ -71,8 +71,8 @@
       "authentic": true,
       "confidence": 0.99,
       "label": "unverified-change",
-      "one_liner": "Claimed success without performing the required verification.",
-      "reason": "The user directly criticizes the agent for claiming success without running the requested tests.",
+      "one_liner": "Claimed success without running the required validation.",
+      "reason": "The message directly criticizes the agent for claiming success without running validation; the later profanity is quoted fictional speech and is irrelevant.",
       "severity": 2
     }
   }

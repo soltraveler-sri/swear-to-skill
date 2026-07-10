@@ -1,0 +1,315 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "c09aacb9a04e9f86",
+    "model": "sonnet",
+    "stage": "synthesize"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are the Stage 4 Synthesist. Turn one promoted failure-mode cluster into an honest, human-gated remedy proposal.\n\nMost frustrations do not deserve a skill. Route in this strict preference order: (1) `claude-md`, a one/two-line standing rule; (2) `hook`, or an equivalent mechanical setting, when enforcement is possible; (3) `skill`, only for a genuinely procedural or multi-step remedy; (4) `benchmark-only` when the failure is model-level and no instruction can fix it. Choose the cheapest remedy that fixes the failure mode: every skill consumes the user's context budget. `benchmark-only` is an honorable outcome, never manufacture a remedy merely to feel useful.\n\nIf the only sensible remedy target is Codex-side (`AGENTS.md` or `~/.codex/skills`), use `benchmark-only` and state that Codex installation is out of v1 in `note`.\n\nThe existing-remedy digests below are numbered [R1]…[RN]. There are 4 existing-remedy digests. Your `dedup` array MUST contain exactly 4 entries, one per number, with `existing` set to exactly that token (e.g. \"R1\"). Include entries even when the verdict is clear. State `clear` or `overlap` for each. Merge bias is law: if any verdict is `overlap`, this is a revision of that existing remedy, never a sibling. Set `overlap_action.revises` to that R token.\n\nFor a `skill`, write a kebab-case name and a concrete auto-invocation description beginning `Use when ...`; this description is the trigger. The body must be substantive Markdown. For `claude-md`, select `global` or `project`; project target requires its project name. For `hook`, give a Claude Code event and a command sketch. For `benchmark-only`, explain the measurement-only outcome in `note`.\n\nThe upstream classifier deliberately over-merges. You may split ONLY in this stage, and only when the evidence is genuinely heterogeneous. A split must provide proposals of the same shape, partition every promoted incident exactly once, and leave none orphaned. Otherwise return one proposal covering the group.\n\nTAXONOMY GIST:\nignored-instruction: explicit user instruction not followed\n\nPROMOTED EVIDENCE:\nBEGIN PROMOTED EVIDENCE incident_id=1 project=aurora\nOne-liner: The agent failed to follow explicit execution constraints.\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nYou ignored the no-network constraint; stop changing the plan.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: You are not following the branch instruction in /work/fake-aurora.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=2 project=aurora\nOne-liner: The agent failed to follow an explicit workflow instruction.\nPreceding request:\nYou ignored the no-network constraint; stop changing the plan.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nYou are not following the branch instruction in /work/fake-aurora.\n\nFollowing exchange:\n\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=4 project=aurora\nOne-liner: An explicit instruction was not followed.\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nI told you to leave the formatter alone, and it was changed.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: The fake vendor error says 'what the hell'; quote it verbatim in the fixture.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=8 project=cinder\nOne-liner: Failed to follow an explicit file-scope constraint.\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nFollow the instructions: this patch must not touch tests.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: The shell target drifted after the handoff.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=24 project=lantern\nOne-liner: Expanded the change instead of following the explicitly requested minimal edit.\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nWhy did you rebuild the fake UI when I asked for one switch?\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: Our fake monitoring bot labels retries 'not working at all'; keep that label.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=31 project=fake-aurora\nOne-liner: Failed to follow an explicit workflow requirement.\nPreceding request:\nYou told me it was fixed before any fake check ran.\n\nAgent activity digest:\n\n\nFrustrated message:\nRead the prompt: fake repository policy requires a changelog.\n\nFollowing exchange:\n\nEND PROMOTED EVIDENCE\n\nEXISTING SKILLS (name and description only):\n- [R1] skill:$HOME/.claude/skills/fake-verify-before-claim/SKILL.md | name=fake-verify-before-claim | description=Use when a completion claim requires verification.\n\nS2S-MANAGED CLAUDE.MD BLOCKS:\n- [R2] claude-md:$HOME/.claude/CLAUDE.md#1 | # Fake Release Discipline\n\nBefore reporting a fake release as complete, run its declared verification\ncommand and report the result plainly.\n\nPENDING OR INSTALLED S2S PROPOSALS:\n- [R3] proposal #1 | type=claude-md | status=pending | {\"confidence\":0.55,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) targets verifying completion claims before reporting them done \\u2014 an honesty/verification failure. This incident is about unauthorized deletion of content despite a stated constraint, a distinct destructive-action failure mode.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline) is about running a declared verification command before reporting a fake release complete \\u2014 again a ve\n- [R4] proposal #2 | type=claude-md | status=pending | {\"confidence\":0.6,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) targets verifying completion claims (e.g. running declared test commands) before reporting done \\u2014 an honesty/verification-of-result failure. This cluster is about acting in the wrong branch/workspace in the first place, a distinct environment-state failure, not a verification-of-claim failure.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline) is about running a declared verification\n\n\nYour prior draft failed local validation. Correct the SKILL.md/frontmatter, dedup, and evidence partition exactly. Specific validation failure: split must contain at least two proposals",
+    "schema": {
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "dedup": {
+          "items": {
+            "properties": {
+              "existing": {
+                "pattern": "^R[0-9]+$",
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "clear",
+                  "overlap"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "existing",
+              "verdict",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "properties": {
+              "incident_id": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "quote": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "incident_id",
+              "quote"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "failure_statement": {
+          "type": "string"
+        },
+        "overlap_action": {
+          "properties": {
+            "revises": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "revises"
+          ],
+          "type": "object"
+        },
+        "remedy_content": {
+          "type": "object"
+        },
+        "remedy_type": {
+          "enum": [
+            "claude-md",
+            "hook",
+            "skill",
+            "benchmark-only"
+          ],
+          "type": "string"
+        },
+        "routing_rationale": {
+          "type": "string"
+        },
+        "split": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "remedy_type",
+        "routing_rationale",
+        "failure_statement",
+        "remedy_content",
+        "evidence",
+        "dedup",
+        "confidence"
+      ],
+      "type": "object"
+    },
+    "stage": "synthesize"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 125083,
+    "duration_ms": 125288,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 5701,
+        "cacheReadInputTokens": 28517,
+        "contextWindow": 1000000,
+        "costUSD": 0.2385231,
+        "inputTokens": 6499,
+        "maxOutputTokens": 64000,
+        "outputTokens": 11751,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"remedy_type\":\"claude-md\",\"routing_rationale\":\"All six incidents are ignored-instruction failures, but they split into two distinct constraint shapes that already have separate pending remedies. Incidents 1 and 2 are about environment/workflow state (branch, network) drifting away from an explicit constraint — this is the same shape as pending proposal R4 (\\\"acting in the wrong branch/workspace\\\"). Incidents 4, 8, 24, and 31 are about the boundary of what a change may touch or must include (leave the formatter alone, don't touch tests, minimal edit only, changelog required by policy) — this is the same shape as pending proposal R3 (\\\"unauthorized modification despite a stated constraint\\\"). Because the two buckets each cleanly overlap a different existing pending proposal, merge bias requires treating this as two revisions rather than one new sibling proposal or a single merged one. In both cases the cheapest fitting remedy is a short claude-md standing rule: the constraints named (which branch, which files, whether network is allowed, whether a changelog is required) vary per task, so no single mechanical hook can generically enforce them; and the remedy is a one-line behavioral reminder, not a multi-step procedure, so a skill would be overkill.\",\"failure_statement\":\"The agent proceeded past an explicit constraint the user had already stated — either an environment/workflow constraint (branch, network) or a change-scope constraint (files to leave alone, minimal-edit-only, a required deliverable) — instead of checking its actions against that constraint before acting or before declaring the work done.\",\"remedy_content\":{\"note\":\"See split[0] and split[1] for the two concrete claude-md additions; each revises a distinct pending proposal (R4 and R3 respectively).\"},\"evidence\":[{\"incident_id\":1,\"quote\":\"You ignored the no-network constraint; stop changing the plan.\"},{\"incident_id\":2,\"quote\":\"You are not following the branch instruction in /work/fake-aurora.\"},{\"incident_id\":4,\"quote\":\"I told you to leave the formatter alone, and it was changed.\"},{\"incident_id\":8,\"quote\":\"Follow the instructions: this patch must not touch tests.\"},{\"incident_id\":24,\"quote\":\"Why did you rebuild the fake UI when I asked for one switch?\"},{\"incident_id\":31,\"quote\":\"Read the prompt: fake repository policy requires a changelog.\"}],\"dedup\":[{\"existing\":\"R1\",\"verdict\":\"clear\",\"reason\":\"R1 (fake-verify-before-claim) targets verifying a completion claim before reporting it done. This cluster is about not respecting a stated constraint during the work itself (branch/network/scope), not about verifying results afterward.\"},{\"existing\":\"R2\",\"verdict\":\"clear\",\"reason\":\"R2 (Fake Release Discipline) is about running a declared verification command before reporting a release complete — again a post-hoc verification-of-claim rule, not a during-the-work constraint-adherence rule.\"},{\"existing\":\"R3\",\"verdict\":\"overlap\",\"reason\":\"R3's own dedup notes describe it as covering unauthorized modification of content despite a stated constraint — exactly the shape of incidents 4 and 8 (formatter/tests touched despite an explicit 'don't touch' instruction), and closely related to 24 and 31 (scope expanded beyond a minimal ask, or a required deliverable omitted). This is a revision of R3, not a new sibling.\"},{\"existing\":\"R4\",\"verdict\":\"overlap\",\"reason\":\"R4's own dedup notes describe it as covering acting in the wrong branch/workspace, an environment-state failure — exactly the shape of incidents 1 and 2 (no-network constraint violated, branch instruction not followed). This is a revision of R4, not a new sibling.\"}],\"overlap_action\":{\"revises\":\"R3, R4 (see per-split overlap_action; this cluster splits across both)\"},\"split\":[{\"incidents\":[1,2],\"remedy_type\":\"claude-md\",\"overlap_action\":{\"revises\":\"R4\"},\"failure_statement\":\"The agent kept working after the user had already stated an environment-level constraint (no network, work on a specific branch), effectively re-deriving or continuing a plan that drifted away from that constraint instead of treating it as binding.\",\"remedy_content\":{\"target\":\"global\",\"heading\":\"Environment & Workflow Constraints Are Binding\",\"text\":\"When the user states an environment-level constraint mid-task — e.g. 'no network calls', 'work on branch X, not Y' — treat it as binding for the rest of the task, not just for the next reply. Before an action that hits the network or changes branch/workspace state, check it against the standing constraint. If you already deviated, stop and correct the environment before continuing, rather than pressing forward and re-explaining the plan.\"},\"dedup\":[{\"existing\":\"R4\",\"verdict\":\"overlap\",\"reason\":\"Same environment-state failure shape (wrong branch/workspace) that R4 already targets; this extends it to cover the network-constraint variant seen in incident 1.\"}],\"evidence\":[{\"incident_id\":1,\"quote\":\"You ignored the no-network constraint; stop changing the plan.\"},{\"incident_id\":2,\"quote\":\"You are not following the branch instruction in /work/fake-aurora.\"}],\"confidence\":0.6},{\"incidents\":[4,8,24,31],\"remedy_type\":\"claude-md\",\"overlap_action\":{\"revises\":\"R3\"},\"failure_statement\":\"The agent did not match the exact scope of the requested change: it modified files the user explicitly said to leave alone, expanded a minimal requested edit into something larger, or omitted a deliverable the user said was required.\",\"remedy_content\":{\"target\":\"global\",\"heading\":\"Match the Requested Change Scope Exactly\",\"text\":\"When the user specifies the scope of a change — files or areas to leave alone ('don't touch the formatter', 'don't touch tests'), a minimal edit ('just flip the one switch'), or a required deliverable dictated by policy ('changelog required') — treat that scope as a hard boundary in both directions: don't touch more than asked, and don't skip a required part of it. Before calling the task done, diff your change against the stated scope.\"},\"dedup\":[{\"existing\":\"R3\",\"verdict\":\"overlap\",\"reason\":\"Same 'unauthorized change despite a stated constraint' shape R3 already targets (formatter/tests untouched-constraints); this extends it to also cover scope-expansion (incident 24) and omission of a required deliverable (incident 31), which are the same boundary-of-scope failure viewed from the other direction.\"}],\"evidence\":[{\"incident_id\":4,\"quote\":\"I told you to leave the formatter alone, and it was changed.\"},{\"incident_id\":8,\"quote\":\"Follow the instructions: this patch must not touch tests.\"},{\"incident_id\":24,\"quote\":\"Why did you rebuild the fake UI when I asked for one switch?\"},{\"incident_id\":31,\"quote\":\"Read the prompt: fake repository policy requires a changelog.\"}],\"confidence\":0.6}],\"confidence\":0.6}",
+    "session_id": "292ee449-aaf4-4367-a5cc-f4daa1720739",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "confidence": 0.6,
+      "dedup": [
+        {
+          "existing": "R1",
+          "reason": "R1 (fake-verify-before-claim) targets verifying a completion claim before reporting it done. This cluster is about not respecting a stated constraint during the work itself (branch/network/scope), not about verifying results afterward.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R2",
+          "reason": "R2 (Fake Release Discipline) is about running a declared verification command before reporting a release complete — again a post-hoc verification-of-claim rule, not a during-the-work constraint-adherence rule.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R3",
+          "reason": "R3's own dedup notes describe it as covering unauthorized modification of content despite a stated constraint — exactly the shape of incidents 4 and 8 (formatter/tests touched despite an explicit 'don't touch' instruction), and closely related to 24 and 31 (scope expanded beyond a minimal ask, or a required deliverable omitted). This is a revision of R3, not a new sibling.",
+          "verdict": "overlap"
+        },
+        {
+          "existing": "R4",
+          "reason": "R4's own dedup notes describe it as covering acting in the wrong branch/workspace, an environment-state failure — exactly the shape of incidents 1 and 2 (no-network constraint violated, branch instruction not followed). This is a revision of R4, not a new sibling.",
+          "verdict": "overlap"
+        }
+      ],
+      "evidence": [
+        {
+          "incident_id": 1,
+          "quote": "You ignored the no-network constraint; stop changing the plan."
+        },
+        {
+          "incident_id": 2,
+          "quote": "You are not following the branch instruction in /work/fake-aurora."
+        },
+        {
+          "incident_id": 4,
+          "quote": "I told you to leave the formatter alone, and it was changed."
+        },
+        {
+          "incident_id": 8,
+          "quote": "Follow the instructions: this patch must not touch tests."
+        },
+        {
+          "incident_id": 24,
+          "quote": "Why did you rebuild the fake UI when I asked for one switch?"
+        },
+        {
+          "incident_id": 31,
+          "quote": "Read the prompt: fake repository policy requires a changelog."
+        }
+      ],
+      "failure_statement": "The agent proceeded past an explicit constraint the user had already stated — either an environment/workflow constraint (branch, network) or a change-scope constraint (files to leave alone, minimal-edit-only, a required deliverable) — instead of checking its actions against that constraint before acting or before declaring the work done.",
+      "overlap_action": {
+        "revises": "R3, R4 (see per-split overlap_action; this cluster splits across both)"
+      },
+      "remedy_content": {
+        "note": "See split[0] and split[1] for the two concrete claude-md additions; each revises a distinct pending proposal (R4 and R3 respectively)."
+      },
+      "remedy_type": "claude-md",
+      "routing_rationale": "All six incidents are ignored-instruction failures, but they split into two distinct constraint shapes that already have separate pending remedies. Incidents 1 and 2 are about environment/workflow state (branch, network) drifting away from an explicit constraint — this is the same shape as pending proposal R4 (\"acting in the wrong branch/workspace\"). Incidents 4, 8, 24, and 31 are about the boundary of what a change may touch or must include (leave the formatter alone, don't touch tests, minimal edit only, changelog required by policy) — this is the same shape as pending proposal R3 (\"unauthorized modification despite a stated constraint\"). Because the two buckets each cleanly overlap a different existing pending proposal, merge bias requires treating this as two revisions rather than one new sibling proposal or a single merged one. In both cases the cheapest fitting remedy is a short claude-md standing rule: the constraints named (which branch, which files, whether network is allowed, whether a changelog is required) vary per task, so no single mechanical hook can generically enforce them; and the remedy is a one-line behavioral reminder, not a multi-step procedure, so a skill would be overkill.",
+      "split": [
+        {
+          "confidence": 0.6,
+          "dedup": [
+            {
+              "existing": "R4",
+              "reason": "Same environment-state failure shape (wrong branch/workspace) that R4 already targets; this extends it to cover the network-constraint variant seen in incident 1.",
+              "verdict": "overlap"
+            }
+          ],
+          "evidence": [
+            {
+              "incident_id": 1,
+              "quote": "You ignored the no-network constraint; stop changing the plan."
+            },
+            {
+              "incident_id": 2,
+              "quote": "You are not following the branch instruction in /work/fake-aurora."
+            }
+          ],
+          "failure_statement": "The agent kept working after the user had already stated an environment-level constraint (no network, work on a specific branch), effectively re-deriving or continuing a plan that drifted away from that constraint instead of treating it as binding.",
+          "incidents": [
+            1,
+            2
+          ],
+          "overlap_action": {
+            "revises": "R4"
+          },
+          "remedy_content": {
+            "heading": "Environment & Workflow Constraints Are Binding",
+            "target": "global",
+            "text": "When the user states an environment-level constraint mid-task — e.g. 'no network calls', 'work on branch X, not Y' — treat it as binding for the rest of the task, not just for the next reply. Before an action that hits the network or changes branch/workspace state, check it against the standing constraint. If you already deviated, stop and correct the environment before continuing, rather than pressing forward and re-explaining the plan."
+          },
+          "remedy_type": "claude-md"
+        },
+        {
+          "confidence": 0.6,
+          "dedup": [
+            {
+              "existing": "R3",
+              "reason": "Same 'unauthorized change despite a stated constraint' shape R3 already targets (formatter/tests untouched-constraints); this extends it to also cover scope-expansion (incident 24) and omission of a required deliverable (incident 31), which are the same boundary-of-scope failure viewed from the other direction.",
+              "verdict": "overlap"
+            }
+          ],
+          "evidence": [
+            {
+              "incident_id": 4,
+              "quote": "I told you to leave the formatter alone, and it was changed."
+            },
+            {
+              "incident_id": 8,
+              "quote": "Follow the instructions: this patch must not touch tests."
+            },
+            {
+              "incident_id": 24,
+              "quote": "Why did you rebuild the fake UI when I asked for one switch?"
+            },
+            {
+              "incident_id": 31,
+              "quote": "Read the prompt: fake repository policy requires a changelog."
+            }
+          ],
+          "failure_statement": "The agent did not match the exact scope of the requested change: it modified files the user explicitly said to leave alone, expanded a minimal requested edit into something larger, or omitted a deliverable the user said was required.",
+          "incidents": [
+            4,
+            8,
+            24,
+            31
+          ],
+          "overlap_action": {
+            "revises": "R3"
+          },
+          "remedy_content": {
+            "heading": "Match the Requested Change Scope Exactly",
+            "target": "global",
+            "text": "When the user specifies the scope of a change — files or areas to leave alone ('don't touch the formatter', 'don't touch tests'), a minimal edit ('just flip the one switch'), or a required deliverable dictated by policy ('changelog required') — treat that scope as a hard boundary in both directions: don't touch more than asked, and don't skip a required part of it. Before calling the task done, diff your change against the stated scope."
+          },
+          "remedy_type": "claude-md"
+        }
+      ]
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 97,
+    "total_cost_usd": 0.2385231,
+    "ttft_ms": 103142,
+    "ttft_stream_ms": 1934,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 5701,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 5701,
+      "cache_read_input_tokens": 28517,
+      "inference_geo": "not_available",
+      "input_tokens": 6499,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 5701,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 5701,
+          "cache_read_input_tokens": 28517,
+          "input_tokens": 6499,
+          "output_tokens": 11751,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 11751,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "d23843f4-b124-4e78-a310-295c1ec3e3ed"
+  }
+}

@@ -71,8 +71,8 @@
       "authentic": false,
       "confidence": 0.99,
       "label": "other",
-      "one_liner": "No frustration at the agent is expressed.",
-      "reason": "The message requests a summary of a third-party review and quotes its wording; it expresses no frustration at the agent's behavior.",
+      "one_liner": "Refers to an external evaluation rather than criticizing the agent's behavior.",
+      "reason": "The message requests a summary and attributes the negative wording to an external review; it does not express frustration at the agent.",
       "severity": 1
     }
   }

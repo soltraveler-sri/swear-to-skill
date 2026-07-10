@@ -69,10 +69,10 @@
   "response": {
     "result": {
       "authentic": true,
-      "confidence": 0.98,
+      "confidence": 0.96,
       "label": "shallow-investigation",
-      "one_liner": "Guessed at the issue instead of performing the requested verification.",
-      "reason": "The message directly criticizes the agent for guessing instead of performing verification; it is not quoted, third-party-directed, self-directed, or playful.",
+      "one_liner": "The agent guessed instead of performing the requested verification.",
+      "reason": "The user directly criticizes the agent for guessing instead of performing verification. No explicit claim of a completed fix is present.",
       "severity": 2
     }
   }

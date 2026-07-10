@@ -70,9 +70,9 @@
     "result": {
       "authentic": false,
       "confidence": 0.99,
-      "label": "unverified-change",
-      "one_liner": "Claimed success without verifying the result.",
-      "reason": "The following exchange explicitly frames the message as joking copywriting about a fictional robot, not genuine frustration at the agent.",
+      "label": "other",
+      "one_liner": "Playful language is not evidence of an actual agent failure.",
+      "reason": "The follow-up explicitly says the message was joking copywriting about a fictional robot, not genuine frustration at the agent's behavior.",
       "severity": 1
     }
   }

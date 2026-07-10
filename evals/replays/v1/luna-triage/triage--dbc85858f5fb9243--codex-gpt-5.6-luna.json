@@ -71,8 +71,8 @@
       "authentic": true,
       "confidence": 0.98,
       "label": "environment-mismanagement",
-      "one_liner": "Worked in the wrong environment instead of the requested one.",
-      "reason": "The message directly criticizes the agent for using the wrong environment, with no quotation, third-party target, self-blame, or irony.",
+      "one_liner": "Used the wrong execution environment instead of following the requested context.",
+      "reason": "The message directly criticizes the agent for operating in the wrong environment, not a third party or the user.",
       "severity": 2
     }
   }

@@ -1,0 +1,281 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "78778016b7d346d7",
+    "model": "sonnet",
+    "stage": "synthesize"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are the Stage 4 Synthesist. Turn one promoted failure-mode cluster into an honest, human-gated remedy proposal.\n\nMost frustrations do not deserve a skill. Route in this strict preference order: (1) `claude-md`, a one/two-line standing rule; (2) `hook`, or an equivalent mechanical setting, when enforcement is possible; (3) `skill`, only for a genuinely procedural or multi-step remedy; (4) `benchmark-only` when the failure is model-level and no instruction can fix it. Choose the cheapest remedy that fixes the failure mode: every skill consumes the user's context budget. `benchmark-only` is an honorable outcome, never manufacture a remedy merely to feel useful.\n\nIf the only sensible remedy target is Codex-side (`AGENTS.md` or `~/.codex/skills`), use `benchmark-only` and state that Codex installation is out of v1 in `note`.\n\nThe existing-remedy digests below are numbered [R1]…[RN]. There are 4 existing-remedy digests. Your `dedup` array MUST contain exactly 4 entries, one per number, with `existing` set to exactly that token (e.g. \"R1\"). Include entries even when the verdict is clear. State `clear` or `overlap` for each. Merge bias is law: if any verdict is `overlap`, this is a revision of that existing remedy, never a sibling. Set `overlap_action.revises` to that R token.\n\nFor a `skill`, write a kebab-case name and a concrete auto-invocation description beginning `Use when ...`; this description is the trigger. The body must be substantive Markdown. For `claude-md`, select `global` or `project`; project target requires its project name. For `hook`, give a Claude Code event and a command sketch. For `benchmark-only`, explain the measurement-only outcome in `note`.\n\nThe upstream classifier deliberately over-merges. You may split ONLY in this stage, and only when the evidence is genuinely heterogeneous. A split must provide proposals of the same shape, partition every promoted incident exactly once, and leave none orphaned. Otherwise return one proposal covering the group.\n\nTAXONOMY GIST:\nignored-instruction: explicit user instruction not followed\n\nPROMOTED EVIDENCE:\nBEGIN PROMOTED EVIDENCE incident_id=1 project=aurora\nOne-liner: The agent failed to follow explicit execution constraints.\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nYou ignored the no-network constraint; stop changing the plan.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: You are not following the branch instruction in /work/fake-aurora.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=2 project=aurora\nOne-liner: The agent failed to follow an explicit workflow instruction.\nPreceding request:\nYou ignored the no-network constraint; stop changing the plan.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nYou are not following the branch instruction in /work/fake-aurora.\n\nFollowing exchange:\n\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=4 project=aurora\nOne-liner: An explicit instruction was not followed.\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nI told you to leave the formatter alone, and it was changed.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: The fake vendor error says 'what the hell'; quote it verbatim in the fixture.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=8 project=cinder\nOne-liner: Failed to follow an explicit file-scope constraint.\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nFollow the instructions: this patch must not touch tests.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: The shell target drifted after the handoff.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=24 project=lantern\nOne-liner: Expanded the change instead of following the explicitly requested minimal edit.\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nWhy did you rebuild the fake UI when I asked for one switch?\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: Our fake monitoring bot labels retries 'not working at all'; keep that label.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=31 project=fake-aurora\nOne-liner: Failed to follow an explicit workflow requirement.\nPreceding request:\nYou told me it was fixed before any fake check ran.\n\nAgent activity digest:\n\n\nFrustrated message:\nRead the prompt: fake repository policy requires a changelog.\n\nFollowing exchange:\n\nEND PROMOTED EVIDENCE\n\nEXISTING SKILLS (name and description only):\n- [R1] skill:$HOME/.claude/skills/fake-verify-before-claim/SKILL.md | name=fake-verify-before-claim | description=Use when a completion claim requires verification.\n\nS2S-MANAGED CLAUDE.MD BLOCKS:\n- [R2] claude-md:$HOME/.claude/CLAUDE.md#1 | # Fake Release Discipline\n\nBefore reporting a fake release as complete, run its declared verification\ncommand and report the result plainly.\n\nPENDING OR INSTALLED S2S PROPOSALS:\n- [R3] proposal #1 | type=claude-md | status=pending | {\"confidence\":0.55,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) targets verifying completion claims before reporting them done \\u2014 an honesty/verification failure. This incident is about unauthorized deletion of content despite a stated constraint, a distinct destructive-action failure mode.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline) is about running a declared verification command before reporting a fake release complete \\u2014 again a ve\n- [R4] proposal #2 | type=claude-md | status=pending | {\"confidence\":0.6,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) targets verifying completion claims (e.g. running declared test commands) before reporting done \\u2014 an honesty/verification-of-result failure. This cluster is about acting in the wrong branch/workspace in the first place, a distinct environment-state failure, not a verification-of-claim failure.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline) is about running a declared verification\n",
+    "schema": {
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "dedup": {
+          "items": {
+            "properties": {
+              "existing": {
+                "pattern": "^R[0-9]+$",
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "clear",
+                  "overlap"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "existing",
+              "verdict",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "properties": {
+              "incident_id": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "quote": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "incident_id",
+              "quote"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "failure_statement": {
+          "type": "string"
+        },
+        "overlap_action": {
+          "properties": {
+            "revises": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "revises"
+          ],
+          "type": "object"
+        },
+        "remedy_content": {
+          "type": "object"
+        },
+        "remedy_type": {
+          "enum": [
+            "claude-md",
+            "hook",
+            "skill",
+            "benchmark-only"
+          ],
+          "type": "string"
+        },
+        "routing_rationale": {
+          "type": "string"
+        },
+        "split": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "remedy_type",
+        "routing_rationale",
+        "failure_statement",
+        "remedy_content",
+        "evidence",
+        "dedup",
+        "confidence"
+      ],
+      "type": "object"
+    },
+    "stage": "synthesize"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 132193,
+    "duration_ms": 132396,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 5640,
+        "cacheReadInputTokens": 28517,
+        "contextWindow": 1000000,
+        "costUSD": 0.2508441,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 12543,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"remedy_type\":\"claude-md\",\"routing_rationale\":\"All six incidents are ignored-instruction failures where the fix is \\\"hold the line on a constraint the user already stated\\\" — no multi-step procedure is needed, so skill is overkill, and the constraints (which branch, whether network is allowed, which files are off-limits) are per-task and stated in conversation, not statically known, so a generic hook can't check them mechanically. A one/two-line standing claude-md rule is the cheapest fix. The evidence splits into two distinct concrete failure targets: (a) deviating from a stated execution/environment constraint (wrong branch/workspace, no-network) set at task start, which matches existing pending proposal R4's \\\"wrong branch/workspace\\\" theme and should revise it rather than sibling it; and (b) expanding the scope of an edit beyond what was authorized (touching declared off-limits files, rebuilding more than a requested minimal change, skipping a mandated workflow step like a changelog) — a different mechanism (scope creep vs. wrong environment) with no existing remedy, so it gets its own proposal. Both halves partition all 6 promoted incidents exactly once.\",\"failure_statement\":\"The agent silently drifts from an execution/environment constraint the user set at the start of the task — working in the wrong branch/workspace, or violating a stated no-network rule — instead of confirming it's still operating within that constraint and asking before deviating.\",\"remedy_content\":{\"scope\":\"global\",\"target\":\"$HOME/.claude/CLAUDE.md\",\"revises_section\":\"R4 (proposal #2, wrong branch/workspace rule)\",\"heading\":\"Environment & Execution Constraints\",\"text\":\"When the user states an execution constraint at the start of a task (target branch/workspace, no-network, or another environment rule), treat it as fixed for the whole task, not just the first step. Before acting, confirm you're still in the stated branch/workspace; if something would force a deviation (e.g. you think you need network access), stop and ask rather than silently changing the plan.\"},\"evidence\":[{\"incident_id\":1,\"quote\":\"You ignored the no-network constraint; stop changing the plan.\"},{\"incident_id\":1,\"quote\":\"You are not following the branch instruction in /work/fake-aurora.\"},{\"incident_id\":2,\"quote\":\"You are not following the branch instruction in /work/fake-aurora.\"}],\"dedup\":[{\"existing\":\"R1\",\"verdict\":\"clear\",\"reason\":\"R1 (fake-verify-before-claim) is about verifying a completion claim before reporting it done. Incidents 1 and 2 are about deviating from a stated branch/no-network constraint mid-task, a distinct execution-fidelity failure, not a false-completion-claim failure.\"},{\"existing\":\"R2\",\"verdict\":\"clear\",\"reason\":\"R2 (Fake Release Discipline) is about running a declared verification command before claiming a release complete. Incidents 1 and 2 involve no release-completion claim; they're about not honoring branch/network constraints while working.\"},{\"existing\":\"R3\",\"verdict\":\"clear\",\"reason\":\"R3's own dedup notes frame it as an unauthorized-deletion / destructive-action failure mode. Incidents 1 and 2 involve no deletion; the violation is working in the wrong branch and disregarding a no-network rule.\"},{\"existing\":\"R4\",\"verdict\":\"overlap\",\"reason\":\"R4's dedup blurb describes its cluster as the agent 'acting in the wrong branch/workspace in the first place' — an environment-state failure. Incident 1's 'You are not following the branch instruction' and incident 2's identical frustration are the same concrete failure mode R4 targets. This proposal revises R4 to also cover the no-network deviation surfaced in incident 1, rather than creating a sibling.\"}],\"overlap_action\":{\"revises\":\"R4\"},\"split\":[{\"remedy_type\":\"claude-md\",\"routing_rationale\":\"Incidents 4, 8, 24, and 31 share a distinct mechanism from the branch/workspace incidents above: the agent doesn't drift to the wrong environment, it exceeds the authorized scope of the edit itself (touching a file declared off-limits, rebuilding far more than a requested minimal change, or skipping a workflow step like a changelog mandated by repo policy). No existing remedy targets this, and it's simple enough to be a standing rule rather than a skill or hook, since the specific off-limits files/scope aren't known ahead of time by any static check.\",\"failure_statement\":\"The agent expands a change beyond what the user explicitly authorized — editing files declared off-limits, doing more than the requested minimal/targeted edit, or skipping a workflow step mandated by repo policy — instead of checking the diff against the stated scope before calling the work done.\",\"remedy_content\":{\"scope\":\"global\",\"target\":\"$HOME/.claude/CLAUDE.md\",\"heading\":\"Scope Discipline\",\"text\":\"When the user gives an explicit scope constraint — files/areas not to touch, a minimal or targeted edit only, or a required step mandated by repo policy (e.g. a changelog entry) — treat it as a hard boundary. Before reporting the change done, check your diff against it: don't touch declared off-limits files, don't do more than the requested edit, and don't skip a required step. If a deviation seems necessary, ask first instead of expanding scope silently.\"},\"evidence\":[{\"incident_id\":4,\"quote\":\"I told you to leave the formatter alone, and it was changed.\"},{\"incident_id\":8,\"quote\":\"Follow the instructions: this patch must not touch tests.\"},{\"incident_id\":24,\"quote\":\"Why did you rebuild the fake UI when I asked for one switch?\"},{\"incident_id\":31,\"quote\":\"Read the prompt: fake repository policy requires a changelog.\"}],\"dedup\":[{\"existing\":\"R1\",\"verdict\":\"clear\",\"reason\":\"R1 targets verifying completion claims before reporting done. These incidents are about exceeding authorized edit scope, not about falsely claiming verification happened.\"},{\"existing\":\"R2\",\"verdict\":\"clear\",\"reason\":\"R2 is specifically about running a declared verification command before claiming a fake release complete; unrelated to scope-of-edit boundaries.\"},{\"existing\":\"R3\",\"verdict\":\"clear\",\"reason\":\"R3 is framed around unauthorized deletion of content, a destructive-action failure. Incidents 4, 8, and 24 involve modifying or adding beyond scope (changing a formatter, touching tests, rebuilding UI), which is the opposite direction (expansion, not deletion), and incident 31 is a missing required step, not a deletion.\"},{\"existing\":\"R4\",\"verdict\":\"clear\",\"reason\":\"R4 concerns acting in the wrong branch/workspace. These incidents occur within the correct workspace but exceed the authorized scope of the edit or skip a required step — a different concrete failure.\"}],\"confidence\":0.55}],\"confidence\":0.6}",
+    "session_id": "d37e1d9b-aa1b-46d4-9e59-51b24fbebed4",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "confidence": 0.6,
+      "dedup": [
+        {
+          "existing": "R1",
+          "reason": "R1 (fake-verify-before-claim) is about verifying a completion claim before reporting it done. Incidents 1 and 2 are about deviating from a stated branch/no-network constraint mid-task, a distinct execution-fidelity failure, not a false-completion-claim failure.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R2",
+          "reason": "R2 (Fake Release Discipline) is about running a declared verification command before claiming a release complete. Incidents 1 and 2 involve no release-completion claim; they're about not honoring branch/network constraints while working.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R3",
+          "reason": "R3's own dedup notes frame it as an unauthorized-deletion / destructive-action failure mode. Incidents 1 and 2 involve no deletion; the violation is working in the wrong branch and disregarding a no-network rule.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R4",
+          "reason": "R4's dedup blurb describes its cluster as the agent 'acting in the wrong branch/workspace in the first place' — an environment-state failure. Incident 1's 'You are not following the branch instruction' and incident 2's identical frustration are the same concrete failure mode R4 targets. This proposal revises R4 to also cover the no-network deviation surfaced in incident 1, rather than creating a sibling.",
+          "verdict": "overlap"
+        }
+      ],
+      "evidence": [
+        {
+          "incident_id": 1,
+          "quote": "You ignored the no-network constraint; stop changing the plan."
+        },
+        {
+          "incident_id": 1,
+          "quote": "You are not following the branch instruction in /work/fake-aurora."
+        },
+        {
+          "incident_id": 2,
+          "quote": "You are not following the branch instruction in /work/fake-aurora."
+        }
+      ],
+      "failure_statement": "The agent silently drifts from an execution/environment constraint the user set at the start of the task — working in the wrong branch/workspace, or violating a stated no-network rule — instead of confirming it's still operating within that constraint and asking before deviating.",
+      "overlap_action": {
+        "revises": "R4"
+      },
+      "remedy_content": {
+        "heading": "Environment & Execution Constraints",
+        "revises_section": "R4 (proposal #2, wrong branch/workspace rule)",
+        "scope": "global",
+        "target": "$HOME/.claude/CLAUDE.md",
+        "text": "When the user states an execution constraint at the start of a task (target branch/workspace, no-network, or another environment rule), treat it as fixed for the whole task, not just the first step. Before acting, confirm you're still in the stated branch/workspace; if something would force a deviation (e.g. you think you need network access), stop and ask rather than silently changing the plan."
+      },
+      "remedy_type": "claude-md",
+      "routing_rationale": "All six incidents are ignored-instruction failures where the fix is \"hold the line on a constraint the user already stated\" — no multi-step procedure is needed, so skill is overkill, and the constraints (which branch, whether network is allowed, which files are off-limits) are per-task and stated in conversation, not statically known, so a generic hook can't check them mechanically. A one/two-line standing claude-md rule is the cheapest fix. The evidence splits into two distinct concrete failure targets: (a) deviating from a stated execution/environment constraint (wrong branch/workspace, no-network) set at task start, which matches existing pending proposal R4's \"wrong branch/workspace\" theme and should revise it rather than sibling it; and (b) expanding the scope of an edit beyond what was authorized (touching declared off-limits files, rebuilding more than a requested minimal change, skipping a mandated workflow step like a changelog) — a different mechanism (scope creep vs. wrong environment) with no existing remedy, so it gets its own proposal. Both halves partition all 6 promoted incidents exactly once.",
+      "split": [
+        {
+          "confidence": 0.55,
+          "dedup": [
+            {
+              "existing": "R1",
+              "reason": "R1 targets verifying completion claims before reporting done. These incidents are about exceeding authorized edit scope, not about falsely claiming verification happened.",
+              "verdict": "clear"
+            },
+            {
+              "existing": "R2",
+              "reason": "R2 is specifically about running a declared verification command before claiming a fake release complete; unrelated to scope-of-edit boundaries.",
+              "verdict": "clear"
+            },
+            {
+              "existing": "R3",
+              "reason": "R3 is framed around unauthorized deletion of content, a destructive-action failure. Incidents 4, 8, and 24 involve modifying or adding beyond scope (changing a formatter, touching tests, rebuilding UI), which is the opposite direction (expansion, not deletion), and incident 31 is a missing required step, not a deletion.",
+              "verdict": "clear"
+            },
+            {
+              "existing": "R4",
+              "reason": "R4 concerns acting in the wrong branch/workspace. These incidents occur within the correct workspace but exceed the authorized scope of the edit or skip a required step — a different concrete failure.",
+              "verdict": "clear"
+            }
+          ],
+          "evidence": [
+            {
+              "incident_id": 4,
+              "quote": "I told you to leave the formatter alone, and it was changed."
+            },
+            {
+              "incident_id": 8,
+              "quote": "Follow the instructions: this patch must not touch tests."
+            },
+            {
+              "incident_id": 24,
+              "quote": "Why did you rebuild the fake UI when I asked for one switch?"
+            },
+            {
+              "incident_id": 31,
+              "quote": "Read the prompt: fake repository policy requires a changelog."
+            }
+          ],
+          "failure_statement": "The agent expands a change beyond what the user explicitly authorized — editing files declared off-limits, doing more than the requested minimal/targeted edit, or skipping a workflow step mandated by repo policy — instead of checking the diff against the stated scope before calling the work done.",
+          "remedy_content": {
+            "heading": "Scope Discipline",
+            "scope": "global",
+            "target": "$HOME/.claude/CLAUDE.md",
+            "text": "When the user gives an explicit scope constraint — files/areas not to touch, a minimal or targeted edit only, or a required step mandated by repo policy (e.g. a changelog entry) — treat it as a hard boundary. Before reporting the change done, check your diff against it: don't touch declared off-limits files, don't do more than the requested edit, and don't skip a required step. If a deviation seems necessary, ask first instead of expanding scope silently."
+          },
+          "remedy_type": "claude-md",
+          "routing_rationale": "Incidents 4, 8, 24, and 31 share a distinct mechanism from the branch/workspace incidents above: the agent doesn't drift to the wrong environment, it exceeds the authorized scope of the edit itself (touching a file declared off-limits, rebuilding far more than a requested minimal change, or skipping a workflow step like a changelog mandated by repo policy). No existing remedy targets this, and it's simple enough to be a standing rule rather than a skill or hook, since the specific off-limits files/scope aren't known ahead of time by any static check."
+        }
+      ]
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 112,
+    "total_cost_usd": 0.2508441,
+    "ttft_ms": 111296,
+    "ttft_stream_ms": 1838,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 5640,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 5640,
+      "cache_read_input_tokens": 28517,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 5640,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 5640,
+          "cache_read_input_tokens": 28517,
+          "input_tokens": 6768,
+          "output_tokens": 12543,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 12543,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "27dfaecd-24f9-45b8-82aa-dfa9c532dd98"
+  }
+}

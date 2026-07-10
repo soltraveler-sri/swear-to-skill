@@ -69,10 +69,10 @@
   "response": {
     "result": {
       "authentic": true,
-      "confidence": 0.99,
-      "label": "scope-deviation",
-      "one_liner": "Performed a broad rewrite instead of the requested narrow change.",
-      "reason": "The user directly criticizes the agent for performing an unrequested rewrite.",
+      "confidence": 0.98,
+      "label": "environment-mismanagement",
+      "one_liner": "Used the wrong working environment while making an unrequested change.",
+      "reason": "The user directly expresses frustration with the agent for delivering an unrequested rewrite and using the wrong requested workspace.",
       "severity": 2
     }
   }

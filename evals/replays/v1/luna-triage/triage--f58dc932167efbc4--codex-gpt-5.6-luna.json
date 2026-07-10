@@ -71,8 +71,8 @@
       "authentic": false,
       "confidence": 0.99,
       "label": "other",
-      "one_liner": "Quoted content is mistaken for frustration at the agent.",
-      "reason": "The message quotes a fictional character and requests preservation of that quoted line; it does not express frustration at the agent.",
+      "one_liner": "No agent-directed frustration is expressed.",
+      "reason": "The message refers to a fictional character's quoted profanity and gives a preservation instruction; it does not express frustration at the agent's behavior.",
       "severity": 1
     }
   }

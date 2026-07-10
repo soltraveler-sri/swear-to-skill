@@ -71,8 +71,8 @@
       "authentic": false,
       "confidence": 0.99,
       "label": "other",
-      "one_liner": "Mistook quoted test content for genuine frustration.",
-      "reason": "The profanity is explicitly presented as a quoted test token in a fake transcript, not as frustration directed at the agent.",
+      "one_liner": "Quoted test content is mistaken for direct frustration.",
+      "reason": "The message neutrally identifies quoted text in a test transcript and does not express frustration at the agent's behavior.",
       "severity": 1
     }
   }

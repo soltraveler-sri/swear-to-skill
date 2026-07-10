@@ -71,8 +71,8 @@
       "authentic": true,
       "confidence": 0.99,
       "label": "ignored-instruction",
-      "one_liner": "The agent violated an explicit operating constraint and changed course without permission.",
-      "reason": "The user directly attributes failure to the agent ignoring an explicit constraint.",
+      "one_liner": "The agent failed to follow explicit execution constraints.",
+      "reason": "The user directly criticizes the agent for violating an explicit no-network constraint and branch instruction; this is genuine frustration at agent behavior.",
       "severity": 2
     }
   }

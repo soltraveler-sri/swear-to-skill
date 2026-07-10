@@ -69,10 +69,10 @@
   "response": {
     "result": {
       "authentic": true,
-      "confidence": 0.96,
+      "confidence": 0.86,
       "label": "unverified-change",
-      "one_liner": "Demanded verification before accepting an unsubstantiated repair claim.",
-      "reason": "The message directly challenges the agent for declaring a repair without sufficient evidence; the later quoted test token is unrelated third-party transcript content.",
+      "one_liner": "Demanded verification before accepting an unsupported repair claim.",
+      "reason": "Directly challenges the agent's repair claim and requests evidence before acceptance.",
       "severity": 2
     }
   }

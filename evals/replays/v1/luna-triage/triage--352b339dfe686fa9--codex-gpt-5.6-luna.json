@@ -71,8 +71,8 @@
       "authentic": false,
       "confidence": 0.99,
       "label": "other",
-      "one_liner": "Playful content-generation language is not an agent-frustration incident.",
-      "reason": "The message explicitly requests playful banner text and does not express genuine frustration at the agent.",
+      "one_liner": "Playful wording is part of a creative request, not a complaint about agent behavior.",
+      "reason": "The message requests playful banner text and does not express frustration at the agent's behavior.",
       "severity": 1
     }
   }

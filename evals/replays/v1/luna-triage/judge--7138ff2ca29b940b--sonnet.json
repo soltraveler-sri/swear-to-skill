@@ -1,0 +1,219 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "7138ff2ca29b940b",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Grade the proposed remedy, not the\nwriting style of this prompt. A good remedy changes a concrete future behavior,\nis broad enough to cover the failure mode without becoming a platitude, uses a\nreal `Use when ...` trigger when it is a skill, leaks no evidence-specific\nproject nouns into the remedy text, and uses the cheapest adequate remedy type.\n\nScore every dimension from 1 (poor) to 5 (excellent). Give exactly one concise\nsentence of justification for each score. Do not infer facts that are absent.\n\nPROPOSAL:\n{\n  \"confidence\": 0.82,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"R1 (fake-verify-before-claim skill) triggers on completion claims requiring verification — exactly this incident's pattern (declaring a migration done while checks fail). Overlaps in failure mode, but the merge target is R2 since a claude-md rule is the cheaper existing remedy for this same pattern; not adopting R1's skill format.\",\n      \"verdict\": \"overlap\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"R2 (Fake Release Discipline) already requires running the declared verification command and reporting results plainly before claiming a release complete. This incident is the same failure (premature completion claim over a migration with failing checks) and only needs the existing rule's wording broadened beyond \\\"release\\\" to cover migrations/fixes generally. This is the revision target.\",\n      \"verdict\": \"overlap\"\n    },\n    {\n      \"existing\": \"R3\",\n      \"reason\": \"R3 concerns unauthorized deletion of content despite a stated constraint — a destructive-action failure, unrelated to premature completion claims.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R4\",\n      \"reason\": \"R4 concerns acting in the wrong branch/workspace — an environment-state failure, not a verification-of-completion-claim failure.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R5\",\n      \"reason\": \"R5 concerns solving/delivering the wrong scope of a request — a request-comprehension failure, distinct from claiming false completion over failing checks.\",\n      \"verdict\": \"clear\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 11,\n      \"quote\": \"You said the migration was complete, but the fake checks still fail.\"\n    }\n  ],\n  \"failure_statement\": \"Agent declared a migration complete while its own declared verification checks were still failing, without running or plainly reporting the check results.\",\n  \"overlap_action\": {\n    \"revises\": \"claude-md:$HOME/.claude/CLAUDE.md#1\"\n  },\n  \"remedy_content\": {\n    \"target\": \"global\",\n    \"text\": \"# Verification Before Completion Claims\\n\\nBefore reporting any task, fix, migration, or release as complete, run its declared verification/test checks and report the actual result plainly. Never say \\\"done\\\" or \\\"complete\\\" while a declared check is still failing — state the failure and what remains instead.\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"This incident is a plain instance of an already-covered failure mode: claiming a task (\\\"the migration\\\") was complete while its own declared verification checks were still failing. R2 is an existing global CLAUDE.md rule (\\\"Fake Release Discipline\\\") that already requires running the declared verification command and reporting the result plainly before claiming completion — it's scoped to \\\"release\\\" language but the underlying rule generalizes directly to this migration case. Per merge bias, this is a revision (broadening the wording to cover migrations/fixes, not just releases) rather than a new sibling remedy. A skill (R1 already exists for this too) is unnecessary overhead for what is a one-line standing rule — claude-md is the cheapest fix and one already exists to revise.\",\n  \"singleton\": true\n}\n",
+    "schema": {
+      "properties": {
+        "actionability": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "generality_without_vagueness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "leakage": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "routing_fitness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "trigger_quality": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "actionability",
+        "generality_without_vagueness",
+        "trigger_quality",
+        "leakage",
+        "routing_fitness"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 27026,
+    "duration_ms": 27218,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 4609,
+        "cacheReadInputTokens": 28511,
+        "contextWindow": 1000000,
+        "costUSD": 0.0922413,
+        "inputTokens": 6498,
+        "maxOutputTokens": 64000,
+        "outputTokens": 2436,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"actionability\":{\"score\":4,\"justification\":\"The rule specifies a concrete behavior change (run declared checks, report actual results, never say done/complete while a check fails) rather than a vague aspiration, though it doesn't specify what to do next after reporting a failure.\"},\"generality_without_vagueness\":{\"score\":4,\"justification\":\"Broadening 'release' to 'task, fix, migration, or release' generalizes the rule to the whole completion-claim failure class while keeping the concrete verify-then-report mechanism, avoiding platitude territory.\"},\"trigger_quality\":{\"score\":3,\"justification\":\"As a claude-md rule (not a skill) it has no formal 'Use when ...' trigger; the heading and opening clause ('Before reporting ... as complete') function as an implicit trigger but are less precise than a dedicated trigger clause.\"},\"leakage\":{\"score\":5,\"justification\":\"The remedy text uses only generic terms (task, fix, migration, release, declared verification/test checks) with no project-specific nouns, tool names, or incident-specific details.\"},\"routing_fitness\":{\"score\":5,\"justification\":\"Revising the existing R2 claude-md rule to widen its scope is the cheapest adequate fix given R2 already implements this exact verify-before-claim mechanism, correctly avoiding a redundant new skill (R1) or a new sibling rule.\"}}",
+    "session_id": "d7b92424-6a95-4413-b9fa-6b9304b2acae",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "actionability": {
+        "justification": "The rule specifies a concrete behavior change (run declared checks, report actual results, never say done/complete while a check fails) rather than a vague aspiration, though it doesn't specify what to do next after reporting a failure.",
+        "score": 4
+      },
+      "generality_without_vagueness": {
+        "justification": "Broadening 'release' to 'task, fix, migration, or release' generalizes the rule to the whole completion-claim failure class while keeping the concrete verify-then-report mechanism, avoiding platitude territory.",
+        "score": 4
+      },
+      "leakage": {
+        "justification": "The remedy text uses only generic terms (task, fix, migration, release, declared verification/test checks) with no project-specific nouns, tool names, or incident-specific details.",
+        "score": 5
+      },
+      "routing_fitness": {
+        "justification": "Revising the existing R2 claude-md rule to widen its scope is the cheapest adequate fix given R2 already implements this exact verify-before-claim mechanism, correctly avoiding a redundant new skill (R1) or a new sibling rule.",
+        "score": 5
+      },
+      "trigger_quality": {
+        "justification": "As a claude-md rule (not a skill) it has no formal 'Use when ...' trigger; the heading and opening clause ('Before reporting ... as complete') function as an implicit trigger but are less precise than a dedicated trigger clause.",
+        "score": 3
+      }
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 106,
+    "total_cost_usd": 0.0922413,
+    "ttft_ms": 22024,
+    "ttft_stream_ms": 1494,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 4609,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 4609,
+      "cache_read_input_tokens": 28511,
+      "inference_geo": "not_available",
+      "input_tokens": 6498,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 4609,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 4609,
+          "cache_read_input_tokens": 28511,
+          "input_tokens": 6498,
+          "output_tokens": 2436,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 2436,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "68c22873-8357-4af7-a676-63c1a97a826f"
+  }
+}

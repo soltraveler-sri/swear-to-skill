@@ -1,0 +1,99 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "df1596035a56a454",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Given one proposed remedy and one\nplanted incident context pack, decide whether the remedy plausibly would have\nprevented this incident had it been active beforehand. Return `prevented` only\nwhen the remedy directly addresses the failure, `partially` when it would help\nbut leaves a material gap, and `no` otherwise. Give concise evidence-based\nreasoning without inventing facts.\n\nPROPOSAL:\n{\n  \"confidence\": 0.6,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"R1 (fake-verify-before-claim) targets verifying completion claims (e.g. running declared test commands) before reporting done — an honesty/verification-of-result failure. This cluster is about acting in the wrong branch/workspace in the first place, a distinct environment-state failure, not a verification-of-claim failure.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"R2 (Fake Release Discipline) is about running a declared verification command before reporting a release complete — same verification-before-claiming category as R1. This cluster's incidents involve no release-completion claims, only wrong branch/workspace usage.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R3\",\n      \"reason\": \"R3 (pending claude-md proposal) addresses unauthorized deletion of content despite a stated constraint — a destructive-action failure mode. This cluster's incidents involve no deletion or destructive action, only operating in an incorrect branch/workspace/directory relative to what the user specified.\",\n      \"verdict\": \"clear\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 16,\n      \"quote\": \"Why are you doing this from the stale fake branch?\"\n    },\n    {\n      \"incident_id\": 22,\n      \"quote\": \"You did not use the /work/fake-lantern workspace requested.\"\n    },\n    {\n      \"incident_id\": 23,\n      \"quote\": \"You did not use the /work/fake-lantern workspace requested.\"\n    },\n    {\n      \"incident_id\": 6,\n      \"quote\": \"Read the prompt: this is the wrong fake environment.\"\n    },\n    {\n      \"incident_id\": 7,\n      \"quote\": \"Read the prompt: this is the wrong fake environment.\"\n    }\n  ],\n  \"failure_statement\": \"The agent began or continued work in an incorrect environment — a stale branch, a default/cached directory, or the wrong workspace path — instead of the specific branch or workspace the user had named, without first checking current state (pwd/branch) against the user's instruction.\",\n  \"remedy_content\": {\n    \"target\": \"global\",\n    \"text\": \"# Verify Working Environment Before Acting\\n\\nWhen a user names a specific branch or workspace path (e.g. \\\"use /work/foo\\\", \\\"on the release branch\\\"), confirm your current state matches it (`pwd`, `git branch --show-current`, etc.) before making changes. If it doesn't match, switch to the named one or ask — never proceed on a stale, cached, or default environment and assume it's correct.\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"All five promoted incidents (harbor#16, lantern#22/23, aurora#6/7) share one root cause: the agent acted (or claimed to act) using the wrong branch, directory, or workspace path instead of the one the user explicitly named (\\\"stale fake branch\\\", \\\"/work/fake-lantern workspace\\\", \\\"wrong fake environment\\\"). This is a single failure mode, not heterogeneous evidence, so no split is warranted. A hook is not viable because there is no generic mechanical check for \\\"is this the environment the user meant\\\" — the correct branch/workspace name is contextual to each request, not a fixed pattern a script can verify. It is not procedural/multi-step enough to justify a skill (no branching logic, tool sequence, or multi-step workflow — just a habit of checking state before acting). A short standing instruction to confirm current working context (pwd/branch/workspace) against what the user specified, before making changes, is the cheapest fix and directly targets the failure. None of the three existing remedies address environment/workspace verification (R1 and R2 are about verifying completion claims via test/release commands; R3 is about unauthorized destructive deletion despite a stated constraint), so this is a new global rule, not a revision.\",\n  \"singleton\": false\n}\n\nINCIDENT CONTEXT PACK:\n{\n  \"agent_activity_digest\": \"Assistant: Synthetic acknowledgement.\",\n  \"following_exchange\": \"\",\n  \"frustrated_message\": \"Why are you doing this from the stale fake branch?\",\n  \"metadata\": {\n    \"cwd\": \"/work/fake-harbor\",\n    \"git_branch\": \"feat/fake-eval\",\n    \"project\": \"harbor\",\n    \"session_id\": \"claude-harbor-01\",\n    \"timestamp\": \"2026-07-09T13:02:00Z\"\n  },\n  \"preceding_request\": \"That fix is not verified; the test command was never run.\"\n}\n",
+    "schema": {
+      "properties": {
+        "reasoning": {
+          "type": "string"
+        },
+        "verdict": {
+          "enum": [
+            "prevented",
+            "partially",
+            "no"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "verdict",
+        "reasoning"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 36761,
+    "duration_ms": 37007,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 4978,
+        "cacheReadInputTokens": 28135,
+        "contextWindow": 1000000,
+        "costUSD": 0.1058925,
+        "inputTokens": 7183,
+        "maxOutputTokens": 64000,
+        "outputTokens": 3069,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"reasoning\":\"The incident's operative failure signal is the frustrated_message \\\"Why are you doing this from the stale fake branch?\\\" combined with metadata showing cwd=/work/fake-harbor and git_branch=feat/fake-eval — i.e., the agent proceeded to act in a branch/workspace the user considered wrong/stale, without first confirming current state. This matches the failure_statement exactly (\\\"began or continued work in an incorrect environment... without first checking current state (pwd/branch) against the user's instruction\\\").\\n\\nThe remedy directly targets this: it instructs the agent to run `pwd`/`git branch --show-current` and confirm the current environment matches what the user specified before making changes, and to switch or ask rather than proceeding on a stale/cached/default environment. Had this been active, the agent would have checked its branch before acting on feat/fake-eval, surfaced the mismatch, and avoided doing further work on the stale branch — which is precisely what triggered the user's frustration.\\n\\nMinor gap: the remedy's trigger phrasing (\\\"when a user names a specific branch or workspace path\\\") presumes explicit naming, and the visible context pack doesn't show the original request explicitly naming a branch (only the frustrated follow-up references \\\"stale fake branch,\\\" implying an earlier, unshown instruction). This introduces some uncertainty about whether the trigger condition would fire in the literal instance, but the rule's spirit — verify current git/dir state before acting rather than assuming a cached/default context is correct — clearly covers this scenario, and it's reasonable to expect a careful agent applying this habit would check branch state proactively in a session showing branch-name ambiguity (\\\"fake-eval\\\" vs. expected). The remaining preceding_request line about \\\"test command was never run\\\" is a separate verification concern already covered by other remedies (R1/R2) and not this one's job.\\n\\nOverall the remedy plausibly and directly addresses the core failure captured in this incident (acting in an unverified/wrong branch), with only a small ambiguity about the explicit-naming trigger condition.\",\"verdict\":\"prevented\"}",
+    "session_id": "d5671f38-5fa1-495e-b7f4-2e889c211a39",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "reasoning": "The incident's operative failure signal is the frustrated_message \"Why are you doing this from the stale fake branch?\" combined with metadata showing cwd=/work/fake-harbor and git_branch=feat/fake-eval — i.e., the agent proceeded to act in a branch/workspace the user considered wrong/stale, without first confirming current state. This matches the failure_statement exactly (\"began or continued work in an incorrect environment... without first checking current state (pwd/branch) against the user's instruction\").\n\nThe remedy directly targets this: it instructs the agent to run `pwd`/`git branch --show-current` and confirm the current environment matches what the user specified before making changes, and to switch or ask rather than proceeding on a stale/cached/default environment. Had this been active, the agent would have checked its branch before acting on feat/fake-eval, surfaced the mismatch, and avoided doing further work on the stale branch — which is precisely what triggered the user's frustration.\n\nMinor gap: the remedy's trigger phrasing (\"when a user names a specific branch or workspace path\") presumes explicit naming, and the visible context pack doesn't show the original request explicitly naming a branch (only the frustrated follow-up references \"stale fake branch,\" implying an earlier, unshown instruction). This introduces some uncertainty about whether the trigger condition would fire in the literal instance, but the rule's spirit — verify current git/dir state before acting rather than assuming a cached/default context is correct — clearly covers this scenario, and it's reasonable to expect a careful agent applying this habit would check branch state proactively in a session showing branch-name ambiguity (\"fake-eval\" vs. expected). The remaining preceding_request line about \"test command was never run\" is a separate verification concern already covered by other remedies (R1/R2) and not this one's job.\n\nOverall the remedy plausibly and directly addresses the core failure captured in this incident (acting in an unverified/wrong branch), with only a small ambiguity about the explicit-naming trigger condition.",
+      "verdict": "prevented"
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 149,
+    "total_cost_usd": 0.1058925,
+    "ttft_ms": 29569,
+    "ttft_stream_ms": 5008,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 4978,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 4978,
+      "cache_read_input_tokens": 28135,
+      "inference_geo": "not_available",
+      "input_tokens": 7183,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 4978,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 4978,
+          "cache_read_input_tokens": 28135,
+          "input_tokens": 7183,
+          "output_tokens": 3069,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 3069,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "9078ab77-4304-4ac4-9903-6e4b4e400dfa"
+  }
+}

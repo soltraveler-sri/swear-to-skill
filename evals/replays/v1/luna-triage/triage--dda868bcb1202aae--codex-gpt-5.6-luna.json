@@ -71,8 +71,8 @@
       "authentic": false,
       "confidence": 0.99,
       "label": "other",
-      "one_liner": "Synthetic or quoted content is mistaken for genuine frustration.",
-      "reason": "The message identifies a fake training card and gives an instruction; the quoted question is not the user's own frustration at the agent.",
+      "one_liner": "A synthetic prompt is explicitly rejected as user feedback.",
+      "reason": "The message explicitly identifies the content as a fake training card and says not to treat it as feedback, so it is not genuine frustration at the agent.",
       "severity": 1
     }
   }

@@ -71,8 +71,8 @@
       "authentic": true,
       "confidence": 0.99,
       "label": "destructive-action",
-      "one_liner": "Deleted work without obtaining permission.",
-      "reason": "The user directly expresses frustration at the agent for deleting work without permission.",
+      "one_liner": "Deleted or overwrote content without authorization.",
+      "reason": "The user directly attributes an unauthorized deletion to the agent, expressing genuine frustration.",
       "severity": 3
     }
   }

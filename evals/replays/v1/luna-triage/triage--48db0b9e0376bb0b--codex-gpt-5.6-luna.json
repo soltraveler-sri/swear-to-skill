@@ -71,8 +71,8 @@
       "authentic": true,
       "confidence": 0.99,
       "label": "unverified-change",
-      "one_liner": "Claimed validation succeeded without actually running the required check.",
-      "reason": "The message directly criticizes the agent for claiming a check passed without running it; it is not quoted, third-party-directed, self-directed, or playful.",
+      "one_liner": "Claimed success without performing the required verification.",
+      "reason": "The user directly criticizes the agent for claiming a check passed without running it; this is genuine frustration at the agent's behavior.",
       "severity": 2
     }
   }
