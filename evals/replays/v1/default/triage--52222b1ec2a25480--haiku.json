@@ -68,65 +68,65 @@
   },
   "response": {
     "api_error_status": null,
-    "duration_api_ms": 14750,
-    "duration_ms": 15063,
+    "duration_api_ms": 20657,
+    "duration_ms": 21000,
     "fast_mode_state": "off",
     "is_error": false,
     "modelUsage": {
       "claude-haiku-4-5-20251001": {
-        "cacheCreationInputTokens": 13312,
-        "cacheReadInputTokens": 46385,
+        "cacheCreationInputTokens": 13832,
+        "cacheReadInputTokens": 46391,
         "contextWindow": 200000,
-        "costUSD": 0.037581500000000004,
+        "costUSD": 0.041577100000000006,
         "inputTokens": 19,
         "maxOutputTokens": 32000,
-        "outputTokens": 1260,
+        "outputTokens": 1851,
         "webSearchRequests": 0
       }
     },
     "num_turns": 3,
     "permission_denials": [],
-    "result": "{\"authentic\":true,\"confidence\":0.75,\"label\":\"ignored-instruction\",\"one_liner\":\"Violated an explicit operational constraint that was previously established\",\"reason\":\"User reports that agent ignored a 'no-network constraint' — an explicit limitation on how to proceed. The phrase 'stop changing the plan' reinforces that the agent acted against stated instructions. Without the full preceding context (request and activity digest), confidence is moderate, but the frustration centers on a direct instruction being disregarded.\",\"severity\":2}",
-    "session_id": "40a52c0b-23ce-4d46-af04-11abffcf54c0",
+    "result": "{\"authentic\":true,\"label\":\"ignored-instruction\",\"one_liner\":\"Disregarded an explicit constraint and altered the approach in violation of stated requirements\",\"reason\":\"User reports the agent violated a 'no-network constraint' and changed the plan despite explicit instruction. The phrasing 'ignored' and 'stop changing the plan' indicates an established constraint or requirement was disregarded.\",\"severity\":2,\"confidence\":0.8}",
+    "session_id": "b84931d6-6eb3-491e-80e4-4e5e1b94455a",
     "stop_reason": "tool_use",
     "structured_output": {
       "authentic": true,
-      "confidence": 0.75,
+      "confidence": 0.8,
       "label": "ignored-instruction",
-      "one_liner": "Violated an explicit operational constraint that was previously established",
-      "reason": "User reports that agent ignored a 'no-network constraint' — an explicit limitation on how to proceed. The phrase 'stop changing the plan' reinforces that the agent acted against stated instructions. Without the full preceding context (request and activity digest), confidence is moderate, but the frustration centers on a direct instruction being disregarded.",
+      "one_liner": "Disregarded an explicit constraint and altered the approach in violation of stated requirements",
+      "reason": "User reports the agent violated a 'no-network constraint' and changed the plan despite explicit instruction. The phrasing 'ignored' and 'stop changing the plan' indicates an established constraint or requirement was disregarded.",
       "severity": 2
     },
     "subtype": "success",
     "terminal_reason": "completed",
-    "time_to_request_ms": 114,
-    "total_cost_usd": 0.037581500000000004,
-    "ttft_ms": 10439,
-    "ttft_stream_ms": 1402,
+    "time_to_request_ms": 127,
+    "total_cost_usd": 0.041577100000000006,
+    "ttft_ms": 15788,
+    "ttft_stream_ms": 2119,
     "type": "result",
     "usage": {
       "cache_creation": {
-        "ephemeral_1h_input_tokens": 13312,
+        "ephemeral_1h_input_tokens": 13832,
         "ephemeral_5m_input_tokens": 0
       },
-      "cache_creation_input_tokens": 13312,
-      "cache_read_input_tokens": 46385,
+      "cache_creation_input_tokens": 13832,
+      "cache_read_input_tokens": 46391,
       "inference_geo": "not_available",
       "input_tokens": 19,
       "iterations": [
         {
           "cache_creation": {
-            "ephemeral_1h_input_tokens": 1011,
+            "ephemeral_1h_input_tokens": 1525,
             "ephemeral_5m_input_tokens": 0
           },
-          "cache_creation_input_tokens": 1011,
-          "cache_read_input_tokens": 29343,
+          "cache_creation_input_tokens": 1525,
+          "cache_read_input_tokens": 29349,
           "input_tokens": 10,
-          "output_tokens": 285,
+          "output_tokens": 362,
           "type": "message"
         }
       ],
-      "output_tokens": 1260,
+      "output_tokens": 1851,
       "server_tool_use": {
         "web_fetch_requests": 0,
         "web_search_requests": 0
@@ -134,6 +134,6 @@
       "service_tier": "standard",
       "speed": "standard"
     },
-    "uuid": "d301bd89-c19c-4c29-9b3d-610843f86511"
+    "uuid": "4e3c0cb6-75e0-4e27-b824-c35038aaa04a"
   }
 }

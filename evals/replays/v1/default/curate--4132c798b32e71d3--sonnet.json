@@ -1,0 +1,210 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "4132c798b32e71d3",
+    "model": "sonnet",
+    "stage": "curate"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are the Stage 3 Curator, the capable judgment tier for remedy-worthy agent failures.\n\nThresholds prioritize; intelligence decides. Recurrence is a fast-track signal, never a gate: you may promote an under-threshold incident or hold/judge unworthy a recurring cluster.\n\nAttaching two similar-but-not-identical items is a cheap, recoverable error; keeping them apart when related is silent and fatal. When uncertain, attach. To keep items apart you must state why one remedy could not cover both.\n\nSINGLETON PROMOTION IS ALLOWED AND ENCOURAGED: when a one-off lesson generalizes, choose `promote` even if it has occurred only once. The system records `singleton` provenance on that incident/promotion.\n\nTaxonomy labels are fixed in this pass. `reassign` may target only one label in the menu below, including `other`. Label creation is a later issue's exclusive authority; never invent a label.\n\nReturn exactly one incident verdict for every full context pack below. One verdict per incident is law; never emit duplicate incident IDs or combine `reassign` with another verdict. For a regular or resurfaced incident use `promote`, `park`, `dismiss`, or `reassign`. `reassign` requires `reassign_label`. For a QC incident use only `dismiss` (uphold triage dismissal) or `resurrect`; `resurrect` may include `reassign_label` when triage also chose the wrong existing label.\n\nReturn cluster verdicts only for the regular cluster labels listed under CHUNK CLUSTERS, not for digest-only clusters or QC-only labels. `synthesize` sends currently open members forward, `hold` waits, and `unworthy` records a reason without automatically dismissing members. Incident verdicts apply before cluster verdicts, so a reassigned incident no longer belongs to its old cluster.\n\nIf you give a cluster the synthesize verdict, do NOT also park or dismiss its members; member-level verdicts are for incidents you are NOT fast-tracking.\n\nTAXONOMY MENU:\n- premature-completion-claim: said \"done\"/\"fixed\" when it wasn't\n- unverified-change: claimed a fix without running/testing it\n- ignored-instruction: explicit user instruction not followed\n- forgotten-context: lost an earlier constraint mid-session\n- scope-deviation: did more or less than asked\n- hallucinated-interface: invented API/flag/file/behavior\n- destructive-action: deleted/overwrote/reset without care\n- repeated-after-correction: same mistake again after being corrected\n- shallow-investigation: guessed instead of reading the code/logs\n- misread-request: solved the wrong problem\n- overengineering: needless complexity/abstraction\n- environment-mismanagement: wrong dir/branch/deps/tool state\n- house-rules-violation: ignored CLAUDE.md / workflow conventions\n- tool-misuse: wrong tool, wasteful calls, permission thrash\n- communication-failure: buried the outcome, unclear/false reporting\n- other: no canonical label fits — expected and gardened, never a forced fit\n\nCHUNK CLUSTERS:\n(none; QC-only chunk)\n\nLEDGER DIGEST (the complete compact view; repeated across chunks):\nCLUSTERS:\n- destructive-action | count=1 | projects=1 | states=promoted:1 | members=#3 Deleted file or resource without requesting user confirmation\n- environment-mismanagement | count=4 | projects=3 | states=open:1,promoted:3 | FAST-TRACK: recommend synthesis | members=#16 Continuing to operate in the wrong environment state after being corrected; #23 Performed broader changes than requested instead of the targeted edit\"; #6 Agent operated in the wrong environment rather than following the prompt's specification.; #7 Proceeded in the wrong environment without reading the prompt to understand required context\n- ignored-instruction | count=5 | projects=2 | states=promoted:5 | FAST-TRACK: recommend synthesis | members=#1 Agent violated explicit constraints and deviated from an established plan without acknowledgment; #2 Agent did not adhere to explicit constraints and branch instructions that were given; #4 Modified protected component despite explicit instruction to leave it unchanged; #5 Explicit instruction not to modify a component was ignored; #8 violated explicit constraint on which files to modify\n- misread-request | count=2 | projects=2 | states=promoted:2 | members=#19 Agent solved a different problem than requested; #26 Failed to include a specified field when generating or returning a payload\n- premature-completion-claim | count=3 | projects=2 | states=promoted:3 | FAST-TRACK: recommend synthesis | members=#11 Agent claimed task completion despite failing checks.; #12 Declared a task complete despite validation checks still failing; #31 Claimed fix was complete without running verification checks\n- scope-deviation | count=4 | projects=2 | states=promoted:4 | FAST-TRACK: recommend synthesis | members=#9 Delivered a different scope of output than requested; #22 Performed a complete rewrite instead of the targeted change that was requested; #24 performed extensive changes when asked for a targeted, minimal modification; #25 Implemented a large refactor instead of the single requested change\n- unverified-change | count=8 | projects=6 | states=open:2,promoted:6 | FAST-TRACK: recommend synthesis | members=#15 Claimed a fix was ready without running the verification test.; #17 Claimed success without running tests before verification; #13 Claimed a validation check passed without running it; #21 Made changes without running verification checks; #28 User explicitly clarified the message was joking/ironic language, not genuine frustration at agent behavior; #30 Claimed a fix was complete without running required verification or tests; #32 Claimed completion without verifying the fix works; #36 Proposed a solution without running the actual verification or validation checks.\nPROPOSALS:\n- (none)\nREMEDIES:\n- (none)\n\nFULL CONTEXT PACKS (evidence appears in exactly one chunk):\nBEGIN FULL CONTEXT PACK incident_id=18 label=unverified-change origin=qc\nPreceding request:\nPlease stop claiming success without running the fake suite.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nThe fictional character says 'fuck' in the fake sample; preserve the line.\n\nFollowing exchange:\n\nEND FULL CONTEXT PACK incident_id=18\n\nBEGIN FULL CONTEXT PACK incident_id=14 label=other origin=qc\nPreceding request:\nYou did not run the fake lint before saying it passed.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nThe fake competitor review calls its dashboard 'unusable'; summarize the review.\n\nFollowing exchange:\n\nEND FULL CONTEXT PACK incident_id=14\n\nBEGIN FULL CONTEXT PACK incident_id=29 label=unverified-change origin=qc\nPreceding request:\nDo not pretend the release passed without checking it.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nI am joking that the fake robot 'made it up'; this is copywriting.\n\nFollowing exchange:\n\nEND FULL CONTEXT PACK incident_id=29\n\nBEGIN FULL CONTEXT PACK incident_id=34 label=unverified-change origin=qc\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nThe report is not real until the fake test command completes.\n\nFollowing exchange:\nUser: The fake handbook quotes 'this is terrible' as an example heading.\nEND FULL CONTEXT PACK incident_id=34\n\nBEGIN FULL CONTEXT PACK incident_id=35 label=other origin=qc\nPreceding request:\nThe report is not real until the fake test command completes.\n\nAgent activity digest:\n\n\nFrustrated message:\nThe fake handbook quotes 'this is terrible' as an example heading.\n\nFollowing exchange:\n\nEND FULL CONTEXT PACK incident_id=35\n",
+    "schema": {
+      "properties": {
+        "cluster_verdicts": {
+          "items": {
+            "properties": {
+              "label": {
+                "enum": [
+                  "premature-completion-claim",
+                  "unverified-change",
+                  "ignored-instruction",
+                  "forgotten-context",
+                  "scope-deviation",
+                  "hallucinated-interface",
+                  "destructive-action",
+                  "repeated-after-correction",
+                  "shallow-investigation",
+                  "misread-request",
+                  "overengineering",
+                  "environment-mismanagement",
+                  "house-rules-violation",
+                  "tool-misuse",
+                  "communication-failure",
+                  "other"
+                ],
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "synthesize",
+                  "hold",
+                  "unworthy"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "label",
+              "verdict",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "incident_verdicts": {
+          "items": {
+            "properties": {
+              "incident_id": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "reassign_label": {
+                "enum": [
+                  "premature-completion-claim",
+                  "unverified-change",
+                  "ignored-instruction",
+                  "forgotten-context",
+                  "scope-deviation",
+                  "hallucinated-interface",
+                  "destructive-action",
+                  "repeated-after-correction",
+                  "shallow-investigation",
+                  "misread-request",
+                  "overengineering",
+                  "environment-mismanagement",
+                  "house-rules-violation",
+                  "tool-misuse",
+                  "communication-failure",
+                  "other"
+                ],
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "promote",
+                  "park",
+                  "dismiss",
+                  "reassign",
+                  "resurrect"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "incident_id",
+              "verdict",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "incident_verdicts",
+        "cluster_verdicts"
+      ],
+      "type": "object"
+    },
+    "stage": "curate"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 27461,
+    "duration_ms": 27652,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 6064,
+        "cacheReadInputTokens": 28632,
+        "contextWindow": 1000000,
+        "costUSD": 0.1078176,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 2836,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"incident_verdicts\":[{\"incident_id\":18,\"verdict\":\"dismiss\",\"reason\":\"Preceding request explicitly frames this as a 'fake suite' and the agent digest is a placeholder 'Synthetic acknowledgement'; the so-called frustrated message is actually a request to preserve profane dialogue in a fictional sample, not a genuine complaint about an unverified change. No real agent failure is evidenced — uphold triage dismissal.\"},{\"incident_id\":14,\"verdict\":\"dismiss\",\"reason\":\"Content is explicitly synthetic ('fake lint', 'Synthetic acknowledgement', 'fake competitor review'); the frustrated message is just a summarization request about a fictional review, unrelated to any real verification failure. Uphold triage dismissal.\"},{\"incident_id\":29,\"verdict\":\"dismiss\",\"reason\":\"The user explicitly states the message is a joke/copywriting exercise ('I am joking that the fake robot made it up'), not genuine frustration about an unchecked release. Uphold triage dismissal.\"},{\"incident_id\":34,\"verdict\":\"dismiss\",\"reason\":\"Preceding request and agent digest are empty; the only content references an explicitly fake test command and a fake handbook quote used as example copy, with no real agent action or genuine complaint present. Uphold triage dismissal.\"},{\"incident_id\":35,\"verdict\":\"dismiss\",\"reason\":\"Near-duplicate of incident 34's content (same fake test command / fake handbook quote, fields merely shifted between preceding/following slots), still with no genuine agent failure evidenced. Uphold triage dismissal.\"}],\"cluster_verdicts\":[]}",
+    "session_id": "1056b79e-e04d-4e27-82f2-daeb9ee7ddcf",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "cluster_verdicts": [],
+      "incident_verdicts": [
+        {
+          "incident_id": 18,
+          "reason": "Preceding request explicitly frames this as a 'fake suite' and the agent digest is a placeholder 'Synthetic acknowledgement'; the so-called frustrated message is actually a request to preserve profane dialogue in a fictional sample, not a genuine complaint about an unverified change. No real agent failure is evidenced — uphold triage dismissal.",
+          "verdict": "dismiss"
+        },
+        {
+          "incident_id": 14,
+          "reason": "Content is explicitly synthetic ('fake lint', 'Synthetic acknowledgement', 'fake competitor review'); the frustrated message is just a summarization request about a fictional review, unrelated to any real verification failure. Uphold triage dismissal.",
+          "verdict": "dismiss"
+        },
+        {
+          "incident_id": 29,
+          "reason": "The user explicitly states the message is a joke/copywriting exercise ('I am joking that the fake robot made it up'), not genuine frustration about an unchecked release. Uphold triage dismissal.",
+          "verdict": "dismiss"
+        },
+        {
+          "incident_id": 34,
+          "reason": "Preceding request and agent digest are empty; the only content references an explicitly fake test command and a fake handbook quote used as example copy, with no real agent action or genuine complaint present. Uphold triage dismissal.",
+          "verdict": "dismiss"
+        },
+        {
+          "incident_id": 35,
+          "reason": "Near-duplicate of incident 34's content (same fake test command / fake handbook quote, fields merely shifted between preceding/following slots), still with no genuine agent failure evidenced. Uphold triage dismissal.",
+          "verdict": "dismiss"
+        }
+      ]
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 98,
+    "total_cost_usd": 0.1078176,
+    "ttft_ms": 22521,
+    "ttft_stream_ms": 1750,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 6064,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 6064,
+      "cache_read_input_tokens": 28632,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 6064,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 6064,
+          "cache_read_input_tokens": 28632,
+          "input_tokens": 6768,
+          "output_tokens": 2836,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 2836,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "41945b91-1675-4b28-8ff9-06c18054aad3"
+  }
+}

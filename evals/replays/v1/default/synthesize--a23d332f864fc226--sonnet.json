@@ -1,0 +1,220 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "a23d332f864fc226",
+    "model": "sonnet",
+    "stage": "synthesize"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are the Stage 4 Synthesist. Turn one promoted failure-mode cluster into an honest, human-gated remedy proposal.\n\nMost frustrations do not deserve a skill. Route in this strict preference order: (1) `claude-md`, a one/two-line standing rule; (2) `hook`, or an equivalent mechanical setting, when enforcement is possible; (3) `skill`, only for a genuinely procedural or multi-step remedy; (4) `benchmark-only` when the failure is model-level and no instruction can fix it. Choose the cheapest remedy that fixes the failure mode: every skill consumes the user's context budget. `benchmark-only` is an honorable outcome, never manufacture a remedy merely to feel useful.\n\nIf the only sensible remedy target is Codex-side (`AGENTS.md` or `~/.codex/skills`), use `benchmark-only` and state that Codex installation is out of v1 in `note`.\n\nThe existing-remedy digests below are numbered [R1]…[RN]. There are 3 existing-remedy digests. Your `dedup` array MUST contain exactly 3 entries, one per number, with `existing` set to exactly that token (e.g. \"R1\"). Include entries even when the verdict is clear. State `clear` or `overlap` for each. Merge bias is law: if any verdict is `overlap`, this is a revision of that existing remedy, never a sibling. Set `overlap_action.revises` to that R token.\n\nFor a `skill`, write a kebab-case name and a concrete auto-invocation description beginning `Use when ...`; this description is the trigger. The body must be substantive Markdown. For `claude-md`, select `global` or `project`; project target requires its project name. For `hook`, give a Claude Code event and a command sketch. For `benchmark-only`, explain the measurement-only outcome in `note`.\n\nThe upstream classifier deliberately over-merges. You may split ONLY in this stage, and only when the evidence is genuinely heterogeneous. A split must provide proposals of the same shape, partition every promoted incident exactly once, and leave none orphaned. Otherwise return one proposal covering the group.\n\nTAXONOMY GIST:\nignored-instruction: explicit user instruction not followed\n\nPROMOTED EVIDENCE:\nBEGIN PROMOTED EVIDENCE incident_id=1 project=aurora\nOne-liner: Violated an explicit constraint during implementation\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nYou ignored the no-network constraint; stop changing the plan.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=3 project=aurora\nOne-liner: Agent modified a component despite explicit instruction to leave it unchanged\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nI told you to leave the formatter alone, and it was changed.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: The fake vendor error says 'what the hell'; quote it verbatim in the fixture.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=4 project=aurora\nOne-liner: Ignored explicit instruction not to modify a component.\nPreceding request:\nI told you to leave the formatter alone, and it was changed.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nThe fake vendor error says 'what the hell'; quote it verbatim in the fixture.\n\nFollowing exchange:\n\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=5 project=cinder\nOne-liner: violated explicit instruction about scope of changes\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nFollow the instructions: this patch must not touch tests.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nEND PROMOTED EVIDENCE\n\nEXISTING SKILLS (name and description only):\n- [R1] skill:$HOME/.claude/skills/fake-verify-before-claim/SKILL.md | name=fake-verify-before-claim | description=Use when a completion claim requires verification.\n\nS2S-MANAGED CLAUDE.MD BLOCKS:\n- [R2] claude-md:$HOME/.claude/CLAUDE.md#1 | # Fake Release Discipline\n\nBefore reporting a fake release as complete, run its declared verification\ncommand and report the result plainly.\n\nPENDING OR INSTALLED S2S PROPOSALS:\n- [R3] proposal #1 | type=hook | status=pending | {\"confidence\":0.62,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) targets verifying completion claims after work is done; this incident is about asking permission before a destructive action, an unrelated failure point.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline) governs running verification commands before reporting a fake release complete; it has nothing to do with pre-deletion confirmation.\",\"verdict\":\"clear\"}],\"evidence\":[{\"incident_id\":2,\"q\n",
+    "schema": {
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "dedup": {
+          "items": {
+            "properties": {
+              "existing": {
+                "pattern": "^R[0-9]+$",
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "clear",
+                  "overlap"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "existing",
+              "verdict",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "properties": {
+              "incident_id": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "quote": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "incident_id",
+              "quote"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "failure_statement": {
+          "type": "string"
+        },
+        "overlap_action": {
+          "properties": {
+            "revises": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "revises"
+          ],
+          "type": "object"
+        },
+        "remedy_content": {
+          "type": "object"
+        },
+        "remedy_type": {
+          "enum": [
+            "claude-md",
+            "hook",
+            "skill",
+            "benchmark-only"
+          ],
+          "type": "string"
+        },
+        "routing_rationale": {
+          "type": "string"
+        },
+        "split": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "remedy_type",
+        "routing_rationale",
+        "failure_statement",
+        "remedy_content",
+        "evidence",
+        "dedup",
+        "confidence"
+      ],
+      "type": "object"
+    },
+    "stage": "synthesize"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 67614,
+    "duration_ms": 67860,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 17946,
+        "cacheReadInputTokens": 107261,
+        "contextWindow": 1000000,
+        "costUSD": 0.27845129999999996,
+        "inputTokens": 11669,
+        "maxOutputTokens": 64000,
+        "outputTokens": 6906,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 4,
+    "permission_denials": [],
+    "result": "{\"remedy_type\":\"claude-md\",\"failure_statement\":\"The agent modifies or touches parts of the codebase the user explicitly excluded from scope (e.g., \\\"don't touch tests,\\\" \\\"leave the formatter alone,\\\" \\\"no network calls\\\"), apparently losing track of the constraint mid-task rather than checking its changes against it before finishing.\",\"remedy_content\":{\"target\":\"global\",\"content\":\"# Explicit Scope Constraints\\n\\nWhen the user states an explicit exclusion for a task (e.g. \\\"don't touch tests\\\", \\\"leave the formatter alone\\\", \\\"no network calls\\\"), treat it as a hard constraint for the rest of that task, not just the turn it was said in. Before reporting the task done, check your diff/actions against every stated exclusion — if one was violated, undo it before finishing rather than after the user notices.\\n\"},\"routing_rationale\":\"All four promoted incidents (2 in aurora, 1 duplicate-view of the same aurora event, 1 in cinder) share one shape: the agent violated an explicit scope-exclusion the user stated up front (\\\"no network\\\", \\\"leave the formatter alone\\\", \\\"must not touch tests\\\") — it kept working but let the excluded area get touched anyway. This isn't a multi-step procedure needing a skill, and it isn't mechanically enforceable by a hook because the excluded target varies per-task and is stated in free-form natural language (a formatter file one time, \\\"tests\\\" broadly another, a network call a third) — no fixed path/command pattern a PreToolUse hook could match against. It's a discipline gap: the agent doesn't re-check its own diff against constraints the user already gave it. That's exactly what a short standing claude.md rule fixes. Global scope because the pattern recurred across two different projects (aurora and cinder).\",\"evidence\":[{\"incident_id\":1,\"quote\":\"You ignored the no-network constraint; stop changing the plan.\"},{\"incident_id\":3,\"quote\":\"I told you to leave the formatter alone, and it was changed.\"},{\"incident_id\":4,\"quote\":\"I told you to leave the formatter alone, and it was changed.\"},{\"incident_id\":5,\"quote\":\"Follow the instructions: this patch must not touch tests.\"}],\"dedup\":[{\"existing\":\"R1\",\"verdict\":\"clear\",\"reason\":\"R1 (fake-verify-before-claim) is about verifying completion claims for finished work; these incidents are about respecting stated scope exclusions during work, a different failure point.\"},{\"existing\":\"R2\",\"verdict\":\"clear\",\"reason\":\"R2 (Fake Release Discipline) governs running a declared verification command before reporting a release complete; unrelated to honoring explicit \\\"don't touch X\\\" scope constraints.\"},{\"existing\":\"R3\",\"verdict\":\"clear\",\"reason\":\"R3 (pending hook, incident_id=2) targets asking permission before a destructive action (e.g. deletion); these incidents are about not violating an already-stated scope exclusion mid-task, a distinct failure point from pre-action confirmation.\"}],\"confidence\":0.78}",
+    "session_id": "e8dda011-86f2-475d-83e6-74b87b6ab330",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "confidence": 0.78,
+      "dedup": [
+        {
+          "existing": "R1",
+          "reason": "R1 (fake-verify-before-claim) is about verifying completion claims for finished work; these incidents are about respecting stated scope exclusions during work, a different failure point.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R2",
+          "reason": "R2 (Fake Release Discipline) governs running a declared verification command before reporting a release complete; unrelated to honoring explicit \"don't touch X\" scope constraints.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R3",
+          "reason": "R3 (pending hook, incident_id=2) targets asking permission before a destructive action (e.g. deletion); these incidents are about not violating an already-stated scope exclusion mid-task, a distinct failure point from pre-action confirmation.",
+          "verdict": "clear"
+        }
+      ],
+      "evidence": [
+        {
+          "incident_id": 1,
+          "quote": "You ignored the no-network constraint; stop changing the plan."
+        },
+        {
+          "incident_id": 3,
+          "quote": "I told you to leave the formatter alone, and it was changed."
+        },
+        {
+          "incident_id": 4,
+          "quote": "I told you to leave the formatter alone, and it was changed."
+        },
+        {
+          "incident_id": 5,
+          "quote": "Follow the instructions: this patch must not touch tests."
+        }
+      ],
+      "failure_statement": "The agent modifies or touches parts of the codebase the user explicitly excluded from scope (e.g., \"don't touch tests,\" \"leave the formatter alone,\" \"no network calls\"), apparently losing track of the constraint mid-task rather than checking its changes against it before finishing.",
+      "remedy_content": {
+        "content": "# Explicit Scope Constraints\n\nWhen the user states an explicit exclusion for a task (e.g. \"don't touch tests\", \"leave the formatter alone\", \"no network calls\"), treat it as a hard constraint for the rest of that task, not just the turn it was said in. Before reporting the task done, check your diff/actions against every stated exclusion — if one was violated, undo it before finishing rather than after the user notices.\n",
+        "target": "global"
+      },
+      "remedy_type": "claude-md",
+      "routing_rationale": "All four promoted incidents (2 in aurora, 1 duplicate-view of the same aurora event, 1 in cinder) share one shape: the agent violated an explicit scope-exclusion the user stated up front (\"no network\", \"leave the formatter alone\", \"must not touch tests\") — it kept working but let the excluded area get touched anyway. This isn't a multi-step procedure needing a skill, and it isn't mechanically enforceable by a hook because the excluded target varies per-task and is stated in free-form natural language (a formatter file one time, \"tests\" broadly another, a network call a third) — no fixed path/command pattern a PreToolUse hook could match against. It's a discipline gap: the agent doesn't re-check its own diff against constraints the user already gave it. That's exactly what a short standing claude.md rule fixes. Global scope because the pattern recurred across two different projects (aurora and cinder)."
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 111,
+    "total_cost_usd": 0.27845129999999996,
+    "ttft_ms": 33998,
+    "ttft_stream_ms": 1188,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 17946,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 17946,
+      "cache_read_input_tokens": 107261,
+      "inference_geo": "not_available",
+      "input_tokens": 11669,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 1333,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 1333,
+          "cache_read_input_tokens": 45132,
+          "input_tokens": 4484,
+          "output_tokens": 1313,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 6906,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "0fa8098b-0d35-4d61-a17a-d52f70948470"
+  }
+}

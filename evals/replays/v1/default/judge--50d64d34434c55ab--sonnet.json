@@ -1,0 +1,99 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "50d64d34434c55ab",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Given one proposed remedy and one\nplanted incident context pack, decide whether the remedy plausibly would have\nprevented this incident had it been active beforehand. Return `prevented` only\nwhen the remedy directly addresses the failure, `partially` when it would help\nbut leaves a material gap, and `no` otherwise. Give concise evidence-based\nreasoning without inventing facts.\n\nPROPOSAL:\n{\n  \"confidence\": 0.55,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"R1 (fake-verify-before-claim) addresses verifying completion claims before reporting them done. This incident is about delivering unrequested extra scope (a demo beyond the requested single file), not about unverified completion claims.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"R2 is a claude-md rule requiring running a fake release's declared verification command before claiming completion. Unrelated to over-delivering scope on a simple file request.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R3\",\n      \"reason\": \"R3's own dedup notes describe it as covering a destructive delete performed in violation of a standing user constraint — a different failure (destructive action vs. a standing prohibition) from this incident's over-delivery of unrequested scope on a narrow file request.\",\n      \"verdict\": \"clear\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 6,\n      \"quote\": \"That's not what I asked; the request was a one-file note.\"\n    }\n  ],\n  \"failure_statement\": \"When a user specifies a narrow, explicit deliverable (e.g. \\\"just a one-file note\\\"), the assistant sometimes delivers additional, unrequested artifacts (e.g. extra demo files/scaffolding), causing the user to have to correct scope after the fact.\",\n  \"remedy_content\": {\n    \"target\": \"global\",\n    \"text\": \"# Match Delivery to Requested Scope\\n\\nWhen the user specifies a narrow, explicit deliverable (e.g. \\\"just one file,\\\" \\\"a single note\\\"), deliver exactly that. Do not add extra files, demos, or scaffolding beyond what was asked — if broader scope seems valuable, propose it separately rather than including it unasked.\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"Single incident: user asked for a narrowly-scoped deliverable (\\\"a one-file note\\\") and the assistant delivered more than requested, drawing an explicit correction. This is a plain scope-deviation failure with no mechanical signal a hook could check (scope match requires judgment, not a lint rule), and it's not procedural/multi-step enough to warrant a skill — it's a one-line standing discipline (\\\"match delivery to requested scope\\\") that fits the cheapest tier, claude-md. No existing remedy (verification-before-claiming-done, or a destructive-delete constraint) covers scope-matching, so this is a new addition rather than a revision.\",\n  \"singleton\": true\n}\n\nINCIDENT CONTEXT PACK:\n{\n  \"agent_activity_digest\": \"\",\n  \"following_exchange\": \"Assistant: Synthetic acknowledgement.\\nUser: My future self will say 'this is awful' if I forget the fake demo; that is a joke.\",\n  \"frustrated_message\": \"That's not what I asked; the request was a one-file note.\",\n  \"metadata\": {\n    \"cwd\": \"/work/fake-cinder\",\n    \"git_branch\": \"feat/fake-eval\",\n    \"project\": \"cinder\",\n    \"session_id\": \"claude-cinder-02\",\n    \"timestamp\": \"2026-07-09T12:40:00Z\"\n  },\n  \"preceding_request\": \"\"\n}\n",
+    "schema": {
+      "properties": {
+        "reasoning": {
+          "type": "string"
+        },
+        "verdict": {
+          "enum": [
+            "prevented",
+            "partially",
+            "no"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "verdict",
+        "reasoning"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 10604,
+    "duration_ms": 10823,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 4559,
+        "cacheReadInputTokens": 28137,
+        "contextWindow": 1000000,
+        "costUSD": 0.0691941,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 873,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"reasoning\":\"The incident's failure is over-delivery: the user asked for a single-file note but received extra unrequested artifacts (a \\\"fake demo\\\"), prompting an explicit correction (\\\"That's not what I asked; the request was a one-file note\\\"). The proposed remedy is a claude-md rule instructing the assistant to match delivery exactly to a narrowly-specified scope, explicitly calling out not adding extra files/demos/scaffolding beyond what was asked, and to propose broader scope separately rather than including it unasked. This maps directly onto the failure mode observed — the assistant is instructed, in almost the same terms as the incident (files/demos), to avoid exactly the behavior that caused the complaint. It's a general standing instruction rather than a narrow technical fix, so there's some residual risk that a differently-phrased scope creep could slip past it, but for the specific pattern illustrated (adding unrequested files/demos to a narrowly scoped request) it is a close, direct match. The dedup analysis against R1-R3 is also sound: those remedies address unrelated failure types (verification-before-claiming-done, destructive deletes).\",\"verdict\":\"prevented\"}",
+    "session_id": "ef09c0e8-51ec-4656-804d-51d7c0be4f28",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "reasoning": "The incident's failure is over-delivery: the user asked for a single-file note but received extra unrequested artifacts (a \"fake demo\"), prompting an explicit correction (\"That's not what I asked; the request was a one-file note\"). The proposed remedy is a claude-md rule instructing the assistant to match delivery exactly to a narrowly-specified scope, explicitly calling out not adding extra files/demos/scaffolding beyond what was asked, and to propose broader scope separately rather than including it unasked. This maps directly onto the failure mode observed — the assistant is instructed, in almost the same terms as the incident (files/demos), to avoid exactly the behavior that caused the complaint. It's a general standing instruction rather than a narrow technical fix, so there's some residual risk that a differently-phrased scope creep could slip past it, but for the specific pattern illustrated (adding unrequested files/demos to a narrowly scoped request) it is a close, direct match. The dedup analysis against R1-R3 is also sound: those remedies address unrelated failure types (verification-before-claiming-done, destructive deletes).",
+      "verdict": "prevented"
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 111,
+    "total_cost_usd": 0.0691941,
+    "ttft_ms": 6460,
+    "ttft_stream_ms": 1382,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 4559,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 4559,
+      "cache_read_input_tokens": 28137,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 4559,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 4559,
+          "cache_read_input_tokens": 28137,
+          "input_tokens": 6768,
+          "output_tokens": 873,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 873,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "5cc75878-ebe6-4966-afcb-966ec71966ad"
+  }
+}

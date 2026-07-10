@@ -1,0 +1,233 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "643ca6f3cca5ca6e",
+    "model": "sonnet",
+    "stage": "synthesize"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are the Stage 4 Synthesist. Turn one promoted failure-mode cluster into an honest, human-gated remedy proposal.\n\nMost frustrations do not deserve a skill. Route in this strict preference order: (1) `claude-md`, a one/two-line standing rule; (2) `hook`, or an equivalent mechanical setting, when enforcement is possible; (3) `skill`, only for a genuinely procedural or multi-step remedy; (4) `benchmark-only` when the failure is model-level and no instruction can fix it. Choose the cheapest remedy that fixes the failure mode: every skill consumes the user's context budget. `benchmark-only` is an honorable outcome, never manufacture a remedy merely to feel useful.\n\nIf the only sensible remedy target is Codex-side (`AGENTS.md` or `~/.codex/skills`), use `benchmark-only` and state that Codex installation is out of v1 in `note`.\n\nThe existing-remedy digests below are numbered [R1]…[RN]. There are 4 existing-remedy digests. Your `dedup` array MUST contain exactly 4 entries, one per number, with `existing` set to exactly that token (e.g. \"R1\"). Include entries even when the verdict is clear. State `clear` or `overlap` for each. Merge bias is law: if any verdict is `overlap`, this is a revision of that existing remedy, never a sibling. Set `overlap_action.revises` to that R token.\n\nFor a `skill`, write a kebab-case name and a concrete auto-invocation description beginning `Use when ...`; this description is the trigger. The body must be substantive Markdown. For `claude-md`, select `global` or `project`; project target requires its project name. For `hook`, give a Claude Code event and a command sketch. For `benchmark-only`, explain the measurement-only outcome in `note`.\n\nThe upstream classifier deliberately over-merges. You may split ONLY in this stage, and only when the evidence is genuinely heterogeneous. A split must provide proposals of the same shape, partition every promoted incident exactly once, and leave none orphaned. Otherwise return one proposal covering the group.\n\nTAXONOMY GIST:\nignored-instruction: explicit user instruction not followed\n\nPROMOTED EVIDENCE:\nBEGIN PROMOTED EVIDENCE incident_id=1 project=aurora\nOne-liner: Agent violated explicit constraints and deviated from an established plan without acknowledgment\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nYou ignored the no-network constraint; stop changing the plan.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: You are not following the branch instruction in /work/fake-aurora.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=2 project=aurora\nOne-liner: Agent did not adhere to explicit constraints and branch instructions that were given\nPreceding request:\nYou ignored the no-network constraint; stop changing the plan.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nYou are not following the branch instruction in /work/fake-aurora.\n\nFollowing exchange:\n\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=4 project=aurora\nOne-liner: Modified protected component despite explicit instruction to leave it unchanged\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nI told you to leave the formatter alone, and it was changed.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: The fake vendor error says 'what the hell'; quote it verbatim in the fixture.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=5 project=aurora\nOne-liner: Explicit instruction not to modify a component was ignored\nPreceding request:\nI told you to leave the formatter alone, and it was changed.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nThe fake vendor error says 'what the hell'; quote it verbatim in the fixture.\n\nFollowing exchange:\n\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=8 project=cinder\nOne-liner: violated explicit constraint on which files to modify\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nFollow the instructions: this patch must not touch tests.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: The shell target drifted after the handoff.\nEND PROMOTED EVIDENCE\n\nEXISTING SKILLS (name and description only):\n- [R1] skill:$HOME/.claude/skills/fake-verify-before-claim/SKILL.md | name=fake-verify-before-claim | description=Use when a completion claim requires verification.\n\nS2S-MANAGED CLAUDE.MD BLOCKS:\n- [R2] claude-md:$HOME/.claude/CLAUDE.md#1 | # Fake Release Discipline\n\nBefore reporting a fake release as complete, run its declared verification\ncommand and report the result plainly.\n\nPENDING OR INSTALLED S2S PROPOSALS:\n- [R3] proposal #1 | type=hook | status=pending | {\"confidence\":0.62,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) governs verifying completion claims before reporting them done - unrelated to gating destructive deletions pre-execution.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline claude-md) requires running a declared verification command before reporting a fake release complete - a post-hoc reporting-accuracy rule, not a pre-execution confirmation gate for deletions.\",\"verdict\":\"clear\"}],\"evid\n- [R4] proposal #2 | type=claude-md | status=pending | {\"confidence\":0.72,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) governs verifying a completion claim (e.g. running a declared test/verification command) before reporting work done. These incidents are about acting in the wrong branch/environment, not unverified completion claims.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline) is a post-hoc reporting-accuracy rule requiring a verification command be run before declaring a release complete. It does\n\n\nYour prior draft failed local validation. Correct the SKILL.md/frontmatter, dedup, and evidence partition exactly. Specific validation failure: split must contain at least two proposals",
+    "schema": {
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "dedup": {
+          "items": {
+            "properties": {
+              "existing": {
+                "pattern": "^R[0-9]+$",
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "clear",
+                  "overlap"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "existing",
+              "verdict",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "properties": {
+              "incident_id": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "quote": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "incident_id",
+              "quote"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "failure_statement": {
+          "type": "string"
+        },
+        "overlap_action": {
+          "properties": {
+            "revises": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "revises"
+          ],
+          "type": "object"
+        },
+        "remedy_content": {
+          "type": "object"
+        },
+        "remedy_type": {
+          "enum": [
+            "claude-md",
+            "hook",
+            "skill",
+            "benchmark-only"
+          ],
+          "type": "string"
+        },
+        "routing_rationale": {
+          "type": "string"
+        },
+        "split": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "remedy_type",
+        "routing_rationale",
+        "failure_statement",
+        "remedy_content",
+        "evidence",
+        "dedup",
+        "confidence"
+      ],
+      "type": "object"
+    },
+    "stage": "synthesize"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 81291,
+    "duration_ms": 81506,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 5579,
+        "cacheReadInputTokens": 28519,
+        "contextWindow": 1000000,
+        "costUSD": 0.1796367,
+        "inputTokens": 6769,
+        "maxOutputTokens": 64000,
+        "outputTokens": 7820,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"remedy_type\":\"claude-md\",\"routing_rationale\":\"All five incidents (two duplicate-framed pairs plus one singleton) reduce to the same failure: the agent kept acting after the user had stated an explicit negative/scope constraint — no network, stay on a specific branch/environment, leave the formatter alone, don't touch tests — and the agent crossed that line without flagging it first. This is not something a single mechanical hook can catch (the forbidden action differs per session: a network call, a branch switch, an edit to one named file, an edit to a test file — no fixed path/command pattern to gate on), and it isn't a multi-step procedure worth a skill; it's a one-line standing discipline: track stated constraints and check actions against them before acting. R4 (pending claude-md proposal) was raised from incidents about the agent 'acting in the wrong branch/environment' — i.e., exactly incident 1/2's branch-instruction violation. Since the merge-bias rule requires overlap to be treated as revision rather than a sibling, and the branch/environment case is one instance of the same general 'explicit constraint ignored' pattern as the file/network cases here, this proposal revises and broadens R4 into a general explicit-constraint-compliance rule rather than adding a narrow new one. Evidence is homogeneous (every incident is the same taxonomy: ignored-instruction / constraint violation), so no split is warranted.\",\"failure_statement\":\"When the user gives an explicit negative or scope constraint (stay on a given branch/environment, no network access, do not modify a named file/component, do not touch tests), the agent proceeds to violate that constraint mid-task without flagging the conflict or asking first, forcing the user to stop and re-assert the same instruction.\",\"remedy_content\":{\"target\":\"global\",\"heading\":\"# Explicit Constraint Compliance\",\"body\":\"When the user states an explicit constraint mid-session — a branch/environment to stay on, files or components not to touch, no network access, or any other scope boundary — treat it as a hard limit for the rest of the task, not a one-time suggestion. Before editing, running a command, or switching context, check the action against every constraint stated so far. If completing the plan would require crossing one, stop and ask before proceeding instead of deviating silently and letting the user catch it after the fact.\"},\"evidence\":[{\"incident_id\":1,\"quote\":\"You ignored the no-network constraint; stop changing the plan.\"},{\"incident_id\":2,\"quote\":\"You are not following the branch instruction in /work/fake-aurora.\"},{\"incident_id\":4,\"quote\":\"I told you to leave the formatter alone, and it was changed.\"},{\"incident_id\":5,\"quote\":\"I told you to leave the formatter alone, and it was changed.\"},{\"incident_id\":8,\"quote\":\"Follow the instructions: this patch must not touch tests.\"}],\"dedup\":[{\"existing\":\"R1\",\"verdict\":\"clear\",\"reason\":\"R1 (fake-verify-before-claim) governs verifying a completion claim before reporting work done; these incidents are about violating a stated constraint mid-task, not about unverified done-claims.\"},{\"existing\":\"R2\",\"verdict\":\"clear\",\"reason\":\"R2 (Fake Release Discipline) requires running a declared verification command before reporting a release complete — a post-hoc reporting-accuracy rule, unrelated to proactively respecting stated scope/branch/network constraints during the task.\"},{\"existing\":\"R3\",\"verdict\":\"clear\",\"reason\":\"R3 is a pending hook proposal for gating destructive deletions pre-execution; these incidents involve branch/network/file-edit constraint violations, not deletion confirmation.\"},{\"existing\":\"R4\",\"verdict\":\"overlap\",\"reason\":\"R4's own dedup notes describe its source incidents as the agent 'acting in the wrong branch/environment' — the same pattern as incident 1/2's branch-instruction violation here. Since these incidents extend that same general failure (explicit constraint ignored) to files and network access as well, this proposal revises R4 into a broader explicit-constraint-compliance rule rather than standing as a sibling.\"}],\"overlap_action\":{\"revises\":\"R4\"},\"confidence\":0.6}",
+    "session_id": "e44064e7-cee4-475b-a444-3766b5489ca1",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "confidence": 0.6,
+      "dedup": [
+        {
+          "existing": "R1",
+          "reason": "R1 (fake-verify-before-claim) governs verifying a completion claim before reporting work done; these incidents are about violating a stated constraint mid-task, not about unverified done-claims.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R2",
+          "reason": "R2 (Fake Release Discipline) requires running a declared verification command before reporting a release complete — a post-hoc reporting-accuracy rule, unrelated to proactively respecting stated scope/branch/network constraints during the task.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R3",
+          "reason": "R3 is a pending hook proposal for gating destructive deletions pre-execution; these incidents involve branch/network/file-edit constraint violations, not deletion confirmation.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R4",
+          "reason": "R4's own dedup notes describe its source incidents as the agent 'acting in the wrong branch/environment' — the same pattern as incident 1/2's branch-instruction violation here. Since these incidents extend that same general failure (explicit constraint ignored) to files and network access as well, this proposal revises R4 into a broader explicit-constraint-compliance rule rather than standing as a sibling.",
+          "verdict": "overlap"
+        }
+      ],
+      "evidence": [
+        {
+          "incident_id": 1,
+          "quote": "You ignored the no-network constraint; stop changing the plan."
+        },
+        {
+          "incident_id": 2,
+          "quote": "You are not following the branch instruction in /work/fake-aurora."
+        },
+        {
+          "incident_id": 4,
+          "quote": "I told you to leave the formatter alone, and it was changed."
+        },
+        {
+          "incident_id": 5,
+          "quote": "I told you to leave the formatter alone, and it was changed."
+        },
+        {
+          "incident_id": 8,
+          "quote": "Follow the instructions: this patch must not touch tests."
+        }
+      ],
+      "failure_statement": "When the user gives an explicit negative or scope constraint (stay on a given branch/environment, no network access, do not modify a named file/component, do not touch tests), the agent proceeds to violate that constraint mid-task without flagging the conflict or asking first, forcing the user to stop and re-assert the same instruction.",
+      "overlap_action": {
+        "revises": "R4"
+      },
+      "remedy_content": {
+        "body": "When the user states an explicit constraint mid-session — a branch/environment to stay on, files or components not to touch, no network access, or any other scope boundary — treat it as a hard limit for the rest of the task, not a one-time suggestion. Before editing, running a command, or switching context, check the action against every constraint stated so far. If completing the plan would require crossing one, stop and ask before proceeding instead of deviating silently and letting the user catch it after the fact.",
+        "heading": "# Explicit Constraint Compliance",
+        "target": "global"
+      },
+      "remedy_type": "claude-md",
+      "routing_rationale": "All five incidents (two duplicate-framed pairs plus one singleton) reduce to the same failure: the agent kept acting after the user had stated an explicit negative/scope constraint — no network, stay on a specific branch/environment, leave the formatter alone, don't touch tests — and the agent crossed that line without flagging it first. This is not something a single mechanical hook can catch (the forbidden action differs per session: a network call, a branch switch, an edit to one named file, an edit to a test file — no fixed path/command pattern to gate on), and it isn't a multi-step procedure worth a skill; it's a one-line standing discipline: track stated constraints and check actions against them before acting. R4 (pending claude-md proposal) was raised from incidents about the agent 'acting in the wrong branch/environment' — i.e., exactly incident 1/2's branch-instruction violation. Since the merge-bias rule requires overlap to be treated as revision rather than a sibling, and the branch/environment case is one instance of the same general 'explicit constraint ignored' pattern as the file/network cases here, this proposal revises and broadens R4 into a general explicit-constraint-compliance rule rather than adding a narrow new one. Evidence is homogeneous (every incident is the same taxonomy: ignored-instruction / constraint violation), so no split is warranted."
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 101,
+    "total_cost_usd": 0.1796367,
+    "ttft_ms": 67683,
+    "ttft_stream_ms": 1426,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 5579,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 5579,
+      "cache_read_input_tokens": 28519,
+      "inference_geo": "not_available",
+      "input_tokens": 6769,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 5579,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 5579,
+          "cache_read_input_tokens": 28519,
+          "input_tokens": 6769,
+          "output_tokens": 7820,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 7820,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "a5a30b8d-77b3-4e25-ac18-0fc5775a265a"
+  }
+}

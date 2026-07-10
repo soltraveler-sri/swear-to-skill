@@ -1,0 +1,219 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "65f65a873a951383",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Grade the proposed remedy, not the\nwriting style of this prompt. A good remedy changes a concrete future behavior,\nis broad enough to cover the failure mode without becoming a platitude, uses a\nreal `Use when ...` trigger when it is a skill, leaks no evidence-specific\nproject nouns into the remedy text, and uses the cheapest adequate remedy type.\n\nScore every dimension from 1 (poor) to 5 (excellent). Give exactly one concise\nsentence of justification for each score. Do not infer facts that are absent.\n\nPROPOSAL:\n{\n  \"confidence\": 0.72,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"R1 (fake-verify-before-claim) is about verifying completion claims before reporting them done; this incident is about a destructive delete performed in violation of a standing user constraint, with no completion-claim verification aspect.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"R2 is a claude-md rule requiring running a fake release's verification command before claiming completion; unrelated to destructive file deletion or honoring prior constraints against touching a resource.\",\n      \"verdict\": \"clear\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 2,\n      \"quote\": \"What are you doing? You deleted the fake migration without asking.\"\n    }\n  ],\n  \"failure_statement\": \"When the user had already told the agent not to touch a given file/resource earlier in the conversation, the agent later deleted it anyway without re-checking that standing constraint or confirming first.\",\n  \"remedy_content\": {\n    \"target\": \"global\",\n    \"text\": \"## Honor Previously Stated Constraints on Destructive Actions\\n\\nIf the user has already told you not to touch something earlier in this session (e.g., \\\"don't delete X,\\\" \\\"leave the migration alone\\\"), treat that constraint as still binding for the rest of the conversation. Before any delete, overwrite, or reset action, check whether it conflicts with a constraint stated earlier — if it might, stop and confirm with the user before proceeding, even if the current request doesn't repeat the constraint.\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"The failure is a single, clear behavioral lapse — ignoring a destructive-action constraint the user had already stated earlier in the same conversation — not a multi-step procedure (rules out skill) and not something a mechanical PreToolUse hook can reliably detect, since it requires recalling and matching a natural-language constraint from earlier turns rather than checking a fixed pattern (rules out hook). A short standing rule in CLAUDE.md is the cheapest fix that directly addresses the gap: explicitly re-check prior-turn constraints before any delete/overwrite/reset action. This is distinct from both existing remedies, which govern verifying completion/release claims, not honoring previously stated do-not-touch constraints before destructive actions.\",\n  \"singleton\": true\n}\n",
+    "schema": {
+      "properties": {
+        "actionability": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "generality_without_vagueness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "leakage": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "routing_fitness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "trigger_quality": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "actionability",
+        "generality_without_vagueness",
+        "trigger_quality",
+        "leakage",
+        "routing_fitness"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 26066,
+    "duration_ms": 26262,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 4312,
+        "cacheReadInputTokens": 28513,
+        "contextWindow": 1000000,
+        "costUSD": 0.0905349,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 2387,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"actionability\":{\"score\":4,\"justification\":\"The rule gives a concrete trigger (before any delete/overwrite/reset) and a concrete action (stop and confirm if it may conflict with an earlier stated constraint), which is directly enactable even though it relies on the model's own recall rather than a mechanical check.\"},\"generality_without_vagueness\":{\"score\":4,\"justification\":\"It targets the specific pattern (destructive action conflicting with an earlier-stated do-not-touch constraint) rather than a vague 'be careful' platitude, while remaining general enough to apply to any file/resource, not just the incident's object.\"},\"trigger_quality\":{\"score\":3,\"justification\":\"As a claude-md rule rather than a skill it has no 'Use when...' header, but it does embed a clear applicability condition ('before any delete, overwrite, or reset action') that functions as a de facto trigger.\"},\"leakage\":{\"score\":2,\"justification\":\"The example clause '\\\"leave the migration alone\\\"' pulls the evidence-specific noun 'migration' from this incident's quote directly into the generic remedy text, which is exactly the kind of evidence-specific leakage the remedy should avoid.\"},\"routing_fitness\":{\"score\":4,\"justification\":\"The rationale correctly identifies that this failure hinges on recalling and matching a natural-language constraint from earlier turns, which a mechanical PreToolUse hook can't reliably do and which isn't a multi-step skill procedure, making a standing claude-md rule the cheapest adequate fix.\"}}",
+    "session_id": "b2fd2e1b-5cad-4f31-863e-b743da8ffb45",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "actionability": {
+        "justification": "The rule gives a concrete trigger (before any delete/overwrite/reset) and a concrete action (stop and confirm if it may conflict with an earlier stated constraint), which is directly enactable even though it relies on the model's own recall rather than a mechanical check.",
+        "score": 4
+      },
+      "generality_without_vagueness": {
+        "justification": "It targets the specific pattern (destructive action conflicting with an earlier-stated do-not-touch constraint) rather than a vague 'be careful' platitude, while remaining general enough to apply to any file/resource, not just the incident's object.",
+        "score": 4
+      },
+      "leakage": {
+        "justification": "The example clause '\"leave the migration alone\"' pulls the evidence-specific noun 'migration' from this incident's quote directly into the generic remedy text, which is exactly the kind of evidence-specific leakage the remedy should avoid.",
+        "score": 2
+      },
+      "routing_fitness": {
+        "justification": "The rationale correctly identifies that this failure hinges on recalling and matching a natural-language constraint from earlier turns, which a mechanical PreToolUse hook can't reliably do and which isn't a multi-step skill procedure, making a standing claude-md rule the cheapest adequate fix.",
+        "score": 4
+      },
+      "trigger_quality": {
+        "justification": "As a claude-md rule rather than a skill it has no 'Use when...' header, but it does embed a clear applicability condition ('before any delete, overwrite, or reset action') that functions as a de facto trigger.",
+        "score": 3
+      }
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 101,
+    "total_cost_usd": 0.0905349,
+    "ttft_ms": 21369,
+    "ttft_stream_ms": 2066,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 4312,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 4312,
+      "cache_read_input_tokens": 28513,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 4312,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 4312,
+          "cache_read_input_tokens": 28513,
+          "input_tokens": 6768,
+          "output_tokens": 2387,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 2387,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "596f887a-a38e-4520-93a2-1af6dba9062d"
+  }
+}
