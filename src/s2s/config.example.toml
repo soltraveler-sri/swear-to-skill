@@ -57,3 +57,8 @@ parallelism = 2
 
 [costs]
 confirm_threshold_usd = 1.0
+
+[eval]
+# "auto" selects replay when this corpus/profile has recordings, otherwise mock.
+# Live mode is intentionally CLI-only so it can never become an implicit spend.
+mode = "auto"

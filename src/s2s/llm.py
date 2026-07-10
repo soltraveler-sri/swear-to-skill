@@ -4,14 +4,16 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from dataclasses import dataclass
 from hashlib import sha256
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
 from time import perf_counter
-from typing import TypeVar
+from typing import TypeAlias, TypeVar
 
 from .config import load_config
 from .ledger import Ledger
@@ -60,6 +62,48 @@ class ClaudeProcessError(LLMError):
 
 class SchemaValidationError(ValueError):
     """Internal error explaining which JSON-schema constraint was not met."""
+
+
+@dataclass(frozen=True)
+class LLMRequest:
+    """Complete request handed to an injectable response transport.
+
+    The environment snapshot is deliberate: eval providers can audit the exact
+    HOME/S2S_HOME a real child process would inherit without spawning one.
+    """
+
+    argv: tuple[str, ...]
+    prompt: str
+    schema: Mapping[str, object]
+    model: str
+    stage: str
+    timeout_s: float
+    env: Mapping[str, str]
+
+    @property
+    def input_digest(self) -> str:
+        return _input_digest(self.prompt)
+
+
+ResponseEnvelope: TypeAlias = Mapping[str, object]
+ResponseProvider: TypeAlias = Callable[[LLMRequest], ResponseEnvelope]
+
+# Eval mode installs one provider for the duration of a synchronous pipeline run.
+# Normal production calls leave this unset and take the subprocess path below.
+response_provider: ResponseProvider | None = None
+
+
+@contextmanager
+def using_response_provider(provider: ResponseProvider | None):
+    """Temporarily replace the transport at the one model-call chokepoint."""
+
+    global response_provider
+    previous = response_provider
+    response_provider = provider
+    try:
+        yield
+    finally:
+        response_provider = previous
 
 
 @dataclass(frozen=True)
@@ -134,15 +178,25 @@ def _call_once(
     tokens = 0
     cost_usd = 0.0
     started = perf_counter()
+    deterministic_transport = bool(
+        response_provider is not None
+        and getattr(response_provider, "deterministic", False)
+    )
     try:
         try:
-            completed = subprocess.run(
-                argv,
-                input=prompt,
-                capture_output=True,
-                text=True,
-                timeout=timeout_s,
-                check=False,
+            request = LLMRequest(
+                argv=tuple(argv),
+                prompt=prompt,
+                schema=schema,
+                model=model,
+                stage=stage,
+                timeout_s=timeout_s,
+                env=dict(os.environ),
+            )
+            envelope_value = (
+                response_provider(request)
+                if response_provider is not None
+                else default_response_provider(request)
             )
         except FileNotFoundError as error:
             raise ClaudeNotFoundError(
@@ -151,18 +205,7 @@ def _call_once(
         except subprocess.TimeoutExpired as error:
             raise LLMTimeout(f"Claude CLI timed out after {timeout_s:g}s.") from error
 
-        if completed.returncode != 0:
-            stderr = completed.stderr.strip()
-            if _looks_like_auth_error(stderr):
-                raise ClaudeAuthError(
-                    "Claude CLI is not authenticated; run `claude login` and try again."
-                )
-            detail = f": {stderr}" if stderr else ""
-            raise ClaudeProcessError(
-                f"Claude CLI exited with status {completed.returncode}{detail}"
-            )
-
-        envelope = _parse_json(completed.stdout, "Claude CLI response")
+        envelope = dict(envelope_value)
         if not isinstance(envelope, dict):
             raise MalformedOutputError("Claude CLI response must be a JSON object envelope.")
         usage = envelope.get("usage", {})
@@ -183,7 +226,13 @@ def _call_once(
     except json.JSONDecodeError as error:
         raise MalformedOutputError(f"Claude returned malformed JSON: {error.msg}") from error
     finally:
-        duration_ms = round((perf_counter() - started) * 1000)
+        # Cached/mock transports are deliberately timing-stable. Live subprocess
+        # accounting retains real duration for cost and performance inspection.
+        duration_ms = (
+            0
+            if deterministic_transport
+            else round((perf_counter() - started) * 1000)
+        )
         ledger.log_run(
             stage=stage,
             model=model,
@@ -192,6 +241,34 @@ def _call_once(
             duration_ms=duration_ms,
             input_digest=_input_digest(prompt),
         )
+
+
+def default_response_provider(request: LLMRequest) -> dict[str, object]:
+    """Execute the real Claude transport and return its parsed JSON envelope."""
+
+    completed = subprocess.run(
+        list(request.argv),
+        input=request.prompt,
+        capture_output=True,
+        text=True,
+        timeout=request.timeout_s,
+        check=False,
+        env=dict(request.env),
+    )
+    if completed.returncode != 0:
+        stderr = completed.stderr.strip()
+        if _looks_like_auth_error(stderr):
+            raise ClaudeAuthError(
+                "Claude CLI is not authenticated; run `claude login` and try again."
+            )
+        detail = f": {stderr}" if stderr else ""
+        raise ClaudeProcessError(
+            f"Claude CLI exited with status {completed.returncode}{detail}"
+        )
+    parsed = _parse_json(completed.stdout, "Claude CLI response")
+    if not isinstance(parsed, dict):
+        raise MalformedOutputError("Claude CLI response must be a JSON object envelope.")
+    return parsed
 
 
 def load_prompt(name: str, version: int | str) -> tuple[str, dict[str, object]]:

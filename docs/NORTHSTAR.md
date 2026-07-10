@@ -585,6 +585,12 @@ Every eval run fabricates a disposable environment (tmp `S2S_HOME`, fake
   up front, confirm-gated, with a `--quick` subset); the trust-building run
   and the only mode that measures real model behavior.
 
+For corpus v1, `--quick` is deterministic rather than another mutable corpus
+annotation: it selects every incident in the manifest's first named cluster,
+the first remedy-worthy singleton, and the first two decoys. Known scanner
+misses remain honest misses, so the selected annotation count may exceed the
+number of downstream triage calls.
+
 ### 15.3 What gets measured
 
 Deterministic, ground-truth-scored metrics:

@@ -23,3 +23,4 @@ target/
 
 # Local outputs (meter reports, scratch analyses) — never commit transcript-derived data
 outputs/
+evalruns/

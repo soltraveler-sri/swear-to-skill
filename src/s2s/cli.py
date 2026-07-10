@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from importlib.metadata import PackageNotFoundError, version
 import json
 import os
+from pathlib import Path
 import sys
 
 
@@ -26,7 +27,7 @@ COMMAND_ISSUES = {
     "autonomy": 17,
 }
 
-IMPLEMENTED_COMMANDS = ("init", "backfill", "review")
+IMPLEMENTED_COMMANDS = ("init", "backfill", "review", "eval")
 
 
 def _distribution_version() -> str:
@@ -70,6 +71,14 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.choices["triage"].add_argument("--yes", action="store_true")
     subparsers.choices["review"].add_argument("--yes", action="store_true")
     subparsers.choices["init"].add_argument("--uninstall", action="store_true")
+    eval_parser = subparsers.choices["eval"]
+    eval_parser.add_argument("--mode", choices=("mock", "replay", "live"))
+    eval_parser.add_argument("--record", action="store_true")
+    eval_parser.add_argument("--yes", action="store_true")
+    eval_parser.add_argument("--quick", action="store_true")
+    eval_parser.add_argument("--stages")
+    eval_parser.add_argument("--keep", action="store_true")
+    eval_parser.add_argument("--corpus", type=Path)
 
     hook_parser = subparsers.add_parser("hook")
     hook_subparsers = hook_parser.add_subparsers(dest="hook_event")
@@ -417,6 +426,39 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         result = backfill()
         return 1 if result.failed else 0
+
+    if args.command == "eval":
+        from .evalrun import DEFAULT_CORPUS, EvalRunConfig, EvalRunError, parse_stages, run_eval
+
+        try:
+            config = EvalRunConfig.production_defaults(
+                corpus=args.corpus or DEFAULT_CORPUS,
+                mode=args.mode,
+                record=args.record,
+                assume_yes=args.yes,
+                quick=args.quick,
+                stages=parse_stages(args.stages),
+                keep=args.keep,
+            )
+            result = run_eval(config)
+        except (EvalRunError, ValueError, OSError) as error:
+            print(f"eval failed: {error}", file=sys.stderr)
+            return 1
+        if result.mode == "mock":
+            print("eval mode: mock — canned manifest-derived responses; scores are meaningless")
+        else:
+            print(f"eval mode: {result.mode}")
+        print(f"detections: {result.detections}")
+        print(f"triaged: {result.triaged}")
+        print(f"proposals: {result.proposals}")
+        print(f"record: {result.record_path}")
+        print(
+            f"sandbox: preserved at {result.sandbox_path}"
+            if result.sandbox_path is not None
+            else "sandbox: removed"
+        )
+        print("eval pipeline: PASS")
+        return 0
 
     if args.command == "hook":
         if args.hook_event == "session-end":
