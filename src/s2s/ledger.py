@@ -18,7 +18,7 @@ import sqlite3
 from .paths import resolve_paths
 
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 BUSY_TIMEOUT_MS = 5_000
 
 INCIDENT_STATES = (
@@ -385,10 +385,21 @@ def _migration_3(connection: sqlite3.Connection) -> None:
     )
 
 
+def _migration_4(connection: sqlite3.Connection) -> None:
+    """Add Synthesist provenance for singleton and revision proposals."""
+
+    connection.execute("ALTER TABLE proposal ADD COLUMN revises TEXT")
+    connection.execute(
+        "ALTER TABLE proposal ADD COLUMN singleton INTEGER NOT NULL DEFAULT 0 "
+        "CHECK (singleton IN (0, 1))"
+    )
+
+
 MIGRATIONS: dict[int, Callable[[sqlite3.Connection], None]] = {
     1: _migration_1,
     2: _migration_2,
     3: _migration_3,
+    4: _migration_4,
 }
 
 
@@ -804,6 +815,47 @@ class Ledger:
             for row in rows
         ]
 
+    def pending_proposal_count(self) -> int:
+        """Return proposals awaiting the Stage 5 human gate."""
+
+        return int(
+            self.connection.execute(
+                "SELECT COUNT(*) FROM proposal WHERE gate_status = 'pending'"
+            ).fetchone()[0]
+        )
+
+    def proposal_surface_rows(self) -> list[tuple[str, str]]:
+        """Return compact references for pending and installed proposal deduplication."""
+
+        rows = self.connection.execute(
+            """
+            SELECT proposal.id, proposal.remedy_type, proposal.gate_status,
+                   proposal.drafted_content, proposal.revises,
+                   EXISTS(SELECT 1 FROM remedy WHERE remedy.proposal_id = proposal.id) AS installed
+            FROM proposal
+            WHERE proposal.gate_status = 'pending'
+               OR EXISTS(SELECT 1 FROM remedy WHERE remedy.proposal_id = proposal.id)
+            ORDER BY proposal.id
+            """
+        ).fetchall()
+        return [
+            (
+                f"proposal #{int(row['id'])}",
+                " | ".join(
+                    part
+                    for part in (
+                        f"type={row['remedy_type']}",
+                        f"status={row['gate_status']}",
+                        "installed" if row["installed"] else None,
+                        f"revises={row['revises']}" if row["revises"] else None,
+                        str(row["drafted_content"])[:500],
+                    )
+                    if part
+                ),
+            )
+            for row in rows
+        ]
+
     def remedy_digest_rows(self) -> list[tuple[int, str, str, str | None]]:
         """Return the compact installed/rolled-back remedy fields for the digest."""
 
@@ -1168,6 +1220,8 @@ class Ledger:
         dedup_verdict: str,
         gate_status: str,
         install_record_ref: str | None = None,
+        revises: str | None = None,
+        singleton: bool = False,
         created_at: str | datetime | None = None,
     ) -> int:
         """Append a proposal and immutable normalized links to its evidence incidents."""
@@ -1180,8 +1234,8 @@ class Ledger:
                 """
                 INSERT INTO proposal (
                     remedy_type, drafted_content, evidence_incident_ids, dedup_verdict,
-                    gate_status, install_record_ref, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    gate_status, install_record_ref, revises, singleton, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     remedy_type,
@@ -1190,6 +1244,8 @@ class Ledger:
                     dedup_verdict,
                     gate_status,
                     install_record_ref,
+                    revises,
+                    int(singleton),
                     _timestamp(created_at),
                 ),
             )
@@ -1199,6 +1255,68 @@ class Ledger:
                 [(proposal_id, incident_id) for incident_id in evidence_ids],
             )
         return proposal_id
+
+    def create_synthesis_proposals(
+        self,
+        proposals: Sequence[dict[str, object]],
+        *,
+        promoted_incident_ids: Sequence[int],
+    ) -> list[int]:
+        """Atomically store a validated synthesis result and consume its promotion group.
+
+        Callers must fully validate split partitions before this method.  The state
+        changes are deliberately in the same transaction as proposal insertion: an
+        interrupted run remains entirely ``promoted`` and can be resumed safely.
+        """
+
+        promoted = list(dict.fromkeys(promoted_incident_ids))
+        if not promoted:
+            raise LedgerError("a synthesis group requires promoted incidents")
+        if not proposals:
+            raise LedgerError("synthesis requires at least one proposal")
+        proposal_ids: list[int] = []
+        with self._write_transaction():
+            rows = self.connection.execute(
+                f"SELECT id, state FROM incident WHERE id IN ({', '.join('?' for _ in promoted)})",
+                promoted,
+            ).fetchall()
+            if len(rows) != len(promoted) or any(row["state"] != "promoted" for row in rows):
+                raise LedgerError("synthesis incidents must all still be promoted")
+            for proposal in proposals:
+                evidence = proposal["evidence_incident_ids"]
+                if not isinstance(evidence, list) or not evidence:
+                    raise LedgerError("a synthesis proposal requires evidence")
+                cursor = self.connection.execute(
+                    """
+                    INSERT INTO proposal (
+                        remedy_type, drafted_content, evidence_incident_ids, dedup_verdict,
+                        gate_status, install_record_ref, revises, singleton, created_at
+                    ) VALUES (?, ?, ?, ?, 'pending', NULL, ?, ?, ?)
+                    """,
+                    (
+                        proposal["remedy_type"],
+                        proposal["drafted_content"],
+                        json.dumps(evidence, separators=(",", ":")),
+                        proposal["dedup_verdict"],
+                        proposal.get("revises"),
+                        int(bool(proposal.get("singleton", False))),
+                        _utc_now(),
+                    ),
+                )
+                proposal_id = int(cursor.lastrowid)
+                proposal_ids.append(proposal_id)
+                self.connection.executemany(
+                    "INSERT INTO proposal_evidence (proposal_id, incident_id) VALUES (?, ?)",
+                    [(proposal_id, incident_id) for incident_id in evidence],
+                )
+            for incident_id in promoted:
+                self._transition_in_transaction(
+                    incident_id,
+                    "in-proposal",
+                    "synthesis proposal drafted",
+                    None,
+                )
+        return proposal_ids
 
     def create_remedy(
         self,

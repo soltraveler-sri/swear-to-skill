@@ -1,0 +1,40 @@
+{
+  "type": "object",
+  "required": ["remedy_type", "routing_rationale", "failure_statement", "remedy_content", "evidence", "dedup", "confidence"],
+  "properties": {
+    "remedy_type": {"type": "string", "enum": ["claude-md", "hook", "skill", "benchmark-only"]},
+    "routing_rationale": {"type": "string"},
+    "failure_statement": {"type": "string"},
+    "remedy_content": {"type": "object"},
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["incident_id", "quote"],
+        "properties": {
+          "incident_id": {"type": "integer", "minimum": 1},
+          "quote": {"type": "string"}
+        }
+      }
+    },
+    "dedup": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["existing", "verdict", "reason"],
+        "properties": {
+          "existing": {"type": "string"},
+          "verdict": {"type": "string", "enum": ["clear", "overlap"]},
+          "reason": {"type": "string"}
+        }
+      }
+    },
+    "overlap_action": {
+      "type": "object",
+      "required": ["revises"],
+      "properties": {"revises": {"type": "string"}}
+    },
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "split": {"type": "array", "items": {"type": "object"}}
+  }
+}
