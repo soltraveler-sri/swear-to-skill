@@ -319,7 +319,7 @@ def test_unattended_llm_failure_pauses_and_writes_status_note(
     monkeypatch.setenv("S2S_HOME", str(home))
     set_autonomy_state("autonomous")
     with Ledger() as ledger:
-        incident_id = ledger.create_incident(
+        ledger.create_incident(
             source="claude-code", session_id="failure", project="project", message="bad"
         )
     events: list[str] = []

@@ -13,7 +13,7 @@ from s2s.cli import main
 from s2s.config import Auditor
 from s2s.curator import run_pass
 from s2s.gate import GateTargets, install
-from s2s.ledger import Ledger, Proposal
+from s2s.ledger import Ledger
 from s2s.synthesist import collect_remedy_surface
 
 

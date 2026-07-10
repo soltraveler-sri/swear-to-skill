@@ -38,6 +38,15 @@ def test_proposals_parser_accepts_json_output() -> None:
     assert args.command == "proposals" and args.json is True
 
 
+def test_version_comes_from_distribution_metadata_or_source_fallback(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with pytest.raises(SystemExit) as exit_status:
+        main(["--version"])
+    assert exit_status.value.code == 0
+    assert capsys.readouterr().out.strip() == "s2s 0.1.0"
+
+
 def test_approve_parser_accepts_edit() -> None:
     args = build_parser().parse_args(["approve", "12", "--edit"])
     assert args.proposal_id == 12 and args.edit is True

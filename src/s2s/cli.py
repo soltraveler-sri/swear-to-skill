@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from collections.abc import Sequence
+from importlib.metadata import PackageNotFoundError, version
 import json
 import os
 import sys
@@ -28,9 +29,21 @@ COMMAND_ISSUES = {
 IMPLEMENTED_COMMANDS = ("init", "backfill", "review")
 
 
+def _distribution_version() -> str:
+    """Read the installed distribution version, with a source-tree fallback."""
+
+    try:
+        return version("swear-to-skill")
+    except PackageNotFoundError:
+        from . import __version__
+
+        return __version__
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the zero-dependency command parser."""
     parser = argparse.ArgumentParser(prog="s2s", description="swear-to-skill")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {_distribution_version()}")
     subparsers = parser.add_subparsers(dest="command", metavar="COMMAND")
 
     for command in (*IMPLEMENTED_COMMANDS, *COMMAND_ISSUES):

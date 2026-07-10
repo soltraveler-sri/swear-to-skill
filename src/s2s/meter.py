@@ -6,6 +6,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from html import escape
+import json
 from pathlib import Path
 import re
 
@@ -65,6 +66,16 @@ class RemedyOutcome:
 
 
 @dataclass(frozen=True)
+class PendingProposal:
+    """A compact, safe-to-display view of a human-review proposal."""
+
+    proposal_id: int
+    remedy_type: str
+    confidence: float | None
+    content: str
+
+
+@dataclass(frozen=True)
 class DashboardData:
     """All durable facts needed by the static dashboard and status command."""
 
@@ -85,6 +96,7 @@ class DashboardData:
     date_end: date | None
     last_scan: str | None
     cost_totals: tuple[CostTotal, ...]
+    pending_proposals: tuple[PendingProposal, ...]
     remedy_outcomes: tuple[RemedyOutcome, ...]
     revision_proposal_count: int
 
@@ -131,9 +143,9 @@ def collect_dashboard_data(ledger: Ledger) -> DashboardData:
         )
         for remedy in ledger.installed_remedies()
     )
-    revision_proposal_count = sum(
-        proposal.proposal_kind == "revision" for proposal in ledger.pending_proposals()
-    )
+    proposals = ledger.pending_proposals()
+    pending_proposals = tuple(_pending_proposal_view(proposal) for proposal in proposals)
+    revision_proposal_count = sum(proposal.proposal_kind == "revision" for proposal in proposals)
     weekly: dict[date, list[int]] = defaultdict(lambda: [0, 0])
     models: dict[str, list[int]] = defaultdict(lambda: [0, 0])
     sources: dict[str, list[int]] = defaultdict(lambda: [0, 0])
@@ -203,6 +215,7 @@ def collect_dashboard_data(ledger: Ledger) -> DashboardData:
         date_end=max(dates) if dates else None,
         last_scan=max(scan_times)[1] if scan_times else None,
         cost_totals=cost_totals,
+        pending_proposals=pending_proposals,
         remedy_outcomes=remedy_outcomes,
         revision_proposal_count=revision_proposal_count,
     )
@@ -575,7 +588,7 @@ def _render_health(data: DashboardData) -> str:
 </div>
 <div class="split">
   {_render_cost_log(data.cost_totals)}
-  <div id="proposals-digest" class="placeholder"><strong>Proposals digest</strong><br>TODO — issue #13 will add review-ready remedies here.</div>
+  {_render_proposals_digest(data.pending_proposals)}
 </div>
 {_render_remedy_outcomes(data.remedy_outcomes)}
 """
@@ -612,3 +625,46 @@ def _render_cost_log(cost_totals: tuple[CostTotal, ...]) -> str:
     return f'''<div id="cost-log" class="table-card"><h3>Cost log</h3><table>
 <thead><tr><th>Stage</th><th>Model</th><th>Calls</th><th>Tokens</th><th>Cost</th></tr></thead>
 <tbody>{rows}</tbody></table></div>'''
+
+
+def _pending_proposal_view(proposal: object) -> PendingProposal:
+    """Extract a bounded display summary without exposing raw evidence packs."""
+
+    from .ledger import Proposal
+
+    assert isinstance(proposal, Proposal)
+    try:
+        payload = json.loads(proposal.drafted_content)
+    except json.JSONDecodeError:
+        payload = {}
+    payload = payload if isinstance(payload, dict) else {}
+    content = payload.get("remedy_content", proposal.drafted_content)
+    if isinstance(content, dict):
+        content = content.get("text") or content.get("note") or content.get("command_sketch") or ""
+    confidence = payload.get("confidence")
+    return PendingProposal(
+        proposal_id=proposal.id,
+        remedy_type=proposal.remedy_type,
+        confidence=float(confidence) if isinstance(confidence, int | float) else None,
+        content=_one_line(str(content), limit=180),
+    )
+
+
+def _render_proposals_digest(proposals: tuple[PendingProposal, ...]) -> str:
+    if not proposals:
+        body = 'No pending proposals. Run <code>s2s status</code> to check the pipeline.'
+    else:
+        rows = "".join(
+            "<li>"
+            f"<strong>#{proposal.proposal_id} · {escape(proposal.remedy_type)}</strong>"
+            f"{(' · confidence ' + format(proposal.confidence, '.2f')) if proposal.confidence is not None else ''}"
+            f"<br>{escape(proposal.content)}"
+            "</li>"
+            for proposal in proposals
+        )
+        body = f"<ul>{rows}</ul><p>Review with <code>s2s proposals</code> or <code>/s2s</code>.</p>"
+    return f'<div id="proposals-digest" class="placeholder"><strong>Proposals digest</strong><br>{body}</div>'
+
+
+def _one_line(value: str, *, limit: int) -> str:
+    return " ".join(value.split())[:limit]
