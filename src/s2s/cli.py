@@ -72,6 +72,11 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.choices["review"].add_argument("--yes", action="store_true")
     subparsers.choices["init"].add_argument("--uninstall", action="store_true")
     eval_parser = subparsers.choices["eval"]
+    eval_parser.description = "Run the synthetic eval and write a local greenlight report."
+    eval_parser.epilog = (
+        "Exit codes: 0 greenlight PASS (and mock wiring checks); 1 FAIL; 2 PARTIAL. "
+        "Mock mode never produces a greenlight verdict."
+    )
     eval_parser.add_argument("--mode", choices=("mock", "replay", "live"))
     eval_parser.add_argument("--record", action="store_true")
     eval_parser.add_argument("--yes", action="store_true")
@@ -432,6 +437,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "eval":
         from .evalrun import DEFAULT_CORPUS, EvalRunConfig, EvalRunError, parse_stages, run_eval
+        from .evalreport import EvalReportError, exit_code_for_verdict, write_report
         from .evalscore import EvalScoreError, score_files
 
         try:
@@ -453,7 +459,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 (args.corpus or DEFAULT_CORPUS) / "manifest.json",
                 thresholds_path=args.thresholds,
             )
-        except (EvalRunError, EvalScoreError, ValueError, OSError) as error:
+            report = write_report(result.record_path, thresholds_path=args.thresholds)
+        except (EvalRunError, EvalScoreError, EvalReportError, ValueError, OSError) as error:
             print(f"eval failed: {error}", file=sys.stderr)
             return 1
         if result.mode == "mock":
@@ -466,23 +473,26 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"record: {result.record_path}")
         print(f"judge results: {result.judge_results_path}")
         print(f"scores: {result.record_path.with_name('scores.json')}")
+        print(f"report: {report.html_path.resolve().as_uri()}")
         print(
             f"sandbox: preserved at {result.sandbox_path}"
             if result.sandbox_path is not None
             else "sandbox: removed"
         )
-        if scores["status"] == "withheld":
-            print("mode=mock: scores withheld")
-            print("eval pipeline: PASS")
-            return 0
-        for metric in scores["metrics"]:  # type: ignore[union-attr]
+        if scores["status"] != "withheld":
+            for metric in scores["metrics"]:  # type: ignore[union-attr]
+                print(
+                    f"{metric['metric']}: {metric['value']} {metric['op']} "
+                    f"{metric['threshold']} {'PASS' if metric['pass'] else 'FAIL'}"
+                )
+        if report.verdict == "WIRING CHECK ONLY":
+            print("greenlight: WIRING CHECK ONLY — not an evaluation")
+        else:
             print(
-                f"{metric['metric']}: {metric['value']} {metric['op']} "
-                f"{metric['threshold']} {'PASS' if metric['pass'] else 'FAIL'}"
+                f"greenlight: {report.verdict} "
+                f"(exit {exit_code_for_verdict(report.verdict)})"
             )
-        passed = scores["status"] == "pass"
-        print(f"eval pipeline: {'PASS' if passed else 'FAIL'}")
-        return 0 if passed else 1
+        return exit_code_for_verdict(report.verdict)
 
     if args.command == "hook":
         if args.hook_event == "session-end":

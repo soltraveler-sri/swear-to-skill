@@ -1,0 +1,1 @@
+{"status":"complete","proposals":[{"proposal_id":10,"counterfactual":{"incidents":[{"incident_id":1,"runs":[{"verdict":"prevented","reasoning":"The rule requires verification before the claim."}]},{"incident_id":4,"runs":[{"verdict":"prevented","reasoning":"The rule directly changes the missing check."}]}]}}]}
