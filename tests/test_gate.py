@@ -548,3 +548,30 @@ def test_approve_edit_runs_editor_and_installs_edited_content(
     assert main(["approve", str(proposal.id), "--edit"]) == 0
     assert "EDITED BY HUMAN" in targets.global_claude_md.read_text()
     assert "installed remedy" in capsys.readouterr().out
+
+
+def test_attribution_line_respects_visibility_opt_out(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    """README-documented opt-out: [visibility] attribution=false keeps bodies clean."""
+    from s2s.config import load_config
+    from s2s.gate import ATTRIBUTION_LINE_RE, _normalize_skill_install_content
+
+    home = tmp_path / "home"
+    monkeypatch.setenv("S2S_HOME", str(home))
+    home.mkdir()
+    (home / "config.toml").write_text("[visibility]\nattribution = false\n")
+    load_config.cache_clear() if hasattr(load_config, "cache_clear") else None
+
+    payload = {
+        "remedy_content": {
+            "name": "verify-first",
+            "description": "Use when a completion claim needs verification.",
+            "body_markdown": "Do the check.",
+        }
+    }
+    _normalize_skill_install_content(payload)
+    assert not any(
+        ATTRIBUTION_LINE_RE.fullmatch(line)
+        for line in str(payload["remedy_content"]["body_markdown"]).splitlines()
+    )

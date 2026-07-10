@@ -129,6 +129,7 @@ class Visibility:
     """Human-facing catalog controls from North Star §15.7."""
 
     library: bool = True
+    attribution: bool = True
 
 
 @dataclass(frozen=True)
@@ -362,6 +363,7 @@ def load_config(config_path: Path | None = None) -> Config:
         ),
         visibility=Visibility(
             library=_bool(visibility, "library", defaults.visibility.library),
+            attribution=_bool(visibility, "attribution", defaults.visibility.attribution),
         ),
         eval=EvalSettings(
             mode=(
