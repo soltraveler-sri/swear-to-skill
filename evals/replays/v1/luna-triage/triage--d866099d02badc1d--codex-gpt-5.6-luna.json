@@ -71,8 +71,8 @@
       "authentic": true,
       "confidence": 0.99,
       "label": "ignored-instruction",
-      "one_liner": "Changed something after being explicitly told to leave it untouched.",
-      "reason": "The user explicitly says the agent violated a prior instruction by changing something they were told to leave alone.",
+      "one_liner": "An explicit instruction was not followed.",
+      "reason": "The user directly reports that the agent violated an explicit instruction to leave something unchanged.",
       "severity": 2
     }
   }

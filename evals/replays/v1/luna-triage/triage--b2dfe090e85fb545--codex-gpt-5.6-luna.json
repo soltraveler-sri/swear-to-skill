@@ -71,8 +71,8 @@
       "authentic": true,
       "confidence": 0.98,
       "label": "ignored-instruction",
-      "one_liner": "An explicit change constraint was not being followed.",
-      "reason": "The user directly addresses the agent and reiterates an explicit constraint that the patch must not modify tests.",
+      "one_liner": "Failed to follow an explicit file-scope constraint.",
+      "reason": "The user directly corrects the agent for violating an explicit scope constraint: the patch must not modify tests.",
       "severity": 2
     }
   }

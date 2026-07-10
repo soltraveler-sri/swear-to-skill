@@ -71,8 +71,8 @@
       "authentic": true,
       "confidence": 0.99,
       "label": "misread-request",
-      "one_liner": "The agent addressed a different problem than the one requested.",
-      "reason": "The user directly criticizes the agent for addressing the wrong task and explicitly states the requested scope.",
+      "one_liner": "The agent addressed the wrong task instead of the requested outcome.",
+      "reason": "The user directly criticizes the agent for solving a different problem than requested; the message is not quoted, third-party-directed, self-directed, or playful.",
       "severity": 2
     }
   }

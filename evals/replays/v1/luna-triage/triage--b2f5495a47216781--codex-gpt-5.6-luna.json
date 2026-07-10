@@ -69,10 +69,10 @@
   "response": {
     "result": {
       "authentic": false,
-      "confidence": 0.98,
+      "confidence": 0.99,
       "label": "other",
-      "one_liner": "Mild annoyance is not directed at the agent.",
-      "reason": "The message expresses mild annoyance about a draft theme, not frustration directed at the agent's behavior.",
+      "one_liner": "Annoyance is directed at the work artifact rather than the agent.",
+      "reason": "The message expresses annoyance about a draft theme, not frustration at the agent's behavior.",
       "severity": 1
     }
   }

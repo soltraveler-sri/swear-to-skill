@@ -69,10 +69,10 @@
   "response": {
     "result": {
       "authentic": false,
-      "confidence": 0.98,
+      "confidence": 0.96,
       "label": "other",
-      "one_liner": "No clear frustration directed at the agent.",
-      "reason": "The message criticizes a test/report context, not the agent's behavior, and provides no explicit agent failure.",
+      "one_liner": "Expresses skepticism about an external testing artifact rather than agent frustration.",
+      "reason": "The message targets a fake test command/reporting artifact, not clearly the agent's behavior.",
       "severity": 1
     }
   }

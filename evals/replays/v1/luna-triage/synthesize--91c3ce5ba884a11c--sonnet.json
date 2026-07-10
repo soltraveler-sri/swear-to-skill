@@ -1,0 +1,227 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "91c3ce5ba884a11c",
+    "model": "sonnet",
+    "stage": "synthesize"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are the Stage 4 Synthesist. Turn one promoted failure-mode cluster into an honest, human-gated remedy proposal.\n\nMost frustrations do not deserve a skill. Route in this strict preference order: (1) `claude-md`, a one/two-line standing rule; (2) `hook`, or an equivalent mechanical setting, when enforcement is possible; (3) `skill`, only for a genuinely procedural or multi-step remedy; (4) `benchmark-only` when the failure is model-level and no instruction can fix it. Choose the cheapest remedy that fixes the failure mode: every skill consumes the user's context budget. `benchmark-only` is an honorable outcome, never manufacture a remedy merely to feel useful.\n\nIf the only sensible remedy target is Codex-side (`AGENTS.md` or `~/.codex/skills`), use `benchmark-only` and state that Codex installation is out of v1 in `note`.\n\nThe existing-remedy digests below are numbered [R1]…[RN]. There are 6 existing-remedy digests. Your `dedup` array MUST contain exactly 6 entries, one per number, with `existing` set to exactly that token (e.g. \"R1\"). Include entries even when the verdict is clear. State `clear` or `overlap` for each. Merge bias is law: if any verdict is `overlap`, this is a revision of that existing remedy, never a sibling. Set `overlap_action.revises` to that R token.\n\nFor a `skill`, write a kebab-case name and a concrete auto-invocation description beginning `Use when ...`; this description is the trigger. The body must be substantive Markdown. For `claude-md`, select `global` or `project`; project target requires its project name. For `hook`, give a Claude Code event and a command sketch. For `benchmark-only`, explain the measurement-only outcome in `note`.\n\nThe upstream classifier deliberately over-merges. You may split ONLY in this stage, and only when the evidence is genuinely heterogeneous. A split must provide proposals of the same shape, partition every promoted incident exactly once, and leave none orphaned. Otherwise return one proposal covering the group.\n\nTAXONOMY GIST:\nscope-deviation: did more or less than asked\n\nPROMOTED EVIDENCE:\nBEGIN PROMOTED EVIDENCE incident_id=26 project=lantern\nOne-liner: Left out the only requested piece of output.\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nYou missed the only requested field in the payload.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: Write a playful banner: 'this is a mess' for the fake festival page.\nEND PROMOTED EVIDENCE\n\nEXISTING SKILLS (name and description only):\n- [R1] skill:$HOME/.claude/skills/fake-verify-before-claim/SKILL.md | name=fake-verify-before-claim | description=Use when a completion claim requires verification.\n\nS2S-MANAGED CLAUDE.MD BLOCKS:\n- [R2] claude-md:$HOME/.claude/CLAUDE.md#1 | # Fake Release Discipline\n\nBefore reporting a fake release as complete, run its declared verification\ncommand and report the result plainly.\n\nPENDING OR INSTALLED S2S PROPOSALS:\n- [R3] proposal #1 | type=claude-md | status=pending | {\"confidence\":0.55,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) targets verifying completion claims before reporting them done \\u2014 an honesty/verification failure. This incident is about unauthorized deletion of content despite a stated constraint, a distinct destructive-action failure mode.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline) is about running a declared verification command before reporting a fake release complete \\u2014 again a ve\n- [R4] proposal #2 | type=claude-md | status=pending | {\"confidence\":0.6,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) targets verifying completion claims (e.g. running declared test commands) before reporting done \\u2014 an honesty/verification-of-result failure. This cluster is about acting in the wrong branch/workspace in the first place, a distinct environment-state failure, not a verification-of-claim failure.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline) is about running a declared verification\n- [R5] proposal #3 | type=claude-md | status=pending | {\"confidence\":0.6,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) addresses verifying completion claims before reporting done \\u2014 an honesty/verification-of-result failure. These incidents are about the agent solving/delivering the wrong scope in the first place, a distinct request-comprehension failure, not a verification gap.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline) requires running a declared verification command before reporting a relea\n- [R6] proposal #4 | type=claude-md | status=pending | revises=claude-md:$HOME/.claude/CLAUDE.md#1 | {\"confidence\":0.82,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim skill) triggers on completion claims requiring verification \\u2014 exactly this incident's pattern (declaring a migration done while checks fail). Overlaps in failure mode, but the merge target is R2 since a claude-md rule is the cheaper existing remedy for this same pattern; not adopting R1's skill format.\",\"verdict\":\"overlap\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline) already requires running the \n",
+    "schema": {
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "dedup": {
+          "items": {
+            "properties": {
+              "existing": {
+                "pattern": "^R[0-9]+$",
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "clear",
+                  "overlap"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "existing",
+              "verdict",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "properties": {
+              "incident_id": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "quote": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "incident_id",
+              "quote"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "failure_statement": {
+          "type": "string"
+        },
+        "overlap_action": {
+          "properties": {
+            "revises": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "revises"
+          ],
+          "type": "object"
+        },
+        "remedy_content": {
+          "type": "object"
+        },
+        "remedy_type": {
+          "enum": [
+            "claude-md",
+            "hook",
+            "skill",
+            "benchmark-only"
+          ],
+          "type": "string"
+        },
+        "routing_rationale": {
+          "type": "string"
+        },
+        "split": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "remedy_type",
+        "routing_rationale",
+        "failure_statement",
+        "remedy_content",
+        "evidence",
+        "dedup",
+        "confidence"
+      ],
+      "type": "object"
+    },
+    "stage": "synthesize"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 53858,
+    "duration_ms": 54050,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 5272,
+        "cacheReadInputTokens": 28517,
+        "contextWindow": 1000000,
+        "costUSD": 0.1360611,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 5038,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"remedy_type\":\"claude-md\",\"routing_rationale\":\"The failure is a semantic completeness check (\\\"does this output contain the one field the user asked for\\\") — not something a deterministic hook can verify (no reliable pattern-match for arbitrary \\\"requested field\\\" across payload shapes), and not procedural/multi-step enough to warrant a skill. A short standing instruction to cross-check generated output against the literal request before returning it is the cheapest fix that addresses the mechanism (skipping the verification step), so claude-md is the right tier. Because R5 already covers \\\"delivering the wrong scope / request-comprehension failure\\\" from prior evidence, this incident is additional support for that same failure mode rather than a new one — merge bias makes this a revision of R5, not a sibling proposal.\",\"failure_statement\":\"Agent returns generated output (a payload, file, or structured response) that omits a field or item the user explicitly and specifically requested, even when the request named only that one thing — a scope-deviation by doing less than asked.\",\"remedy_content\":{\"target\":\"global\",\"heading\":\"# Request Scope Completeness\",\"body\":\"Before returning generated output (a payload, file, or structured response), re-read the user's request and confirm every explicitly named field or item is actually present in what you produced — this matters most when the request names only one or a few things, where a single omission is a total miss, not a minor gap. If something requested is missing, add it before presenting the output as complete; do not let an unrelated tangent in the same output (e.g. bonus content) substitute for the thing that was actually asked for.\"},\"evidence\":[{\"incident_id\":26,\"quote\":\"You missed the only requested field in the payload.\"}],\"dedup\":[{\"existing\":\"R1\",\"verdict\":\"clear\",\"reason\":\"R1 (fake-verify-before-claim) triggers on completion claims needing verification via a declared verification command/process. This incident is about output content missing a requested field, not about verifying a claim of task completion.\"},{\"existing\":\"R2\",\"verdict\":\"clear\",\"reason\":\"R2 (Fake Release Discipline) requires running a declared verification command before reporting a fake release complete. Unrelated to a payload omitting a requested field.\"},{\"existing\":\"R3\",\"verdict\":\"clear\",\"reason\":\"R3's own dedup notes describe its incidents as unauthorized deletion of content despite a stated constraint — a destructive-action failure, distinct from this incident's under-delivery of requested output.\"},{\"existing\":\"R4\",\"verdict\":\"clear\",\"reason\":\"R4's own dedup notes describe its incidents as acting in the wrong branch/workspace — an environment-state failure, distinct from omitting a requested output field.\"},{\"existing\":\"R5\",\"verdict\":\"overlap\",\"reason\":\"R5's own dedup reasoning characterizes its incidents as the agent 'delivering the wrong scope in the first place, a distinct request-comprehension failure' — that is precisely this incident: the agent delivered a payload missing the one requested field, a request-comprehension/scope failure. Treating this as additional evidence for R5 rather than a new sibling.\"},{\"existing\":\"R6\",\"verdict\":\"clear\",\"reason\":\"R6 revises R2 and is specifically about running migration verification checks before declaring a migration done. Unrelated to a payload omitting a requested field.\"}],\"overlap_action\":{\"revises\":\"R5\"},\"confidence\":0.55}",
+    "session_id": "b76452cb-b05d-49fe-aa1f-91010ad72c82",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "confidence": 0.55,
+      "dedup": [
+        {
+          "existing": "R1",
+          "reason": "R1 (fake-verify-before-claim) triggers on completion claims needing verification via a declared verification command/process. This incident is about output content missing a requested field, not about verifying a claim of task completion.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R2",
+          "reason": "R2 (Fake Release Discipline) requires running a declared verification command before reporting a fake release complete. Unrelated to a payload omitting a requested field.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R3",
+          "reason": "R3's own dedup notes describe its incidents as unauthorized deletion of content despite a stated constraint — a destructive-action failure, distinct from this incident's under-delivery of requested output.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R4",
+          "reason": "R4's own dedup notes describe its incidents as acting in the wrong branch/workspace — an environment-state failure, distinct from omitting a requested output field.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R5",
+          "reason": "R5's own dedup reasoning characterizes its incidents as the agent 'delivering the wrong scope in the first place, a distinct request-comprehension failure' — that is precisely this incident: the agent delivered a payload missing the one requested field, a request-comprehension/scope failure. Treating this as additional evidence for R5 rather than a new sibling.",
+          "verdict": "overlap"
+        },
+        {
+          "existing": "R6",
+          "reason": "R6 revises R2 and is specifically about running migration verification checks before declaring a migration done. Unrelated to a payload omitting a requested field.",
+          "verdict": "clear"
+        }
+      ],
+      "evidence": [
+        {
+          "incident_id": 26,
+          "quote": "You missed the only requested field in the payload."
+        }
+      ],
+      "failure_statement": "Agent returns generated output (a payload, file, or structured response) that omits a field or item the user explicitly and specifically requested, even when the request named only that one thing — a scope-deviation by doing less than asked.",
+      "overlap_action": {
+        "revises": "R5"
+      },
+      "remedy_content": {
+        "body": "Before returning generated output (a payload, file, or structured response), re-read the user's request and confirm every explicitly named field or item is actually present in what you produced — this matters most when the request names only one or a few things, where a single omission is a total miss, not a minor gap. If something requested is missing, add it before presenting the output as complete; do not let an unrelated tangent in the same output (e.g. bonus content) substitute for the thing that was actually asked for.",
+        "heading": "# Request Scope Completeness",
+        "target": "global"
+      },
+      "remedy_type": "claude-md",
+      "routing_rationale": "The failure is a semantic completeness check (\"does this output contain the one field the user asked for\") — not something a deterministic hook can verify (no reliable pattern-match for arbitrary \"requested field\" across payload shapes), and not procedural/multi-step enough to warrant a skill. A short standing instruction to cross-check generated output against the literal request before returning it is the cheapest fix that addresses the mechanism (skipping the verification step), so claude-md is the right tier. Because R5 already covers \"delivering the wrong scope / request-comprehension failure\" from prior evidence, this incident is additional support for that same failure mode rather than a new one — merge bias makes this a revision of R5, not a sibling proposal."
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 98,
+    "total_cost_usd": 0.1360611,
+    "ttft_ms": 43313,
+    "ttft_stream_ms": 1692,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 5272,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 5272,
+      "cache_read_input_tokens": 28517,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 5272,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 5272,
+          "cache_read_input_tokens": 28517,
+          "input_tokens": 6768,
+          "output_tokens": 5038,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 5038,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "f7a6ea02-10e9-4f9e-ac56-c76897623caf"
+  }
+}

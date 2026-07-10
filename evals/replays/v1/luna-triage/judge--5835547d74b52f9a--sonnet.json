@@ -1,0 +1,99 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "5835547d74b52f9a",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Given one proposed remedy and one\nplanted incident context pack, decide whether the remedy plausibly would have\nprevented this incident had it been active beforehand. Return `prevented` only\nwhen the remedy directly addresses the failure, `partially` when it would help\nbut leaves a material gap, and `no` otherwise. Give concise evidence-based\nreasoning without inventing facts.\n\nPROPOSAL:\n{\n  \"confidence\": 0.6,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"R1 (fake-verify-before-claim) targets verifying completion claims (e.g. running declared test commands) before reporting done — an honesty/verification-of-result failure. This cluster is about acting in the wrong branch/workspace in the first place, a distinct environment-state failure, not a verification-of-claim failure.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"R2 (Fake Release Discipline) is about running a declared verification command before reporting a release complete — same verification-before-claiming category as R1. This cluster's incidents involve no release-completion claims, only wrong branch/workspace usage.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R3\",\n      \"reason\": \"R3 (pending claude-md proposal) addresses unauthorized deletion of content despite a stated constraint — a destructive-action failure mode. This cluster's incidents involve no deletion or destructive action, only operating in an incorrect branch/workspace/directory relative to what the user specified.\",\n      \"verdict\": \"clear\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 16,\n      \"quote\": \"Why are you doing this from the stale fake branch?\"\n    },\n    {\n      \"incident_id\": 22,\n      \"quote\": \"You did not use the /work/fake-lantern workspace requested.\"\n    },\n    {\n      \"incident_id\": 23,\n      \"quote\": \"You did not use the /work/fake-lantern workspace requested.\"\n    },\n    {\n      \"incident_id\": 6,\n      \"quote\": \"Read the prompt: this is the wrong fake environment.\"\n    },\n    {\n      \"incident_id\": 7,\n      \"quote\": \"Read the prompt: this is the wrong fake environment.\"\n    }\n  ],\n  \"failure_statement\": \"The agent began or continued work in an incorrect environment — a stale branch, a default/cached directory, or the wrong workspace path — instead of the specific branch or workspace the user had named, without first checking current state (pwd/branch) against the user's instruction.\",\n  \"remedy_content\": {\n    \"target\": \"global\",\n    \"text\": \"# Verify Working Environment Before Acting\\n\\nWhen a user names a specific branch or workspace path (e.g. \\\"use /work/foo\\\", \\\"on the release branch\\\"), confirm your current state matches it (`pwd`, `git branch --show-current`, etc.) before making changes. If it doesn't match, switch to the named one or ask — never proceed on a stale, cached, or default environment and assume it's correct.\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"All five promoted incidents (harbor#16, lantern#22/23, aurora#6/7) share one root cause: the agent acted (or claimed to act) using the wrong branch, directory, or workspace path instead of the one the user explicitly named (\\\"stale fake branch\\\", \\\"/work/fake-lantern workspace\\\", \\\"wrong fake environment\\\"). This is a single failure mode, not heterogeneous evidence, so no split is warranted. A hook is not viable because there is no generic mechanical check for \\\"is this the environment the user meant\\\" — the correct branch/workspace name is contextual to each request, not a fixed pattern a script can verify. It is not procedural/multi-step enough to justify a skill (no branching logic, tool sequence, or multi-step workflow — just a habit of checking state before acting). A short standing instruction to confirm current working context (pwd/branch/workspace) against what the user specified, before making changes, is the cheapest fix and directly targets the failure. None of the three existing remedies address environment/workspace verification (R1 and R2 are about verifying completion claims via test/release commands; R3 is about unauthorized destructive deletion despite a stated constraint), so this is a new global rule, not a revision.\",\n  \"singleton\": false\n}\n\nINCIDENT CONTEXT PACK:\n{\n  \"agent_activity_digest\": \"Assistant: Synthetic acknowledgement.\",\n  \"following_exchange\": \"\",\n  \"frustrated_message\": \"You did not use the /work/fake-lantern workspace requested.\",\n  \"metadata\": {\n    \"cwd\": \"/work/fake-lantern\",\n    \"git_branch\": \"feat/fake-eval\",\n    \"project\": \"lantern\",\n    \"session_id\": \"claude-lantern-01\",\n    \"timestamp\": \"2026-07-09T13:32:00Z\"\n  },\n  \"preceding_request\": \"This is not what I asked; a rewrite was not requested.\"\n}\n",
+    "schema": {
+      "properties": {
+        "reasoning": {
+          "type": "string"
+        },
+        "verdict": {
+          "enum": [
+            "prevented",
+            "partially",
+            "no"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "verdict",
+        "reasoning"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 36752,
+    "duration_ms": 36930,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 4985,
+        "cacheReadInputTokens": 28135,
+        "contextWindow": 1000000,
+        "costUSD": 0.11139450000000001,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 3516,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"reasoning\":\"The incident pack's frustrated_message (\\\"You did not use the /work/fake-lantern workspace requested.\\\") matches verbatim one of the evidence quotes cited for this exact remedy cluster (incident 22/23, project \\\"lantern\\\"), so on its face this looks like a direct hit for the proposed remedy.\\n\\nHowever, two details undercut full confidence:\\n1. The pack's own metadata already shows `cwd: \\\"/work/fake-lantern\\\"` and a branch matching the session's stated project — i.e., by the mechanical check the remedy proposes (pwd/git branch --show-current), the agent's location already matches what was \\\"requested.\\\" A remedy whose entire mechanism is \\\"confirm pwd/branch match the named workspace before acting\\\" would not have flagged anything, since that check would have passed. This suggests the actual failure mode here may not be *being in the wrong directory* but something subtler (e.g., not substantively engaging with files already present there, using stale/cached context despite a correct cwd) — a gap the proposed check does not close.\\n2. The preceding_request (\\\"This is not what I asked; a rewrite was not requested\\\") reads as a scope/instruction-following complaint (unrequested rewrite), not an environment-location complaint, further suggesting the frustration may be about behavior within the workspace rather than which workspace was used.\\n\\nGiven the remedy's mechanism directly matches the surface quote but the corroborating metadata weakens the case that a pwd/branch check alone would have caught this particular incident's root cause, I judge this as a partial rather than a clean prevention.\",\"verdict\":\"partially\"}",
+    "session_id": "67a521ea-0367-45f9-acb9-a0934dfb2ab7",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "reasoning": "The incident pack's frustrated_message (\"You did not use the /work/fake-lantern workspace requested.\") matches verbatim one of the evidence quotes cited for this exact remedy cluster (incident 22/23, project \"lantern\"), so on its face this looks like a direct hit for the proposed remedy.\n\nHowever, two details undercut full confidence:\n1. The pack's own metadata already shows `cwd: \"/work/fake-lantern\"` and a branch matching the session's stated project — i.e., by the mechanical check the remedy proposes (pwd/git branch --show-current), the agent's location already matches what was \"requested.\" A remedy whose entire mechanism is \"confirm pwd/branch match the named workspace before acting\" would not have flagged anything, since that check would have passed. This suggests the actual failure mode here may not be *being in the wrong directory* but something subtler (e.g., not substantively engaging with files already present there, using stale/cached context despite a correct cwd) — a gap the proposed check does not close.\n2. The preceding_request (\"This is not what I asked; a rewrite was not requested\") reads as a scope/instruction-following complaint (unrequested rewrite), not an environment-location complaint, further suggesting the frustration may be about behavior within the workspace rather than which workspace was used.\n\nGiven the remedy's mechanism directly matches the surface quote but the corroborating metadata weakens the case that a pwd/branch check alone would have caught this particular incident's root cause, I judge this as a partial rather than a clean prevention.",
+      "verdict": "partially"
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 98,
+    "total_cost_usd": 0.11139450000000001,
+    "ttft_ms": 31512,
+    "ttft_stream_ms": 1211,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 4985,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 4985,
+      "cache_read_input_tokens": 28135,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 4985,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 4985,
+          "cache_read_input_tokens": 28135,
+          "input_tokens": 6768,
+          "output_tokens": 3516,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 3516,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "57ae831f-78b2-4f8f-b34d-d12d80991cd0"
+  }
+}

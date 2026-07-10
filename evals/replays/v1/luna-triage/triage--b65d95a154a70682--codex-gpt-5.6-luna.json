@@ -71,8 +71,8 @@
       "authentic": false,
       "confidence": 0.99,
       "label": "other",
-      "one_liner": "Playful self-directed frustration was misclassified as an agent failure.",
-      "reason": "The message is explicitly a joke, quotes a hypothetical future speaker, and expresses self-directed annoyance rather than frustration at the agent.",
+      "one_liner": "Playful self-directed annoyance is not an agent incident.",
+      "reason": "The message is explicitly framed as a joke about the user's future self forgetting something, not frustration at the agent's behavior.",
       "severity": 1
     }
   }

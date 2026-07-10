@@ -1,0 +1,181 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "e7d2a67a360cc81e",
+    "model": "sonnet",
+    "stage": "curate"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are the Stage 3 Taxonomy Gardener, the capable judgment tier that keeps a closed-set triage taxonomy useful without fragmenting it.\n\nAttaching two similar-but-not-identical items is a cheap, recoverable error; keeping them apart when related is silent and fatal. When uncertain, attach. To keep items apart you must state why one remedy could not cover both.\n\nKeeping two labels separate requires an articulated reason one remedy could not cover both.\n\nYou have exactly two authorities. First, you may propose one new canonical label only when at least three supplied `other` incidents form one coherent, recurring failure mode. The proposal must use a kebab-case name, a durable gist, 2-3 representative examples, and at least three evidence incident IDs from the supplied `other` evidence. Do not invent an incident ID. Second, you may merge existing canonical labels when one remedy could plausibly cover both; name the surviving label, the absorbed label, and the reason. Never merge `other`.\n\nYou do not have authority to split labels, create a sibling label for a subtle distinction, reassign individual canonical-label incidents, or make up a label outside `propose_label`. If no action is justified, return `propose_label: null` and an empty `merge_labels` array.\n\nOTHER INCIDENT EVIDENCE (all non-terminal incidents currently labelled `other`):\n- incident_id=21 | one_liner=Required validation was skipped.\n\nLABEL DISTRIBUTION STATS:\n- destructive-action: count=1 share=2.8%\n- environment-mismanagement: count=5 share=13.9%\n- ignored-instruction: count=6 share=16.7%\n- misread-request: count=2 share=5.6%\n- other: count=14 share=38.9%\n- premature-completion-claim: count=1 share=2.8%\n- scope-deviation: count=1 share=2.8%\n- shallow-investigation: count=1 share=2.8%\n- unverified-change: count=5 share=13.9%\n- active_cluster_count=9\n- singleton_ratio=44.4%\n- other_share_open=38.9%\n",
+    "schema": {
+      "properties": {
+        "merge_labels": {
+          "items": {
+            "properties": {
+              "absorbed": {
+                "enum": [
+                  "premature-completion-claim",
+                  "unverified-change",
+                  "ignored-instruction",
+                  "forgotten-context",
+                  "scope-deviation",
+                  "hallucinated-interface",
+                  "destructive-action",
+                  "repeated-after-correction",
+                  "shallow-investigation",
+                  "misread-request",
+                  "overengineering",
+                  "environment-mismanagement",
+                  "house-rules-violation",
+                  "tool-misuse",
+                  "communication-failure"
+                ],
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "survivor": {
+                "enum": [
+                  "premature-completion-claim",
+                  "unverified-change",
+                  "ignored-instruction",
+                  "forgotten-context",
+                  "scope-deviation",
+                  "hallucinated-interface",
+                  "destructive-action",
+                  "repeated-after-correction",
+                  "shallow-investigation",
+                  "misread-request",
+                  "overengineering",
+                  "environment-mismanagement",
+                  "house-rules-violation",
+                  "tool-misuse",
+                  "communication-failure"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "survivor",
+              "absorbed",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "propose_label": {
+          "properties": {
+            "evidence_incident_ids": {
+              "items": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "minItems": 3,
+              "type": "array"
+            },
+            "examples": {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 3,
+              "minItems": 2,
+              "type": "array"
+            },
+            "gist": {
+              "type": "string"
+            },
+            "name": {
+              "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "gist",
+            "examples",
+            "evidence_incident_ids"
+          ],
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "propose_label",
+        "merge_labels"
+      ],
+      "type": "object"
+    },
+    "stage": "curate"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 5838,
+    "duration_ms": 6032,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 0,
+        "cacheReadInputTokens": 32648,
+        "contextWindow": 1000000,
+        "costUSD": 0.0358584,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 384,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"propose_label\":null,\"merge_labels\":[]}",
+    "session_id": "9ce2787a-6d72-4113-9134-4582aacdb28c",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "merge_labels": [],
+      "propose_label": null
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 107,
+    "total_cost_usd": 0.0358584,
+    "ttft_ms": 5905,
+    "ttft_stream_ms": 2123,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 32648,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 0,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 32648,
+          "input_tokens": 6768,
+          "output_tokens": 384,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 384,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "ae8bcbbc-806a-43e5-b1cf-8470f7cebaca"
+  }
+}

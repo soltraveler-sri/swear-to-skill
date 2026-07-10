@@ -71,8 +71,8 @@
       "authentic": true,
       "confidence": 0.99,
       "label": "unverified-change",
-      "one_liner": "Claimed completion before performing the required validation.",
-      "reason": "The user directly criticizes the agent for claiming a fix before running checks.",
+      "one_liner": "Claimed a fix before running the required verification.",
+      "reason": "The user directly criticizes the agent for claiming a fix before verification ran.",
       "severity": 2
     }
   }

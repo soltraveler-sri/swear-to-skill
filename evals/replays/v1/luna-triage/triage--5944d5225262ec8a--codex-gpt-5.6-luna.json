@@ -71,8 +71,8 @@
       "authentic": true,
       "confidence": 0.99,
       "label": "unverified-change",
-      "one_liner": "A change was presented without executing the required verification.",
-      "reason": "The user directly criticizes the agent for claiming or presenting a fix without running the required test command.",
+      "one_liner": "Claimed a fix without running the required verification.",
+      "reason": "The user directly criticizes the agent for claiming or presenting an unverified fix without running the test command.",
       "severity": 2
     }
   }

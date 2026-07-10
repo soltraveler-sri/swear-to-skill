@@ -71,8 +71,8 @@
       "authentic": false,
       "confidence": 0.99,
       "label": "other",
-      "one_liner": "Quoted third-party wording is not frustration directed at the agent.",
-      "reason": "The phrase is quoted as part of a fixture instruction and refers to a fake vendor error, not the agent's behavior.",
+      "one_liner": "The message requests verbatim content rather than expressing frustration at the agent.",
+      "reason": "The message is an instruction about quoting a third-party error, not frustration directed at the agent.",
       "severity": 1
     }
   }

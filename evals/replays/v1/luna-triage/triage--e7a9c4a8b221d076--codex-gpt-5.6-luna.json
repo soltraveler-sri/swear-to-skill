@@ -72,7 +72,7 @@
       "confidence": 0.98,
       "label": "ignored-instruction",
       "one_liner": "Failed to follow an explicit workflow requirement.",
-      "reason": "The message directs the agent to follow an explicit stated requirement that was missed.",
+      "reason": "The message directly criticizes the agent for failing to follow an explicit policy requirement.",
       "severity": 2
     }
   }

@@ -69,10 +69,10 @@
   "response": {
     "result": {
       "authentic": true,
-      "confidence": 0.96,
+      "confidence": 0.94,
       "label": "environment-mismanagement",
-      "one_liner": "Used the wrong environment instead of applying the requested small change.",
-      "reason": "The user directly expresses frustration with the agent's behavior, specifically that it used the wrong environment and failed to make the requested small change.",
+      "one_liner": "Worked in the wrong environment instead of applying the requested change.",
+      "reason": "The user directly criticizes the agent for failing to apply the specified small change and using the wrong environment; this is genuine frustration at agent behavior.",
       "severity": 2
     }
   }

@@ -71,8 +71,8 @@
       "authentic": true,
       "confidence": 0.99,
       "label": "premature-completion-claim",
-      "one_liner": "Claimed completion despite the resulting checks still failing.",
-      "reason": "The user directly criticizes the agent for claiming completion while checks still fail.",
+      "one_liner": "Declared work complete despite unresolved failing checks.",
+      "reason": "The user directly criticizes the agent for declaring completion while checks still fail.",
       "severity": 2
     }
   }

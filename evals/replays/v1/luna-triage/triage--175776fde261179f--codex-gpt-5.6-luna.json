@@ -71,8 +71,8 @@
       "authentic": false,
       "confidence": 0.98,
       "label": "other",
-      "one_liner": "Reported third-party wording is mistaken for agent-directed frustration.",
-      "reason": "The message reports a label used by a fake monitoring bot and asks to preserve it; it does not express frustration at the agent.",
+      "one_liner": "The message targets an external tool rather than the agent.",
+      "reason": "The message is about a monitoring bot's labeling, not frustration directed at the agent.",
       "severity": 1
     }
   }

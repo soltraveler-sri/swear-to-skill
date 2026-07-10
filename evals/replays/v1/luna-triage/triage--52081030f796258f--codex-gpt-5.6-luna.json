@@ -69,10 +69,10 @@
   "response": {
     "result": {
       "authentic": true,
-      "confidence": 0.98,
-      "label": "scope-deviation",
-      "one_liner": "Produced work outside the requested one-file scope.",
-      "reason": "The user directly expresses frustration with the agent for exceeding or missing the requested one-file scope; the later quoted joke is explicitly self-directed and non-authentic but does not change this incident.",
+      "confidence": 0.99,
+      "label": "misread-request",
+      "one_liner": "Delivered a different outcome than the one requested.",
+      "reason": "The user directly expresses frustration at the agent for delivering something different from the requested one-file note.",
       "severity": 2
     }
   }

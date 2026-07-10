@@ -71,8 +71,8 @@
       "authentic": false,
       "confidence": 0.99,
       "label": "other",
-      "one_liner": "Quoted example language was mistaken for direct frustration.",
-      "reason": "The frustration is quoted and attributed to a handbook example, not directed at the agent.",
+      "one_liner": "Reports quoted frustration from an external source rather than agent behavior.",
+      "reason": "The message reports quoted language in a handbook and does not express frustration at the agent's behavior.",
       "severity": 1
     }
   }

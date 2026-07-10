@@ -71,8 +71,8 @@
       "authentic": true,
       "confidence": 0.97,
       "label": "scope-deviation",
-      "one_liner": "Omitted a required part of the requested output.",
-      "reason": "The message directly expresses frustration at the agent for omitting requested output; it is not quoted, third-party-directed, self-directed, or playful.",
+      "one_liner": "Left out the only requested piece of output.",
+      "reason": "The user directly criticizes the agent for omitting the sole requested output element; it is neither quoted nor aimed at a third party.",
       "severity": 2
     }
   }
