@@ -11,7 +11,7 @@ from pathlib import Path
 import subprocess
 import sys
 from time import perf_counter
-from typing import Any, TypeVar
+from typing import TypeVar
 
 from .config import load_config
 from .ledger import Ledger

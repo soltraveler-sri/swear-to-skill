@@ -8,7 +8,6 @@ therefore every reader is deliberately tolerant of bad and unknown JSONL lines.
 
 from __future__ import annotations
 
-from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime
 import json

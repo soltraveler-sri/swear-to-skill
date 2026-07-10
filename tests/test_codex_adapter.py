@@ -6,9 +6,8 @@ from pathlib import Path
 import pytest
 
 from s2s.adapters import codex
-from s2s.archiver import archive_transcript
 from s2s.ledger import Ledger
-from s2s.scanner import scan_codex_history, scan_pending_queue, scan_transcript
+from s2s.scanner import scan_codex_history, scan_pending_queue
 from s2s.triager import context_for_incident
 
 

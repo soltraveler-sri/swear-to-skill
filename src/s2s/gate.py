@@ -24,7 +24,7 @@ from typing import Any, Callable, Mapping
 from . import initcmd
 from . import notify
 from .config import Config, effective_autonomy_state, load_config
-from .ledger import Ledger, LedgerError, Proposal, Remedy
+from .ledger import Ledger, Proposal, Remedy
 from .paths import resolve_paths
 from .synthesist import SKILL_NAME_RE, SynthesisValidationError, parse_skill_markdown
 

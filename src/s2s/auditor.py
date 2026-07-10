@@ -12,7 +12,7 @@ import json
 
 from .config import Auditor as AuditorConfig
 from .config import load_config
-from .ledger import Incident, Ledger, Remedy, SessionStats
+from .ledger import Ledger, Remedy, SessionStats
 
 
 @dataclass(frozen=True)
