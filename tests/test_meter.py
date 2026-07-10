@@ -6,7 +6,7 @@ import pytest
 
 from s2s.cli import main
 from s2s.ledger import Ledger
-from s2s.meter import collect_dashboard_data, friendly_model_name, write_dashboard
+from s2s.meter import collect_dashboard_data, friendly_model_name, render_dashboard, render_status, write_dashboard
 
 
 @pytest.fixture
@@ -190,10 +190,73 @@ def test_dashboard_is_self_contained_and_contains_fixture_values(ledger: Ledger)
     assert "https://" not in document
 
 
+def test_dashboard_interprets_fragmentation_and_taxonomy_gap_thresholds(ledger: Ledger) -> None:
+    for index in range(10):
+        _record_detection(
+            ledger,
+            source="claude-code",
+            session_id=f"singleton-{index}",
+            project="alpha",
+            occurred_at=f"2026-02-{index + 1:02d}T09:00:00+00:00",
+            message=f"singleton {index}",
+            label=f"bucket-{index}",
+        )
+    for index in range(5):
+        _record_detection(
+            ledger,
+            source="claude-code",
+            session_id=f"other-{index}",
+            project="alpha",
+            occurred_at=f"2026-03-{index + 1:02d}T09:00:00+00:00",
+            message=f"other {index}",
+            label="other",
+        )
+
+    data = collect_dashboard_data(ledger)
+    dashboard = render_dashboard(data)
+
+    assert data.singleton_ratio > 0.9 and data.active_cluster_count >= 10
+    assert data.other_share > 0.3
+    assert "fragmentation death pattern — the pipeline is not clustering; inspect taxonomy fit" in dashboard
+    assert "taxonomy gap — gardening should be creating labels" in dashboard
+    status = render_status(data, archived_sessions=0)
+    assert "singleton ratio:" in status and "other share:" in status
+
+
 def test_dashboard_empty_state_is_friendly_and_writes_without_data(ledger: Ledger) -> None:
     report = write_dashboard(ledger)
 
     assert "no data yet — run: s2s backfill && s2s scan" in report.read_text(encoding="utf-8")
+
+
+def test_cost_log_is_aggregated_in_dashboard_and_status(ledger: Ledger) -> None:
+    ledger.log_run(
+        stage="triage",
+        model="haiku",
+        tokens=5,
+        cost_usd=0.01,
+        duration_ms=10,
+        input_digest="a" * 16,
+    )
+    ledger.log_run(
+        stage="triage",
+        model="haiku",
+        tokens=7,
+        cost_usd=0.02,
+        duration_ms=12,
+        input_digest="b" * 16,
+    )
+
+    data = collect_dashboard_data(ledger)
+    assert [(row.stage, row.model, row.calls, row.tokens, row.cost_usd) for row in data.cost_totals] == [
+        ("triage", "haiku", 2, 12, pytest.approx(0.03))
+    ]
+    document = write_dashboard(ledger).read_text(encoding="utf-8")
+    assert 'id="cost-log"' in document
+    assert "triage" in document and "haiku" in document and "$0.0300" in document
+    status = render_status(data, archived_sessions=0)
+    assert "LLM costs: $0.0300 across 2 call(s)" in status
+    assert "triage/haiku: 2 call(s), 12 token(s), $0.0300" in status
 
 
 def test_dashboard_renders_a_single_dated_session(ledger: Ledger) -> None:

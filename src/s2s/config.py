@@ -15,6 +15,7 @@ class Thresholds:
 
     triage_untriaged_count: int = 10
     triage_max_age_hours: int = 24
+    triage_per_run_cap: int = 25
     curator_unreviewed_count: int = 10
     curator_max_age_days: int = 7
 
@@ -35,6 +36,32 @@ class Notifications:
     session_start_digest: bool = True
     desktop: bool = False
     webhook_url: str = ""
+    events: tuple[str, ...] = ("proposal_pending", "autonomous_action")
+
+
+@dataclass(frozen=True)
+class Models:
+    """LLM policy defaults from North Star §§4 and 7."""
+
+    triage: str = "haiku"
+    curate: str = "sonnet"
+    synthesize: str = "sonnet"
+    parallelism: int = 2
+
+
+@dataclass(frozen=True)
+class Costs:
+    """User-confirmation policy for bulk LLM work."""
+
+    confirm_threshold_usd: float = 1.0
+
+
+@dataclass(frozen=True)
+class Curator:
+    """Curator evidence sampling and per-call context governor."""
+
+    qc_sample_size: int = 5
+    context_char_budget: int = 60_000
 
 
 @dataclass(frozen=True)
@@ -44,6 +71,9 @@ class Config:
     thresholds: Thresholds = Thresholds()
     autonomy: Autonomy = Autonomy()
     notifications: Notifications = Notifications()
+    models: Models = Models()
+    costs: Costs = Costs()
+    curator: Curator = Curator()
 
 
 def _section(document: dict[str, object], name: str) -> dict[str, object]:
@@ -66,6 +96,18 @@ def _bool(section: dict[str, object], name: str, default: bool) -> bool:
     return value if isinstance(value, bool) else default
 
 
+def _float(section: dict[str, object], name: str, default: float) -> float:
+    value = section.get(name, default)
+    return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else default
+
+
+def _strings(section: dict[str, object], name: str, default: tuple[str, ...]) -> tuple[str, ...]:
+    value = section.get(name, default)
+    if not isinstance(value, list):
+        return default
+    return tuple(item for item in value if isinstance(item, str))
+
+
 def load_config(config_path: Path | None = None) -> Config:
     """Load a config file, returning pure documented defaults when it is absent."""
 
@@ -79,6 +121,9 @@ def load_config(config_path: Path | None = None) -> Config:
     thresholds = _section(document, "thresholds")
     autonomy = _section(document, "autonomy")
     notifications = _section(document, "notifications")
+    models = _section(document, "models")
+    costs = _section(document, "costs")
+    curator = _section(document, "curator")
     defaults = Config()
 
     return Config(
@@ -92,6 +137,11 @@ def load_config(config_path: Path | None = None) -> Config:
                 thresholds,
                 "triage_max_age_hours",
                 defaults.thresholds.triage_max_age_hours,
+            ),
+            triage_per_run_cap=_int(
+                thresholds,
+                "triage_per_run_cap",
+                defaults.thresholds.triage_per_run_cap,
             ),
             curator_unreviewed_count=_int(
                 thresholds,
@@ -128,6 +178,34 @@ def load_config(config_path: Path | None = None) -> Config:
                 notifications,
                 "webhook_url",
                 defaults.notifications.webhook_url,
+            ),
+            events=_strings(
+                notifications,
+                "events",
+                defaults.notifications.events,
+            ),
+        ),
+        models=Models(
+            triage=_str(models, "triage", defaults.models.triage),
+            curate=_str(models, "curate", defaults.models.curate),
+            synthesize=_str(models, "synthesize", defaults.models.synthesize),
+            parallelism=_int(models, "parallelism", defaults.models.parallelism),
+        ),
+        costs=Costs(
+            confirm_threshold_usd=_float(
+                costs,
+                "confirm_threshold_usd",
+                defaults.costs.confirm_threshold_usd,
+            )
+        ),
+        curator=Curator(
+            qc_sample_size=_int(
+                curator, "qc_sample_size", defaults.curator.qc_sample_size
+            ),
+            context_char_budget=_int(
+                curator,
+                "context_char_budget",
+                defaults.curator.context_char_budget,
             ),
         ),
     )

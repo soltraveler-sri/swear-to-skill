@@ -18,8 +18,9 @@ import sqlite3
 from .paths import resolve_paths
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 5
 BUSY_TIMEOUT_MS = 5_000
+PROPOSAL_STATES = ("pending", "approved", "installed", "rejected")
 
 INCIDENT_STATES = (
     "detected",
@@ -140,6 +141,67 @@ class ClusterStats:
     first_seen: str
     last_seen: str
     remedy_ids: tuple[int, ...]
+
+
+@dataclass(frozen=True)
+class CuratorDecision:
+    """One durable Curator judgment over an incident's full evidence."""
+
+    id: int
+    incident_id: int
+    verdict: str
+    reason: str
+    previous_label: str | None
+    reassign_label: str | None
+    singleton: bool
+    created_at: str
+
+
+@dataclass(frozen=True)
+class CuratorClusterDecision:
+    """One durable Curator judgment over a label cluster."""
+
+    id: int
+    label: str
+    verdict: str
+    reason: str
+    created_at: str
+
+
+@dataclass(frozen=True)
+class Proposal:
+    """One Stage 5 proposal, including its gate audit fields."""
+
+    id: int
+    remedy_type: str
+    drafted_content: str
+    evidence_incident_ids: tuple[int, ...]
+    dedup_verdict: str
+    gate_status: str
+    install_record_ref: str | None
+    revises: str | None
+    singleton: bool
+    rejection_reason: str | None
+    approved_at: str | None
+    decided_at: str | None
+    created_at: str
+
+
+@dataclass(frozen=True)
+class Remedy:
+    """One reserved, installed, or rolled-back filesystem remedy."""
+
+    id: int
+    artifact_type: str
+    artifact_path: str
+    artifact_digest: str | None
+    proposal_id: int
+    installed_at: str
+    rollback_at: str | None
+    state: str
+    managed_remedy_id: int
+    revises_remedy_id: int | None
+    state_record_ref: str | None
 
 
 def _utc_now() -> str:
@@ -297,6 +359,58 @@ def _migration_2(connection: sqlite3.Connection) -> None:
         )
         """
     )
+
+
+def _migration_3(connection: sqlite3.Connection) -> None:
+    """Add Curator pass metadata, provenance, and append-only decisions."""
+
+    connection.execute(
+        """
+        CREATE TABLE meta (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE curator_incident_decision (
+            id INTEGER PRIMARY KEY,
+            incident_id INTEGER NOT NULL REFERENCES incident(id) ON DELETE RESTRICT,
+            verdict TEXT NOT NULL CHECK (
+                verdict IN ('promote', 'park', 'dismiss', 'reassign', 'resurrect')
+            ),
+            reason TEXT NOT NULL,
+            previous_label TEXT,
+            reassign_label TEXT,
+            singleton INTEGER NOT NULL DEFAULT 0 CHECK (singleton IN (0, 1)),
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE curator_cluster_decision (
+            id INTEGER PRIMARY KEY,
+            label TEXT NOT NULL,
+            verdict TEXT NOT NULL CHECK (verdict IN ('synthesize', 'hold', 'unworthy')),
+            reason TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX curator_incident_decision_incident_idx
+        ON curator_incident_decision (incident_id, id)
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX curator_cluster_decision_label_idx
+        ON curator_cluster_decision (label, id)
+        """
+    )
     # A direct user message is the scanner unit of work.  This makes manual
     # re-scans and a retried queue item safe even after a process interruption,
     # without imposing scanner semantics on incidents written by later stages.
@@ -308,9 +422,41 @@ def _migration_2(connection: sqlite3.Connection) -> None:
     )
 
 
+def _migration_4(connection: sqlite3.Connection) -> None:
+    """Add Synthesist provenance for singleton and revision proposals."""
+
+    connection.execute("ALTER TABLE proposal ADD COLUMN revises TEXT")
+    connection.execute(
+        "ALTER TABLE proposal ADD COLUMN singleton INTEGER NOT NULL DEFAULT 0 "
+        "CHECK (singleton IN (0, 1))"
+    )
+
+
+def _migration_5(connection: sqlite3.Connection) -> None:
+    """Add Gate decision audit fields and explicit remedy lifecycle metadata."""
+
+    connection.execute("ALTER TABLE proposal ADD COLUMN rejection_reason TEXT")
+    connection.execute("ALTER TABLE proposal ADD COLUMN approved_at TEXT")
+    connection.execute("ALTER TABLE proposal ADD COLUMN decided_at TEXT")
+    connection.execute(
+        "ALTER TABLE remedy ADD COLUMN state TEXT NOT NULL DEFAULT 'installed' "
+        "CHECK (state IN ('approved', 'installed', 'rolled-back'))"
+    )
+    connection.execute("ALTER TABLE remedy ADD COLUMN managed_remedy_id INTEGER")
+    connection.execute(
+        "ALTER TABLE remedy ADD COLUMN revises_remedy_id INTEGER REFERENCES remedy(id)"
+    )
+    connection.execute("ALTER TABLE remedy ADD COLUMN state_record_ref TEXT")
+    connection.execute("UPDATE remedy SET managed_remedy_id = id")
+    connection.execute("CREATE INDEX remedy_state_idx ON remedy(state, id)")
+
+
 MIGRATIONS: dict[int, Callable[[sqlite3.Connection], None]] = {
     1: _migration_1,
     2: _migration_2,
+    3: _migration_3,
+    4: _migration_4,
+    5: _migration_5,
 }
 
 
@@ -553,7 +699,7 @@ class Ledger:
                 raise IncidentNotFoundError(f"incident {incident_id} does not exist")
             self._transition_in_transaction(incident_id, "triaged", reason, timestamp)
             outcome = "dismissed-triage" if dismissed else "open"
-            outcome_reason = "triage dismissed" if dismissed else "triage accepted"
+            outcome_reason = reason if dismissed else "triage accepted"
             self._transition_in_transaction(incident_id, outcome, outcome_reason, timestamp)
 
     def wake_parked_incidents(
@@ -606,6 +752,48 @@ class Ledger:
 
         return self.incidents_in_state("open")
 
+    def curator_unreviewed_incidents(self) -> list[Incident]:
+        """Return open incidents not yet given any full-context Curator verdict.
+
+        QC resurrection is itself a full-context Curator judgment, so it counts for
+        the pay-once invariant. The resurrected incident remains visible in cluster
+        digests and can move forward through a later cluster verdict. Previously
+        parked incidents are surfaced only by the next-arrival event path.
+        """
+
+        rows = self.connection.execute(
+            """
+            SELECT incident.*
+            FROM incident
+            WHERE incident.state = 'open'
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM curator_incident_decision
+                  WHERE curator_incident_decision.incident_id = incident.id
+              )
+            ORDER BY incident.occurred_at, incident.id
+            """
+        ).fetchall()
+        return [self._incident_from_row(row) for row in rows]
+
+    def curator_qc_candidates(self) -> list[Incident]:
+        """Return recent triage dismissals never before sampled by the Curator."""
+
+        rows = self.connection.execute(
+            """
+            SELECT incident.*
+            FROM incident
+            WHERE incident.state = 'dismissed-triage'
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM curator_incident_decision
+                  WHERE curator_incident_decision.incident_id = incident.id
+              )
+            ORDER BY incident.occurred_at DESC, incident.id DESC
+            """
+        ).fetchall()
+        return [self._incident_from_row(row) for row in rows]
+
     def parked_incidents(self, label: str) -> list[Incident]:
         """Return parked incidents for one label, including all durable metadata."""
 
@@ -614,6 +802,224 @@ class Ledger:
             (label,),
         ).fetchall()
         return [self._incident_from_row(row) for row in rows]
+
+    def active_cluster_members(self) -> list[Incident]:
+        """Return labelled members that still participate in an active cluster."""
+
+        rows = self.connection.execute(
+            """
+            SELECT * FROM incident
+            WHERE label IS NOT NULL
+              AND state IN ('open', 'parked', 'promoted', 'in-proposal', 'remedied')
+            ORDER BY label, occurred_at, id
+            """
+        ).fetchall()
+        return [self._incident_from_row(row) for row in rows]
+
+    def other_nonterminal_incidents(self) -> list[Incident]:
+        """Return the gardener's complete active ``other`` evidence set."""
+
+        rows = self.connection.execute(
+            """
+            SELECT * FROM incident
+            WHERE label = 'other'
+              AND state NOT IN ('dismissed-triage', 'dismissed-reviewed', 'remedied')
+            ORDER BY occurred_at, id
+            """
+        ).fetchall()
+        return [self._incident_from_row(row) for row in rows]
+
+    def relabel_incidents(self, incident_ids: list[int] | tuple[int, ...], label: str) -> int:
+        """Bulk-update labels without changing the incident state machine history."""
+
+        ids = tuple(incident_ids)
+        if not ids or not label.strip():
+            raise LedgerError("relabeling requires incident IDs and a non-empty label")
+        if len(set(ids)) != len(ids) or not all(isinstance(item, int) and item > 0 for item in ids):
+            raise LedgerError("relabeling requires unique positive incident IDs")
+        marks = ", ".join("?" for _ in ids)
+        with self._write_transaction():
+            result = self.connection.execute(
+                f"UPDATE incident SET label = ? WHERE id IN ({marks})", (label, *ids)
+            )
+            if result.rowcount != len(ids):
+                raise IncidentNotFoundError("one or more incidents do not exist")
+            return result.rowcount
+
+    def relabel_label(self, absorbed: str, survivor: str) -> int:
+        """Merge an entire label cluster without altering incident states/history."""
+
+        if not absorbed.strip() or not survivor.strip():
+            raise LedgerError("label merges require non-empty labels")
+        with self._write_transaction():
+            result = self.connection.execute(
+                "UPDATE incident SET label = ? WHERE label = ?", (survivor, absorbed)
+            )
+            return result.rowcount
+
+    def proposal_digest_rows(self) -> list[tuple[int, str, str, str]]:
+        """Return the compact proposal fields needed by the Curator ledger digest."""
+
+        rows = self.connection.execute(
+            """
+            SELECT id, remedy_type, gate_status, drafted_content
+            FROM proposal
+            ORDER BY id
+            """
+        ).fetchall()
+        return [
+            (int(row["id"]), str(row["remedy_type"]), str(row["gate_status"]), str(row["drafted_content"]))
+            for row in rows
+        ]
+
+    def pending_proposal_count(self) -> int:
+        """Return proposals awaiting the Stage 5 human gate."""
+
+        return int(
+            self.connection.execute(
+                "SELECT COUNT(*) FROM proposal WHERE gate_status = 'pending'"
+            ).fetchone()[0]
+        )
+
+    def pending_proposals(self) -> list[Proposal]:
+        """Return proposals awaiting a Gate decision in stable FIFO order."""
+
+        rows = self.connection.execute(
+            "SELECT * FROM proposal WHERE gate_status = 'pending' ORDER BY id"
+        ).fetchall()
+        return [self._proposal_from_row(row) for row in rows]
+
+    def get_proposal(self, proposal_id: int) -> Proposal | None:
+        """Return one proposal, including rejected and installed audit records."""
+
+        row = self.connection.execute(
+            "SELECT * FROM proposal WHERE id = ?", (proposal_id,)
+        ).fetchone()
+        return self._proposal_from_row(row) if row is not None else None
+
+    def approve_proposal(
+        self,
+        proposal_id: int,
+        *,
+        drafted_content: str | None = None,
+        timestamp: str | datetime | None = None,
+    ) -> Proposal:
+        """Move a pending proposal to approved, optionally storing a human edit."""
+
+        changed_at = _timestamp(timestamp)
+        with self._write_transaction():
+            row = self.connection.execute(
+                "SELECT gate_status FROM proposal WHERE id = ?", (proposal_id,)
+            ).fetchone()
+            if row is None:
+                raise LedgerError(f"proposal {proposal_id} does not exist")
+            if row["gate_status"] != "pending":
+                raise LedgerError(
+                    f"proposal {proposal_id} is {row['gate_status']!r}, not pending"
+                )
+            if drafted_content is None:
+                result = self.connection.execute(
+                    """
+                    UPDATE proposal
+                    SET gate_status = 'approved', approved_at = ?, decided_at = ?
+                    WHERE id = ?
+                    """,
+                    (changed_at, changed_at, proposal_id),
+                )
+            else:
+                result = self.connection.execute(
+                    """
+                    UPDATE proposal
+                    SET drafted_content = ?, gate_status = 'approved',
+                        approved_at = ?, decided_at = ?
+                    WHERE id = ?
+                    """,
+                    (drafted_content, changed_at, changed_at, proposal_id),
+                )
+            assert result.rowcount == 1
+        proposal = self.get_proposal(proposal_id)
+        assert proposal is not None
+        return proposal
+
+    def reject_proposal(
+        self,
+        proposal_id: int,
+        *,
+        reason: str | None = None,
+        timestamp: str | datetime | None = None,
+    ) -> None:
+        """Reject one pending proposal and retain the user's optional reason."""
+
+        with self._write_transaction():
+            result = self.connection.execute(
+                """
+                UPDATE proposal
+                SET gate_status = 'rejected', rejection_reason = ?, decided_at = ?
+                WHERE id = ? AND gate_status = 'pending'
+                """,
+                (reason, _timestamp(timestamp), proposal_id),
+            )
+            if result.rowcount != 1:
+                row = self.connection.execute(
+                    "SELECT gate_status FROM proposal WHERE id = ?", (proposal_id,)
+                ).fetchone()
+                if row is None:
+                    raise LedgerError(f"proposal {proposal_id} does not exist")
+                raise LedgerError(
+                    f"proposal {proposal_id} is {row['gate_status']!r}, not pending"
+                )
+
+    def proposal_surface_rows(self) -> list[tuple[str, str]]:
+        """Return compact references for pending and installed proposal deduplication."""
+
+        rows = self.connection.execute(
+            """
+            SELECT proposal.id, proposal.remedy_type, proposal.gate_status,
+                   proposal.drafted_content, proposal.revises,
+                   EXISTS(SELECT 1 FROM remedy WHERE remedy.proposal_id = proposal.id) AS installed
+            FROM proposal
+            WHERE proposal.gate_status = 'pending'
+               OR EXISTS(SELECT 1 FROM remedy WHERE remedy.proposal_id = proposal.id)
+            ORDER BY proposal.id
+            """
+        ).fetchall()
+        return [
+            (
+                f"proposal #{int(row['id'])}",
+                " | ".join(
+                    part
+                    for part in (
+                        f"type={row['remedy_type']}",
+                        f"status={row['gate_status']}",
+                        "installed" if row["installed"] else None,
+                        f"revises={row['revises']}" if row["revises"] else None,
+                        str(row["drafted_content"])[:500],
+                    )
+                    if part
+                ),
+            )
+            for row in rows
+        ]
+
+    def remedy_digest_rows(self) -> list[tuple[int, str, str, str | None]]:
+        """Return the compact installed/rolled-back remedy fields for the digest."""
+
+        rows = self.connection.execute(
+            """
+            SELECT id, artifact_type, artifact_path, rollback_at
+            FROM remedy
+            ORDER BY id
+            """
+        ).fetchall()
+        return [
+            (
+                int(row["id"]),
+                str(row["artifact_type"]),
+                str(row["artifact_path"]),
+                row["rollback_at"],
+            )
+            for row in rows
+        ]
 
     def incidents_in_state(self, state: str) -> list[Incident]:
         """Return all incidents in one state, oldest first."""
@@ -771,6 +1177,185 @@ class Ledger:
             )
             return int(cursor.lastrowid)
 
+    def get_meta(self, key: str) -> str | None:
+        """Read one small durable pipeline metadata value."""
+
+        row = self.connection.execute("SELECT value FROM meta WHERE key = ?", (key,)).fetchone()
+        return str(row["value"]) if row is not None else None
+
+    def set_meta(self, key: str, value: str) -> None:
+        """Atomically create or replace one small pipeline metadata value."""
+
+        if not key.strip():
+            raise LedgerError("meta key cannot be empty")
+        with self._write_transaction():
+            self.connection.execute(
+                """
+                INSERT INTO meta (key, value) VALUES (?, ?)
+                ON CONFLICT(key) DO UPDATE SET value = excluded.value
+                """,
+                (key, value),
+            )
+
+    def apply_curator_incident_verdict(
+        self,
+        incident_id: int,
+        verdict: str,
+        *,
+        reason: str,
+        reassign_label: str | None = None,
+        singleton: bool = False,
+        timestamp: str | datetime | None = None,
+    ) -> None:
+        """Apply and record one semantically valid Curator verdict atomically."""
+
+        if verdict not in {"promote", "park", "dismiss", "reassign", "resurrect"}:
+            raise LedgerError(f"unknown Curator incident verdict {verdict!r}")
+        if not reason.strip():
+            raise LedgerError("a Curator verdict requires a non-empty reason")
+        if verdict == "reassign" and not (reassign_label and reassign_label.strip()):
+            raise LedgerError("reassign verdict requires reassign_label")
+        if verdict not in {"reassign", "resurrect"} and reassign_label is not None:
+            raise LedgerError(f"{verdict} verdict cannot also reassign a label")
+        if singleton and verdict != "promote":
+            raise LedgerError("singleton provenance is only valid for promotion")
+
+        changed_at = _timestamp(timestamp)
+        with self._write_transaction():
+            row = self.connection.execute(
+                "SELECT state, label FROM incident WHERE id = ?", (incident_id,)
+            ).fetchone()
+            if row is None:
+                raise IncidentNotFoundError(f"incident {incident_id} does not exist")
+            state = str(row["state"])
+            previous_label = row["label"]
+
+            if state == "open":
+                if verdict == "promote":
+                    self._transition_in_transaction(incident_id, "promoted", reason, changed_at)
+                elif verdict == "park":
+                    self._transition_in_transaction(incident_id, "parked", reason, changed_at)
+                elif verdict == "dismiss":
+                    self._transition_in_transaction(
+                        incident_id, "dismissed-reviewed", reason, changed_at
+                    )
+                elif verdict == "reassign":
+                    self.connection.execute(
+                        "UPDATE incident SET label = ? WHERE id = ?",
+                        (reassign_label, incident_id),
+                    )
+                else:
+                    raise IllegalTransitionError(incident_id, state, "open")
+            elif state == "dismissed-triage":
+                if verdict == "resurrect":
+                    if reassign_label is not None:
+                        self.connection.execute(
+                            "UPDATE incident SET label = ? WHERE id = ?",
+                            (reassign_label, incident_id),
+                        )
+                    self._transition_in_transaction(incident_id, "open", reason, changed_at)
+                elif verdict != "dismiss":
+                    target = {
+                        "promote": "promoted",
+                        "park": "parked",
+                        "reassign": state,
+                    }.get(verdict, state)
+                    raise IllegalTransitionError(incident_id, state, target)
+                # ``dismiss`` upholds the existing triage dismissal without a state change.
+            else:
+                target = {
+                    "promote": "promoted",
+                    "park": "parked",
+                    "dismiss": "dismissed-reviewed",
+                    "reassign": state,
+                    "resurrect": "open",
+                }[verdict]
+                raise IllegalTransitionError(incident_id, state, target)
+
+            self.connection.execute(
+                """
+                INSERT INTO curator_incident_decision (
+                    incident_id, verdict, reason, previous_label, reassign_label,
+                    singleton, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    incident_id,
+                    verdict,
+                    reason,
+                    previous_label,
+                    reassign_label,
+                    int(singleton),
+                    changed_at,
+                ),
+            )
+
+    def record_curator_cluster_verdict(
+        self,
+        label: str,
+        verdict: str,
+        *,
+        reason: str,
+        timestamp: str | datetime | None = None,
+    ) -> None:
+        """Append a cluster judgment, including durable unworthy/hold reasons."""
+
+        if verdict not in {"synthesize", "hold", "unworthy"}:
+            raise LedgerError(f"unknown Curator cluster verdict {verdict!r}")
+        if not label.strip() or not reason.strip():
+            raise LedgerError("a cluster verdict requires a label and reason")
+        with self._write_transaction():
+            self.connection.execute(
+                """
+                INSERT INTO curator_cluster_decision (label, verdict, reason, created_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (label, verdict, reason, _timestamp(timestamp)),
+            )
+
+    def curator_decisions(self, incident_id: int | None = None) -> list[CuratorDecision]:
+        """Return append-only incident decisions, optionally for one incident."""
+
+        if incident_id is None:
+            rows = self.connection.execute(
+                "SELECT * FROM curator_incident_decision ORDER BY id"
+            ).fetchall()
+        else:
+            rows = self.connection.execute(
+                "SELECT * FROM curator_incident_decision WHERE incident_id = ? ORDER BY id",
+                (incident_id,),
+            ).fetchall()
+        return [
+            CuratorDecision(
+                id=int(row["id"]),
+                incident_id=int(row["incident_id"]),
+                verdict=str(row["verdict"]),
+                reason=str(row["reason"]),
+                previous_label=row["previous_label"],
+                reassign_label=row["reassign_label"],
+                singleton=bool(row["singleton"]),
+                created_at=str(row["created_at"]),
+            )
+            for row in rows
+        ]
+
+    def curator_cluster_decisions(self) -> list[CuratorClusterDecision]:
+        """Return all append-only cluster decisions."""
+
+        rows = self.connection.execute(
+            "SELECT * FROM curator_cluster_decision ORDER BY id"
+        ).fetchall()
+        return [
+            CuratorClusterDecision(
+                id=int(row["id"]),
+                label=str(row["label"]),
+                verdict=str(row["verdict"]),
+                reason=str(row["reason"]),
+                created_at=str(row["created_at"]),
+            )
+            for row in rows
+        ]
+
     def create_proposal(
         self,
         *,
@@ -780,6 +1365,8 @@ class Ledger:
         dedup_verdict: str,
         gate_status: str,
         install_record_ref: str | None = None,
+        revises: str | None = None,
+        singleton: bool = False,
         created_at: str | datetime | None = None,
     ) -> int:
         """Append a proposal and immutable normalized links to its evidence incidents."""
@@ -787,13 +1374,15 @@ class Ledger:
         evidence_ids = list(dict.fromkeys(evidence_incident_ids))
         if not evidence_ids:
             raise LedgerError("a proposal requires at least one evidence incident")
+        if gate_status not in PROPOSAL_STATES:
+            raise LedgerError(f"unknown proposal gate status {gate_status!r}")
         with self._write_transaction():
             cursor = self.connection.execute(
                 """
                 INSERT INTO proposal (
                     remedy_type, drafted_content, evidence_incident_ids, dedup_verdict,
-                    gate_status, install_record_ref, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    gate_status, install_record_ref, revises, singleton, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     remedy_type,
@@ -802,6 +1391,8 @@ class Ledger:
                     dedup_verdict,
                     gate_status,
                     install_record_ref,
+                    revises,
+                    int(singleton),
                     _timestamp(created_at),
                 ),
             )
@@ -812,6 +1403,68 @@ class Ledger:
             )
         return proposal_id
 
+    def create_synthesis_proposals(
+        self,
+        proposals: Sequence[dict[str, object]],
+        *,
+        promoted_incident_ids: Sequence[int],
+    ) -> list[int]:
+        """Atomically store a validated synthesis result and consume its promotion group.
+
+        Callers must fully validate split partitions before this method.  The state
+        changes are deliberately in the same transaction as proposal insertion: an
+        interrupted run remains entirely ``promoted`` and can be resumed safely.
+        """
+
+        promoted = list(dict.fromkeys(promoted_incident_ids))
+        if not promoted:
+            raise LedgerError("a synthesis group requires promoted incidents")
+        if not proposals:
+            raise LedgerError("synthesis requires at least one proposal")
+        proposal_ids: list[int] = []
+        with self._write_transaction():
+            rows = self.connection.execute(
+                f"SELECT id, state FROM incident WHERE id IN ({', '.join('?' for _ in promoted)})",
+                promoted,
+            ).fetchall()
+            if len(rows) != len(promoted) or any(row["state"] != "promoted" for row in rows):
+                raise LedgerError("synthesis incidents must all still be promoted")
+            for proposal in proposals:
+                evidence = proposal["evidence_incident_ids"]
+                if not isinstance(evidence, list) or not evidence:
+                    raise LedgerError("a synthesis proposal requires evidence")
+                cursor = self.connection.execute(
+                    """
+                    INSERT INTO proposal (
+                        remedy_type, drafted_content, evidence_incident_ids, dedup_verdict,
+                        gate_status, install_record_ref, revises, singleton, created_at
+                    ) VALUES (?, ?, ?, ?, 'pending', NULL, ?, ?, ?)
+                    """,
+                    (
+                        proposal["remedy_type"],
+                        proposal["drafted_content"],
+                        json.dumps(evidence, separators=(",", ":")),
+                        proposal["dedup_verdict"],
+                        proposal.get("revises"),
+                        int(bool(proposal.get("singleton", False))),
+                        _utc_now(),
+                    ),
+                )
+                proposal_id = int(cursor.lastrowid)
+                proposal_ids.append(proposal_id)
+                self.connection.executemany(
+                    "INSERT INTO proposal_evidence (proposal_id, incident_id) VALUES (?, ?)",
+                    [(proposal_id, incident_id) for incident_id in evidence],
+                )
+            for incident_id in promoted:
+                self._transition_in_transaction(
+                    incident_id,
+                    "in-proposal",
+                    "synthesis proposal drafted",
+                    None,
+                )
+        return proposal_ids
+
     def create_remedy(
         self,
         *,
@@ -820,18 +1473,143 @@ class Ledger:
         proposal_id: int,
         artifact_digest: str | None = None,
         installed_at: str | datetime | None = None,
+        state: str = "installed",
+        managed_remedy_id: int | None = None,
+        revises_remedy_id: int | None = None,
+        state_record_ref: str | None = None,
     ) -> int:
         """Append an installed-remedy record linked back to its proposal provenance."""
 
         with self._write_transaction():
+            if state not in {"approved", "installed", "rolled-back"}:
+                raise LedgerError(f"unknown remedy state {state!r}")
             cursor = self.connection.execute(
                 """
-                INSERT INTO remedy (artifact_type, artifact_path, artifact_digest, proposal_id, installed_at)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO remedy (
+                    artifact_type, artifact_path, artifact_digest, proposal_id,
+                    installed_at, state, managed_remedy_id, revises_remedy_id,
+                    state_record_ref
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (artifact_type, artifact_path, artifact_digest, proposal_id, _timestamp(installed_at)),
+                (
+                    artifact_type,
+                    artifact_path,
+                    artifact_digest,
+                    proposal_id,
+                    _timestamp(installed_at),
+                    state,
+                    managed_remedy_id,
+                    revises_remedy_id,
+                    state_record_ref,
+                ),
             )
-            return int(cursor.lastrowid)
+            remedy_id = int(cursor.lastrowid)
+            if managed_remedy_id is None:
+                self.connection.execute(
+                    "UPDATE remedy SET managed_remedy_id = ? WHERE id = ?",
+                    (remedy_id, remedy_id),
+                )
+            return remedy_id
+
+    def get_remedy(self, remedy_id: int) -> Remedy | None:
+        """Return one remedy lifecycle record."""
+
+        row = self.connection.execute(
+            "SELECT * FROM remedy WHERE id = ?", (remedy_id,)
+        ).fetchone()
+        return self._remedy_from_row(row) if row is not None else None
+
+    def remedy_for_proposal(self, proposal_id: int) -> Remedy | None:
+        """Return the newest remedy reserved for a proposal, if any."""
+
+        row = self.connection.execute(
+            "SELECT * FROM remedy WHERE proposal_id = ? ORDER BY id DESC LIMIT 1",
+            (proposal_id,),
+        ).fetchone()
+        return self._remedy_from_row(row) if row is not None else None
+
+    def mark_remedy_installed(
+        self,
+        remedy_id: int,
+        *,
+        artifact_digest: str,
+        state_record_ref: str,
+        timestamp: str | datetime | None = None,
+    ) -> None:
+        """Finalize a reserved remedy and remediate all of its proposal evidence."""
+
+        changed_at = _timestamp(timestamp)
+        with self._write_transaction():
+            row = self.connection.execute(
+                "SELECT proposal_id, state FROM remedy WHERE id = ?", (remedy_id,)
+            ).fetchone()
+            if row is None:
+                raise LedgerError(f"remedy {remedy_id} does not exist")
+            if row["state"] != "approved":
+                raise LedgerError(f"remedy {remedy_id} is {row['state']!r}, not approved")
+            proposal_id = int(row["proposal_id"])
+            self.connection.execute(
+                """
+                UPDATE remedy
+                SET state = 'installed', artifact_digest = ?, state_record_ref = ?,
+                    installed_at = ?
+                WHERE id = ?
+                """,
+                (artifact_digest, state_record_ref, changed_at, remedy_id),
+            )
+            self.connection.execute(
+                """
+                UPDATE proposal
+                SET gate_status = 'installed', install_record_ref = ?
+                WHERE id = ? AND gate_status = 'approved'
+                """,
+                (state_record_ref, proposal_id),
+            )
+            incident_rows = self.connection.execute(
+                """
+                SELECT incident.id, incident.state
+                FROM incident
+                JOIN proposal_evidence ON proposal_evidence.incident_id = incident.id
+                WHERE proposal_evidence.proposal_id = ?
+                ORDER BY incident.id
+                """,
+                (proposal_id,),
+            ).fetchall()
+            for incident in incident_rows:
+                if incident["state"] == "in-proposal":
+                    self._transition_in_transaction(
+                        int(incident["id"]),
+                        "remedied",
+                        f"remedy {remedy_id} installed",
+                        changed_at,
+                    )
+
+    def mark_remedy_rolled_back(
+        self,
+        remedy_id: int,
+        *,
+        rollback_metadata: str,
+        timestamp: str | datetime | None = None,
+    ) -> None:
+        """Move an installed remedy to its terminal rolled-back state."""
+
+        changed_at = _timestamp(timestamp)
+        with self._write_transaction():
+            result = self.connection.execute(
+                """
+                UPDATE remedy
+                SET state = 'rolled-back', rollback_at = ?, rollback_metadata = ?
+                WHERE id = ? AND state = 'installed'
+                """,
+                (changed_at, rollback_metadata, remedy_id),
+            )
+            if result.rowcount != 1:
+                row = self.connection.execute(
+                    "SELECT state FROM remedy WHERE id = ?", (remedy_id,)
+                ).fetchone()
+                if row is None:
+                    raise LedgerError(f"remedy {remedy_id} does not exist")
+                raise LedgerError(f"remedy {remedy_id} is {row['state']!r}, not installed")
 
     def cluster_stats(self) -> list[ClusterStats]:
         """Derive cluster counts, project spread, time range, and linked remedies by label."""
@@ -886,6 +1664,11 @@ class Ledger:
             return 0.0
         return sum(cluster.incident_count == 1 for cluster in clusters) / len(clusters)
 
+    def active_cluster_count(self) -> int:
+        """Return the number of labelled clusters participating in the pipeline."""
+
+        return len(self.cluster_stats())
+
     def other_share(self) -> float:
         """Return the fraction of labelled incidents assigned to the ``other`` escape hatch."""
 
@@ -898,9 +1681,8 @@ class Ledger:
             """
         ).fetchone()
         labelled_count = int(row["labelled_count"])
-        if labelled_count == 0:
-            return 0.0
-        return int(row["other_count"]) / labelled_count
+        other_count = int(row["other_count"] or 0)
+        return other_count / labelled_count if labelled_count else 0.0
 
     @staticmethod
     def _incident_from_row(row: sqlite3.Row) -> Incident:
@@ -919,6 +1701,45 @@ class Ledger:
             severity=row["severity"],
             confidence=float(confidence) if confidence is not None else None,
             state=str(row["state"]),
+        )
+
+    @staticmethod
+    def _proposal_from_row(row: sqlite3.Row) -> Proposal:
+        return Proposal(
+            id=int(row["id"]),
+            remedy_type=str(row["remedy_type"]),
+            drafted_content=str(row["drafted_content"]),
+            evidence_incident_ids=tuple(int(item) for item in json.loads(row["evidence_incident_ids"])),
+            dedup_verdict=str(row["dedup_verdict"]),
+            gate_status=str(row["gate_status"]),
+            install_record_ref=row["install_record_ref"],
+            revises=row["revises"],
+            singleton=bool(row["singleton"]),
+            rejection_reason=row["rejection_reason"],
+            approved_at=row["approved_at"],
+            decided_at=row["decided_at"],
+            created_at=str(row["created_at"]),
+        )
+
+    @staticmethod
+    def _remedy_from_row(row: sqlite3.Row) -> Remedy:
+        managed_id = row["managed_remedy_id"]
+        return Remedy(
+            id=int(row["id"]),
+            artifact_type=str(row["artifact_type"]),
+            artifact_path=str(row["artifact_path"]),
+            artifact_digest=row["artifact_digest"],
+            proposal_id=int(row["proposal_id"]),
+            installed_at=str(row["installed_at"]),
+            rollback_at=row["rollback_at"],
+            state=str(row["state"]),
+            managed_remedy_id=int(managed_id) if managed_id is not None else int(row["id"]),
+            revises_remedy_id=(
+                int(row["revises_remedy_id"])
+                if row["revises_remedy_id"] is not None
+                else None
+            ),
+            state_record_ref=row["state_record_ref"],
         )
 
     @staticmethod

@@ -42,6 +42,17 @@ class WeeklyRate(Rate):
 
 
 @dataclass(frozen=True)
+class CostTotal:
+    """Aggregate accounting for one LLM stage/model pairing."""
+
+    stage: str
+    model: str
+    calls: int
+    tokens: int
+    cost_usd: float
+
+
+@dataclass(frozen=True)
 class DashboardData:
     """All durable facts needed by the static dashboard and status command."""
 
@@ -54,11 +65,13 @@ class DashboardData:
     categories: tuple[tuple[str, int], ...]
     incident_states: tuple[tuple[str, int], ...]
     queue_depth: int
+    active_cluster_count: int
     singleton_ratio: float
     other_share: float
     date_start: date | None
     date_end: date | None
     last_scan: str | None
+    cost_totals: tuple[CostTotal, ...]
 
     @property
     def rate(self) -> float:
@@ -91,6 +104,7 @@ def collect_dashboard_data(ledger: Ledger) -> DashboardData:
 
     stats = ledger.session_stats()
     incident_counts, categories, state_counts = _incident_aggregates(ledger)
+    cost_totals = _cost_totals(ledger)
     weekly: dict[date, list[int]] = defaultdict(lambda: [0, 0])
     models: dict[str, list[int]] = defaultdict(lambda: [0, 0])
     projects: dict[str, list[int]] = defaultdict(lambda: [0, 0])
@@ -146,11 +160,13 @@ def collect_dashboard_data(ledger: Ledger) -> DashboardData:
             if state_counts[state]
         ),
         queue_depth=len(ledger.pending_queue_items()),
+        active_cluster_count=ledger.active_cluster_count(),
         singleton_ratio=ledger.singleton_ratio(),
         other_share=ledger.other_share(),
         date_start=min(dates) if dates else None,
         date_end=max(dates) if dates else None,
         last_scan=max(scan_times)[1] if scan_times else None,
+        cost_totals=cost_totals,
     )
 
 
@@ -226,6 +242,17 @@ def render_status(data: DashboardData, *, archived_sessions: int) -> str:
     """Return a compact text status summary for the terminal and companion skill."""
 
     incidents = ", ".join(f"{state}={count}" for state, count in data.incident_states)
+    total_calls = sum(row.calls for row in data.cost_totals)
+    total_cost = sum(row.cost_usd for row in data.cost_totals)
+    cost_lines = [
+        f"LLM costs: ${total_cost:.4f} across {total_calls} call(s)",
+        *( 
+            f"  {row.stage}/{row.model}: {row.calls} call(s), {row.tokens} token(s), ${row.cost_usd:.4f}"
+            for row in data.cost_totals
+        ),
+    ]
+    if not data.cost_totals:
+        cost_lines.append("  no LLM runs recorded")
     return "\n".join(
         (
             "s2s status",
@@ -240,6 +267,7 @@ def render_status(data: DashboardData, *, archived_sessions: int) -> str:
             f"singleton ratio: {_percentage(data.singleton_ratio * 100)}",
             f"other share: {_percentage(data.other_share * 100)}",
             f"last scan: {data.last_scan or 'none'}",
+            *cost_lines,
         )
     )
 
@@ -267,6 +295,27 @@ def _incident_aggregates(
         categories[str(row["label"]) if row["label"] is not None else "Unclassified"] += 1
         states[str(row["state"])] += 1
     return counts, categories, states
+
+
+def _cost_totals(ledger: Ledger) -> tuple[CostTotal, ...]:
+    rows = ledger.connection.execute(
+        """
+        SELECT stage, model, COUNT(*) AS calls, SUM(tokens) AS tokens, SUM(cost_usd) AS cost_usd
+        FROM run_log
+        GROUP BY stage, model
+        ORDER BY stage, model
+        """
+    ).fetchall()
+    return tuple(
+        CostTotal(
+            stage=str(row["stage"]),
+            model=str(row["model"]),
+            calls=int(row["calls"]),
+            tokens=int(row["tokens"]),
+            cost_usd=float(row["cost_usd"]),
+        )
+        for row in rows
+    )
 
 
 def _session_hit_messages(
@@ -355,6 +404,25 @@ def _metric_card(label: str, value: str) -> str:
     return f'<div class="card"><span class="number">{escape(value)}</span><span class="label">{escape(label)}</span></div>'
 
 
+def _health_metric_card(label: str, value: str, interpretation: str) -> str:
+    return (
+        f'<div class="card"><span class="number">{escape(value)}</span>'
+        f'<span class="label">{escape(label)}</span><p class="muted">{escape(interpretation)}</p></div>'
+    )
+
+
+def _singleton_interpretation(data: DashboardData) -> str:
+    if data.singleton_ratio > 0.9 and data.active_cluster_count >= 10:
+        return "fragmentation death pattern — the pipeline is not clustering; inspect taxonomy fit"
+    return f"{data.active_cluster_count} active cluster(s); lower is healthier when incidents recur."
+
+
+def _other_interpretation(data: DashboardData) -> str:
+    if data.other_share > 0.3:
+        return "taxonomy gap — gardening should be creating labels"
+    return "The escape hatch is within the expected range."
+
+
 def _render_chart(weeks: tuple[WeeklyRate, ...]) -> str:
     if not weeks:
         return '<div class="empty">No dated sessions are available for a weekly chart yet.</div>'
@@ -436,13 +504,26 @@ def _render_health(data: DashboardData) -> str:
     return f"""
 <div class="health-grid">
   {_metric_card('Queue depth', str(data.queue_depth))}
-  {_metric_card('Singleton ratio', _percentage(data.singleton_ratio * 100))}
-  {_metric_card('Other share', _percentage(data.other_share * 100))}
+  {_health_metric_card('Singleton ratio', _percentage(data.singleton_ratio * 100), _singleton_interpretation(data))}
+  {_health_metric_card('Other share', _percentage(data.other_share * 100), _other_interpretation(data))}
   <div class="table-card"><h3>Incidents by state</h3><table><thead><tr><th>State</th><th>Count</th></tr></thead><tbody>{state_rows}</tbody></table></div>
 </div>
 <div class="split">
-  <div id="cost-log" class="placeholder"><strong>Cost log</strong><br>TODO — issue #7 will add local run-cost history here.</div>
+  {_render_cost_log(data.cost_totals)}
   <div id="proposals-digest" class="placeholder"><strong>Proposals digest</strong><br>TODO — issue #13 will add review-ready remedies here.</div>
 </div>
 <div id="remedy-outcomes" class="placeholder" style="margin-top:12px"><strong>Remedy outcomes</strong><br>TODO — issue #16 will add post-install outcome measurement here.</div>
 """
+
+
+def _render_cost_log(cost_totals: tuple[CostTotal, ...]) -> str:
+    rows = "".join(
+        (
+            f"<tr><td>{escape(cost.stage)}</td><td>{escape(cost.model)}</td>"
+            f"<td>{cost.calls}</td><td>{cost.tokens}</td><td>${cost.cost_usd:.4f}</td></tr>"
+        )
+        for cost in cost_totals
+    ) or '<tr><td colspan="5" class="muted">No LLM runs recorded yet.</td></tr>'
+    return f'''<div id="cost-log" class="table-card"><h3>Cost log</h3><table>
+<thead><tr><th>Stage</th><th>Model</th><th>Calls</th><th>Tokens</th><th>Cost</th></tr></thead>
+<tbody>{rows}</tbody></table></div>'''

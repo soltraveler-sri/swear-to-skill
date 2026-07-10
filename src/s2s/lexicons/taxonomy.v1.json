@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "labels": [
+    {"label": "premature-completion-claim", "gist": "said \"done\"/\"fixed\" when it wasn't", "examples": ["You said this was done, but the failure is still here.", "That fix clearly did not work."], "counter_example": "The agent said it was still investigating."},
+    {"label": "unverified-change", "gist": "claimed a fix without running/testing it", "examples": ["Why did you call it fixed without testing?", "Run the checks before claiming success."], "counter_example": "The agent ran the requested tests and reported their failure."},
+    {"label": "ignored-instruction", "gist": "explicit user instruction not followed", "examples": ["I explicitly told you not to change that.", "Please follow the instruction I gave you."], "counter_example": "The user changed their own instruction."},
+    {"label": "forgotten-context", "gist": "lost an earlier constraint mid-session", "examples": ["We already established that constraint.", "You forgot the requirement from earlier."], "counter_example": "The constraint was never stated in this session."},
+    {"label": "scope-deviation", "gist": "did more or less than asked", "examples": ["I asked for one small change, not a rewrite.", "You left out the requested part."], "counter_example": "The user requested a broad refactor."},
+    {"label": "hallucinated-interface", "gist": "invented API/flag/file/behavior", "examples": ["That flag does not exist.", "You made up an interface instead of checking it."], "counter_example": "The interface is documented in the repository."},
+    {"label": "destructive-action", "gist": "deleted/overwrote/reset without care", "examples": ["Why did you overwrite my work?", "Do not delete files without asking."], "counter_example": "The user explicitly requested removal of the file."},
+    {"label": "repeated-after-correction", "gist": "same mistake again after being corrected", "examples": ["I already corrected you on this.", "You repeated the mistake I just pointed out."], "counter_example": "This is the first time the issue occurred."},
+    {"label": "shallow-investigation", "gist": "guessed instead of reading the code/logs", "examples": ["Please read the error before guessing.", "You did not inspect the relevant code."], "counter_example": "The agent examined the logs before proposing a cause."},
+    {"label": "misread-request", "gist": "solved the wrong problem", "examples": ["That is not what I asked for.", "You solved a different problem."], "counter_example": "The requested outcome was delivered."},
+    {"label": "overengineering", "gist": "needless complexity/abstraction", "examples": ["This is far more complicated than needed.", "Please stop adding abstractions for a tiny change."], "counter_example": "The added structure is necessary for the requested behavior."},
+    {"label": "environment-mismanagement", "gist": "wrong dir/branch/deps/tool state", "examples": ["You are working in the wrong directory.", "That is not the branch I asked you to use."], "counter_example": "The environment is correct but the implementation is faulty."},
+    {"label": "house-rules-violation", "gist": "ignored CLAUDE.md / workflow conventions", "examples": ["You ignored the repository instructions.", "Read the project workflow rules first."], "counter_example": "No project rule governs this action."},
+    {"label": "tool-misuse", "gist": "wrong tool, wasteful calls, permission thrash", "examples": ["Why are you using that tool for this?", "Stop retrying a command that cannot work."], "counter_example": "The selected tool is appropriate and succeeds."},
+    {"label": "communication-failure", "gist": "buried the outcome, unclear/false reporting", "examples": ["Just tell me the outcome clearly.", "Your status report is misleading."], "counter_example": "The agent gave a clear, accurate outcome."},
+    {"label": "other", "gist": "no canonical label fits — expected and gardened, never a forced fit", "examples": ["This is a real agent failure but none of the listed labels fit.", "Use this when the menu misses the failure mode."], "counter_example": "A supplied canonical label plainly fits."}
+  ],
+  "history": []
+}

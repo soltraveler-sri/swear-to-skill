@@ -226,6 +226,8 @@ def load_lexicon(user_lexicons_dir: Path | None = None) -> dict[str, Any]:
         "swear_index_excluded_terms": [],
     }
     for path in _json_files(LEXICONS_DIR):
+        if path.name.startswith("taxonomy."):
+            continue
         _merge_lexicon(lexicon, _read_lexicon_file(path), path)
 
     override_dir = user_lexicons_dir

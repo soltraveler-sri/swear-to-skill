@@ -26,6 +26,7 @@ def test_missing_config_returns_documented_defaults(monkeypatch, tmp_path) -> No
 
     assert config.thresholds.triage_untriaged_count == 10
     assert config.thresholds.triage_max_age_hours == 24
+    assert config.thresholds.triage_per_run_cap == 25
     assert config.thresholds.curator_unreviewed_count == 10
     assert config.thresholds.curator_max_age_days == 7
     assert config.autonomy.mode == "review"
@@ -34,6 +35,14 @@ def test_missing_config_returns_documented_defaults(monkeypatch, tmp_path) -> No
     assert config.notifications.session_start_digest is True
     assert config.notifications.desktop is False
     assert config.notifications.webhook_url == ""
+    assert config.notifications.events == ("proposal_pending", "autonomous_action")
+    assert config.models.triage == "haiku"
+    assert config.models.curate == "sonnet"
+    assert config.models.synthesize == "sonnet"
+    assert config.models.parallelism == 2
+    assert config.costs.confirm_threshold_usd == 1.0
+    assert config.curator.qc_sample_size == 5
+    assert config.curator.context_char_budget == 60_000
 
 
 def test_config_is_loaded_from_the_overridden_s2s_home(monkeypatch, tmp_path) -> None:
@@ -42,10 +51,17 @@ def test_config_is_loaded_from_the_overridden_s2s_home(monkeypatch, tmp_path) ->
         "[thresholds]\ncurator_unreviewed_count = 4\n"
         "[autonomy]\nmode = 'autonomous'\n"
         "[notifications]\ndesktop = true\n"
+        "[models]\ntriage = 'custom-haiku'\nparallelism = 3\n"
+        "[costs]\nconfirm_threshold_usd = 2.5\n"
     )
 
     config = load_config()
 
     assert config.thresholds.curator_unreviewed_count == 4
+    assert config.thresholds.triage_per_run_cap == 25
     assert config.autonomy.mode == "autonomous"
     assert config.notifications.desktop is True
+    assert config.models.triage == "custom-haiku"
+    assert config.models.curate == "sonnet"
+    assert config.models.parallelism == 3
+    assert config.costs.confirm_threshold_usd == 2.5
