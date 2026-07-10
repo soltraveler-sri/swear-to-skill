@@ -69,7 +69,9 @@ def test_init_is_byte_idempotent_and_installs_default_config(
     assert (s2s_home / "archive").is_dir()
     assert (s2s_home / "state").is_dir()
     assert (s2s_home / "logs").is_dir()
-    assert (settings.parent / "skills" / "s2s" / "SKILL.md").is_file()
+    companion = settings.parent / "skills" / "s2s" / "SKILL.md"
+    assert companion.is_file()
+    assert "name: s2s" in companion.read_text()
 
 
 def test_companion_skill_install_upgrade_and_uninstall_round_trip(
