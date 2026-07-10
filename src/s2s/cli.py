@@ -100,6 +100,7 @@ def _run_status() -> int:
 
     with Ledger() as ledger:
         print(render_status(collect_dashboard_data(ledger), archived_sessions=count_archived_sessions()))
+        print(f"pending proposals: {ledger.pending_proposal_count()}")
     return 0
 
 
