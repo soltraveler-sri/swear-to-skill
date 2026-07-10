@@ -317,3 +317,20 @@ def test_repeat_and_tranche_cycles_emit_scorer_inputs(tmp_path: Path) -> None:
     assert all(item["idempotent"] for item in record["cycles"])  # type: ignore[index]
     assert all(item["state_machine_integrity"] for item in record["cycles"])  # type: ignore[index]
     assert all(item["on_new_economics"] for item in record["cycles"])  # type: ignore[index]
+
+
+def test_sandbox_config_garden_version_is_independent_of_curate(tmp_path) -> None:
+    """Live finding: curate v2 must not drag garden to a nonexistent v2."""
+    from s2s import evalrun
+
+    config = evalrun.EvalRunConfig(
+        mode="mock",
+        assume_yes=True,
+        output_root=tmp_path,
+        keep=True,
+        stages=("scan",),
+        curate=evalrun.EvalStageConfig("sonnet", prompt_version="v2"),
+    )
+    result = evalrun.run_eval(config)
+    text = (result.sandbox_path / "s2s-home" / "config.toml").read_text()
+    assert 'garden = "v1"' in text
