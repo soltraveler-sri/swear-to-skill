@@ -1,0 +1,219 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "5a6db9e63544de93",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Grade the proposed remedy, not the\nwriting style of this prompt. A good remedy changes a concrete future behavior,\nis broad enough to cover the failure mode without becoming a platitude, uses a\nreal `Use when ...` trigger when it is a skill, leaks no evidence-specific\nproject nouns into the remedy text, and uses the cheapest adequate remedy type.\n\nScore every dimension from 1 (poor) to 5 (excellent). Give exactly one concise\nsentence of justification for each score. Do not infer facts that are absent.\n\nPROPOSAL:\n{\n  \"failure_statement\": \"Small requested changes expanded into rewrites.\",\n  \"remedy_content\": {\n    \"body\": \"Compare the work with the request before responding.\",\n    \"description\": \"Use for tasks.\",\n    \"name\": \"scope-check\"\n  },\n  \"remedy_type\": \"skill\",\n  \"routing_rationale\": \"A skill can guide scope management.\"\n}\n",
+    "schema": {
+      "properties": {
+        "actionability": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "generality_without_vagueness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "leakage": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "routing_fitness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "trigger_quality": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "actionability",
+        "generality_without_vagueness",
+        "trigger_quality",
+        "leakage",
+        "routing_fitness"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 15533,
+    "duration_ms": 15728,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 3621,
+        "cacheReadInputTokens": 28509,
+        "contextWindow": 1000000,
+        "costUSD": 0.0708927,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 1354,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"actionability\":{\"score\":2,\"justification\":\"\\\"Compare the work with the request before responding\\\" is a post-hoc check with no specified corrective action (e.g., revert unrequested edits, ask before expanding scope), so it doesn't reliably change future behavior.\"},\"generality_without_vagueness\":{\"score\":1,\"justification\":\"The body is a content-free platitude that could apply to any task and gives no specific guidance tied to the scope-creep failure mode (e.g., limiting diff to the requested lines, flagging extra refactors).\"},\"trigger_quality\":{\"score\":1,\"justification\":\"The description \\\"Use for tasks.\\\" is not a real trigger — it fails to specify any condition distinguishing this skill from default behavior, so it would fire on everything or nothing predictably.\"},\"leakage\":{\"score\":5,\"justification\":\"The remedy text is fully generic and contains no project-specific nouns or evidence-specific details from the failure case.\"},\"routing_fitness\":{\"score\":2,\"justification\":\"The routing rationale is circular (\\\"a skill can guide scope management\\\") and doesn't justify why a persistent skill file is cheaper or more appropriate than a lighter-weight reminder, given the vague, poorly-triggered content it delivers.\"}}",
+    "session_id": "12c495e1-6cfb-4d8b-90c9-1fb4147ad670",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "actionability": {
+        "justification": "\"Compare the work with the request before responding\" is a post-hoc check with no specified corrective action (e.g., revert unrequested edits, ask before expanding scope), so it doesn't reliably change future behavior.",
+        "score": 2
+      },
+      "generality_without_vagueness": {
+        "justification": "The body is a content-free platitude that could apply to any task and gives no specific guidance tied to the scope-creep failure mode (e.g., limiting diff to the requested lines, flagging extra refactors).",
+        "score": 1
+      },
+      "leakage": {
+        "justification": "The remedy text is fully generic and contains no project-specific nouns or evidence-specific details from the failure case.",
+        "score": 5
+      },
+      "routing_fitness": {
+        "justification": "The routing rationale is circular (\"a skill can guide scope management\") and doesn't justify why a persistent skill file is cheaper or more appropriate than a lighter-weight reminder, given the vague, poorly-triggered content it delivers.",
+        "score": 2
+      },
+      "trigger_quality": {
+        "justification": "The description \"Use for tasks.\" is not a real trigger — it fails to specify any condition distinguishing this skill from default behavior, so it would fire on everything or nothing predictably.",
+        "score": 1
+      }
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 100,
+    "total_cost_usd": 0.0708927,
+    "ttft_ms": 11155,
+    "ttft_stream_ms": 2043,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 3621,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 3621,
+      "cache_read_input_tokens": 28509,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 3621,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 3621,
+          "cache_read_input_tokens": 28509,
+          "input_tokens": 6768,
+          "output_tokens": 1354,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 1354,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "e90c663a-a1d8-4af3-b47b-5273aad1b39d"
+  }
+}

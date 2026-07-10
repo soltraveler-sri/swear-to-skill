@@ -12,13 +12,13 @@ import re
 from .config import load_config
 from .ledger import Incident, Ledger, Remedy
 from .notify import emit
-from .llm import call, estimate_and_confirm, load_prompt
+from .llm import MalformedOutputError, call, estimate_and_confirm, load_prompt
 from .taxonomy import list_labels
 from .triager import context_for_incident
 
 
 PROMPT_NAME = "synthesize"
-PROMPT_VERSION = 1
+PROMPT_VERSION = 2
 SKILL_NAME_RE = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
 MANAGED_BLOCK_RE = re.compile(r"<!--\s*s2s:begin\s*-->(.*?)<!--\s*s2s:end\s*-->", re.DOTALL)
 
@@ -34,6 +34,7 @@ class SynthesisResult:
     label: str
     incident_ids: tuple[int, ...]
     proposal_ids: tuple[int, ...]
+    error: str | None = None
 
 
 @dataclass(frozen=True)
@@ -45,8 +46,15 @@ class RemedySurface:
     proposals: tuple[tuple[str, str], ...]
 
     @property
+    def reference_ids(self) -> dict[str, str]:
+        """Stable prompt tokens mapped to their durable remedy references."""
+
+        rows = (*self.skills, *self.claude_md_blocks, *self.proposals)
+        return {f"R{index}": reference for index, (reference, _) in enumerate(rows, start=1)}
+
+    @property
     def references(self) -> tuple[str, ...]:
-        return tuple(reference for reference, _ in (*self.skills, *self.claude_md_blocks, *self.proposals))
+        return tuple(self.reference_ids.values())
 
 
 def synthesize_pending(
@@ -87,14 +95,29 @@ def synthesize_pending(
             project_claude_md_paths=default_project_paths,
             reference_root=surface_reference_root,
         )
-        response = _call_validated(
-            render_synthesis_prompt(template, label, incidents, surface),
-            schema=schema,
-            model=model,
-            effort=config.models.synthesize_effort,
-            incident_ids={incident.id for incident in incidents},
-            surface_references=set(surface.references),
-        )
+        try:
+            response = _call_validated(
+                render_synthesis_prompt(template, label, incidents, surface),
+                schema=schema,
+                model=model,
+                effort=config.models.synthesize_effort,
+                incident_ids={incident.id for incident in incidents},
+                reference_ids=surface.reference_ids,
+            )
+        except (SynthesisValidationError, MalformedOutputError) as error:
+            # A group whose response stays invalid after the corrective retry
+            # is a data point (evals score it; the pump retries next cycle
+            # since its incidents remain 'promoted') — never a reason to
+            # abandon the remaining groups.
+            results.append(
+                SynthesisResult(
+                    label,
+                    tuple(incident.id for incident in incidents),
+                    (),
+                    error=f"{type(error).__name__}: {error}",
+                )
+            )
+            continue
         normalized = _normalize_response(response, singleton=_singleton_group(ledger, incidents))
         proposal_ids = ledger.create_synthesis_proposals(
             normalized,
@@ -148,7 +171,7 @@ def synthesize_audit_revision(
         model=config.models.synthesize,
         effort=config.models.synthesize_effort,
         incident_ids={incident.id for incident in incidents},
-        surface_references=set(surface.references),
+        reference_ids=surface.reference_ids,
     )
     if response.get("split") is not None:
         raise SynthesisValidationError("audit revision must produce one replacement proposal")
@@ -226,12 +249,19 @@ def render_synthesis_prompt(
     """Render the complete evidence and every dedup target for one label group."""
 
     evidence = _bounded_evidence_packs(incidents, load_config().curator.context_char_budget)
+    render_rows = _render_surface_rows if "{{REFERENCE_COUNT}}" in template else _render_legacy_surface_rows
     replacements = {
         "{{TAXONOMY_GIST}}": _taxonomy_gist(label),
         "{{EVIDENCE_PACKS}}": evidence,
-        "{{SKILL_DIGESTS}}": _render_surface_rows(surface.skills),
-        "{{CLAUDE_MD_DIGESTS}}": _render_surface_rows(surface.claude_md_blocks),
-        "{{PROPOSAL_DIGESTS}}": _render_surface_rows(surface.proposals),
+        "{{REFERENCE_COUNT}}": str(len(surface.reference_ids)),
+        "{{SKILL_DIGESTS}}": render_rows(surface.skills),
+        "{{CLAUDE_MD_DIGESTS}}": render_rows(
+            surface.claude_md_blocks, start_index=len(surface.skills) + 1
+        ),
+        "{{PROPOSAL_DIGESTS}}": render_rows(
+            surface.proposals,
+            start_index=len(surface.skills) + len(surface.claude_md_blocks) + 1,
+        ),
     }
     rendered = template
     for marker, value in replacements.items():
@@ -281,22 +311,26 @@ def _call_validated(
     model: str,
     effort: str | None = None,
     incident_ids: set[int],
-    surface_references: set[str],
+    reference_ids: Mapping[str, str],
 ) -> dict[str, object]:
     """Retry once when code-only artifact and partition checks reject valid JSON."""
 
     retry_note = "\n\nYour prior draft failed local validation. Correct the SKILL.md/frontmatter, dedup, and evidence partition exactly."
     last_error: SynthesisValidationError | None = None
     for attempt in range(2):
+        invocation_prompt = prompt
+        if attempt:
+            assert last_error is not None
+            invocation_prompt += retry_note + " Specific validation failure: " + str(last_error)
         response = call(
-            prompt if attempt == 0 else prompt + retry_note,
+            invocation_prompt,
             schema=schema,
             model=model,
             stage="synthesize",
             effort=effort,
         )
         try:
-            _validate_response(response, incident_ids=incident_ids, surface_references=surface_references)
+            _validate_response(response, incident_ids=incident_ids, reference_ids=reference_ids)
         except SynthesisValidationError as error:
             last_error = error
             continue
@@ -309,11 +343,11 @@ def _validate_response(
     response: Mapping[str, object],
     *,
     incident_ids: set[int],
-    surface_references: set[str],
+    reference_ids: Mapping[str, str],
 ) -> None:
     proposals = response.get("split")
     if proposals is None:
-        if _validate_proposal(response, incident_ids, surface_references) != incident_ids:
+        if _validate_proposal(response, incident_ids, reference_ids) != incident_ids:
             raise SynthesisValidationError("proposal evidence must cover every promoted incident")
         return
     if not isinstance(proposals, list) or len(proposals) < 2:
@@ -322,7 +356,7 @@ def _validate_response(
     for proposal in proposals:
         if not isinstance(proposal, Mapping):
             raise SynthesisValidationError("split proposals must be objects")
-        ids = _validate_proposal(proposal, incident_ids, surface_references)
+        ids = _validate_proposal(proposal, incident_ids, reference_ids)
         if seen.intersection(ids):
             raise SynthesisValidationError("split evidence overlaps between proposals")
         seen.update(ids)
@@ -331,7 +365,7 @@ def _validate_response(
 
 
 def _validate_proposal(
-    proposal: Mapping[str, object], incident_ids: set[int], surface_references: set[str]
+    proposal: Mapping[str, object], incident_ids: set[int], reference_ids: Mapping[str, str]
 ) -> set[int]:
     remedy_type = proposal.get("remedy_type")
     if remedy_type not in {"claude-md", "hook", "skill", "benchmark-only"}:
@@ -346,6 +380,7 @@ def _validate_proposal(
     if not isinstance(evidence, list) or not evidence:
         raise SynthesisValidationError("proposal requires evidence")
     ids: set[int] = set()
+    normalized_evidence: list[Mapping[str, object]] = []
     for item in evidence:
         if not isinstance(item, Mapping):
             raise SynthesisValidationError("evidence entries must be objects")
@@ -355,8 +390,14 @@ def _validate_proposal(
         if not isinstance(quote, str) or not quote.strip() or len(quote.splitlines()) > 2:
             raise SynthesisValidationError("evidence quotes must be non-empty and at most two lines")
         if incident_id in ids:
-            raise SynthesisValidationError("proposal repeats an evidence incident")
+            # Real models occasionally cite the same incident twice. A repeat
+            # is harmless redundancy, not a correctness problem — normalize by
+            # keeping the first citation instead of failing the proposal.
+            continue
         ids.add(incident_id)
+        normalized_evidence.append(item)
+    if isinstance(proposal, dict):
+        proposal["evidence"] = normalized_evidence
     content = proposal.get("remedy_content")
     if not isinstance(content, Mapping):
         raise SynthesisValidationError("remedy_content must be an object")
@@ -364,6 +405,7 @@ def _validate_proposal(
     dedup = proposal.get("dedup")
     if not isinstance(dedup, list):
         raise SynthesisValidationError("dedup must be an array")
+    reference_to_id = {reference: reference_id for reference_id, reference in reference_ids.items()}
     targets: dict[str, str] = {}
     for item in dedup:
         if not isinstance(item, Mapping):
@@ -371,16 +413,33 @@ def _validate_proposal(
         existing, verdict, reason = item.get("existing"), item.get("verdict"), item.get("reason")
         if not isinstance(existing, str) or not isinstance(verdict, str) or not isinstance(reason, str) or not reason.strip():
             raise SynthesisValidationError("dedup entries require existing, verdict, and reason")
-        if verdict not in {"clear", "overlap"} or existing in targets:
+        if verdict not in {"clear", "overlap"}:
             raise SynthesisValidationError("dedup verdicts must be unique clear or overlap entries")
-        targets[existing] = verdict
-    if set(targets) != surface_references:
-        raise SynthesisValidationError("dedup must explicitly cover every shown existing remedy")
-    overlaps = {existing for existing, verdict in targets.items() if verdict == "overlap"}
+        reference_id = existing if existing in reference_ids else reference_to_id.get(existing)
+        if reference_id is None:
+            raise SynthesisValidationError(f"dedup references unknown existing remedy: {existing}")
+        if reference_id in targets:
+            raise SynthesisValidationError("dedup verdicts must be unique clear or overlap entries")
+        targets[reference_id] = verdict
+    missing = [reference_id for reference_id in reference_ids if reference_id not in targets]
+    if missing:
+        details = ", ".join(
+            f"{reference_id} ({reference_ids[reference_id]})" for reference_id in missing
+        )
+        raise SynthesisValidationError(f"dedup missing entries for: {details}")
+    overlaps = {reference_id for reference_id, verdict in targets.items() if verdict == "overlap"}
     action = proposal.get("overlap_action")
     if overlaps:
-        if not isinstance(action, Mapping) or action.get("revises") not in overlaps:
+        revises = action.get("revises") if isinstance(action, Mapping) else None
+        revision_id = None
+        if isinstance(revises, str):
+            revision_id = revises if revises in reference_ids else reference_to_id.get(revises)
+        if revision_id not in overlaps:
             raise SynthesisValidationError("overlap proposals must revise an overlapping existing remedy")
+        if isinstance(proposal, dict):
+            normalized_action = dict(action)
+            normalized_action["revises"] = reference_ids[revision_id]
+            proposal["overlap_action"] = normalized_action
     elif action is not None:
         raise SynthesisValidationError("overlap_action is only valid when overlap exists")
     return ids
@@ -421,7 +480,8 @@ def _normalize_response(response: Mapping[str, object], *, singleton: bool) -> l
         assert isinstance(evidence, list)
         dedup = raw["dedup"]
         assert isinstance(dedup, list)
-        revisions = [item["existing"] for item in dedup if isinstance(item, Mapping) and item.get("verdict") == "overlap"]
+        action = raw.get("overlap_action")
+        revises = action.get("revises") if isinstance(action, Mapping) else None
         proposal = dict(raw)
         proposal.pop("split", None)
         proposal["singleton"] = singleton
@@ -431,7 +491,7 @@ def _normalize_response(response: Mapping[str, object], *, singleton: bool) -> l
                 "drafted_content": json.dumps(proposal, sort_keys=True, separators=(",", ":")),
                 "evidence_incident_ids": [int(item["incident_id"]) for item in evidence if isinstance(item, Mapping)],
                 "dedup_verdict": json.dumps(dedup, sort_keys=True, separators=(",", ":")),
-                "revises": revisions[0] if revisions else None,
+                "revises": revises if isinstance(revises, str) else None,
                 "singleton": singleton,
             }
         )
@@ -472,7 +532,24 @@ def _taxonomy_gist(label: str) -> str:
     return f"{label}: promoted taxonomy label"
 
 
-def _render_surface_rows(rows: Sequence[tuple[str, str]]) -> str:
+def _render_surface_rows(
+    rows: Sequence[tuple[str, str]], *, start_index: int = 1
+) -> str:
+    return (
+        "\n".join(
+            f"- [R{index}] {reference} | {digest}"
+            for index, (reference, digest) in enumerate(rows, start=start_index)
+        )
+        or "- (none)"
+    )
+
+
+def _render_legacy_surface_rows(
+    rows: Sequence[tuple[str, str]], *, start_index: int = 1
+) -> str:
+    """Keep published v1 arms byte-compatible while v2 owns stable prompt IDs."""
+
+    del start_index
     return "\n".join(f"- {reference} | {digest}" for reference, digest in rows) or "- (none)"
 
 

@@ -81,9 +81,9 @@ class Prompts:
     """Published prompt versions used by each judgment surface."""
 
     triage: str = "v1"
-    curate: str = "v1"
+    curate: str = "v2"
     garden: str = "v1"
-    synthesize: str = "v1"
+    synthesize: str = "v2"
     judge_remedy: str = "v1"
     judge_counterfactual: str = "v1"
 

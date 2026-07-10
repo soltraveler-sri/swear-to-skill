@@ -1,0 +1,217 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "ac02f4895a757f79",
+    "model": "sonnet",
+    "stage": "synthesize"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are the Stage 4 Synthesist. Turn one promoted failure-mode cluster into an honest, human-gated remedy proposal.\n\nMost frustrations do not deserve a skill. Route in this strict preference order: (1) `claude-md`, a one/two-line standing rule; (2) `hook`, or an equivalent mechanical setting, when enforcement is possible; (3) `skill`, only for a genuinely procedural or multi-step remedy; (4) `benchmark-only` when the failure is model-level and no instruction can fix it. Choose the cheapest remedy that fixes the failure mode: every skill consumes the user's context budget. `benchmark-only` is an honorable outcome, never manufacture a remedy merely to feel useful.\n\nIf the only sensible remedy target is Codex-side (`AGENTS.md` or `~/.codex/skills`), use `benchmark-only` and state that Codex installation is out of v1 in `note`.\n\nThe existing-remedy digests below are numbered [R1]…[RN]. There are 3 existing-remedy digests. Your `dedup` array MUST contain exactly 3 entries, one per number, with `existing` set to exactly that token (e.g. \"R1\"). Include entries even when the verdict is clear. State `clear` or `overlap` for each. Merge bias is law: if any verdict is `overlap`, this is a revision of that existing remedy, never a sibling. Set `overlap_action.revises` to that R token.\n\nFor a `skill`, write a kebab-case name and a concrete auto-invocation description beginning `Use when ...`; this description is the trigger. The body must be substantive Markdown. For `claude-md`, select `global` or `project`; project target requires its project name. For `hook`, give a Claude Code event and a command sketch. For `benchmark-only`, explain the measurement-only outcome in `note`.\n\nThe upstream classifier deliberately over-merges. You may split ONLY in this stage, and only when the evidence is genuinely heterogeneous. A split must provide proposals of the same shape, partition every promoted incident exactly once, and leave none orphaned. Otherwise return one proposal covering the group.\n\nTAXONOMY GIST:\nignored-instruction: explicit user instruction not followed\n\nPROMOTED EVIDENCE:\nBEGIN PROMOTED EVIDENCE incident_id=1 project=aurora\nOne-liner: Violated an explicit operational constraint that was previously established\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nYou ignored the no-network constraint; stop changing the plan.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=3 project=aurora\nOne-liner: Ignored explicit instruction to leave a component unchanged\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nI told you to leave the formatter alone, and it was changed.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: The fake vendor error says 'what the hell'; quote it verbatim in the fixture.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=5 project=cinder\nOne-liner: Modified code sections that were explicitly instructed to remain unchanged\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nFollow the instructions: this patch must not touch tests.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nEND PROMOTED EVIDENCE\n\nEXISTING SKILLS (name and description only):\n- [R1] skill:$HOME/.claude/skills/fake-verify-before-claim/SKILL.md | name=fake-verify-before-claim | description=Use when a completion claim requires verification.\n\nS2S-MANAGED CLAUDE.MD BLOCKS:\n- [R2] claude-md:$HOME/.claude/CLAUDE.md#1 | # Fake Release Discipline\n\nBefore reporting a fake release as complete, run its declared verification\ncommand and report the result plainly.\n\nPENDING OR INSTALLED S2S PROPOSALS:\n- [R3] proposal #1 | type=hook | status=pending | {\"confidence\":0.72,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) targets verifying completion claims before reporting success; this incident is about an unconfirmed destructive delete, a different failure mode entirely \\u2014 no overlap.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline claude-md block) is about running a verification command before reporting a fake release complete; this incident concerns deleting a file without permission, not relea\n",
+    "schema": {
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "dedup": {
+          "items": {
+            "properties": {
+              "existing": {
+                "pattern": "^R[0-9]+$",
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "clear",
+                  "overlap"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "existing",
+              "verdict",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "properties": {
+              "incident_id": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "quote": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "incident_id",
+              "quote"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "failure_statement": {
+          "type": "string"
+        },
+        "overlap_action": {
+          "properties": {
+            "revises": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "revises"
+          ],
+          "type": "object"
+        },
+        "remedy_content": {
+          "type": "object"
+        },
+        "remedy_type": {
+          "enum": [
+            "claude-md",
+            "hook",
+            "skill",
+            "benchmark-only"
+          ],
+          "type": "string"
+        },
+        "routing_rationale": {
+          "type": "string"
+        },
+        "split": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "remedy_type",
+        "routing_rationale",
+        "failure_statement",
+        "remedy_content",
+        "evidence",
+        "dedup",
+        "confidence"
+      ],
+      "type": "object"
+    },
+    "stage": "synthesize"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 41916,
+    "duration_ms": 42118,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 4919,
+        "cacheReadInputTokens": 28515,
+        "contextWindow": 1000000,
+        "costUSD": 0.1146825,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 3754,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"remedy_type\":\"claude-md\",\"routing_rationale\":\"All three promoted incidents are the same shape: the agent was given an explicit, in-scope constraint on what NOT to change (no-network / don't touch the formatter / don't touch tests) and violated it during otherwise-unrelated work. This is a behavioral-discipline gap, not a missing capability, so a skill is wrong — there's no multi-step procedure to teach, just a standing rule to hold constant. A hook is also wrong: the constraints are ad-hoc and semantic per conversation (\\\"the formatter,\\\" \\\"no network,\\\" \\\"the plan\\\") — there's no fixed file path, command, or pattern a hook could mechanically gate on across arbitrary future sessions. That leaves the cheapest fix that actually targets the failure: a short standing claude-md rule instructing the agent to track any explicit \\\"don't touch / don't do X\\\" constraint for the rest of the task and self-check its diff/plan against it before finishing. Incidents span two projects (aurora, cinder) with no project-specific hook or config involved, so this belongs at global scope, not a per-project block.\",\"failure_statement\":\"When a user gives an explicit negative constraint mid-task (a file/area to leave unchanged, or an operational limit like \\\"no network\\\"), the agent silently violates it later in the same session — either by editing the excluded area or by re-planning around the stated limit — without flagging the conflict before acting.\",\"remedy_content\":{\"target\":\"global\",\"heading\":\"# Respect Explicit Do-Not-Touch / Operational Constraints\",\"body\":\"When the user states an explicit negative constraint during a task — a file, module, or area to leave unchanged (e.g. \\\"don't touch the formatter,\\\" \\\"this patch must not touch tests\\\"), or an operational limit (e.g. \\\"no network calls\\\") — treat it as binding for the rest of the task, not just the turn it was given in. Before finishing or before any re-plan, check your diff/plan against every such constraint still in effect and confirm none were violated or silently dropped. If a later step seems to require violating one, stop and ask rather than proceeding.\"},\"evidence\":[{\"incident_id\":1,\"quote\":\"You ignored the no-network constraint; stop changing the plan.\"},{\"incident_id\":3,\"quote\":\"I told you to leave the formatter alone, and it was changed.\"},{\"incident_id\":5,\"quote\":\"Follow the instructions: this patch must not touch tests.\"}],\"dedup\":[{\"existing\":\"R1\",\"verdict\":\"clear\",\"reason\":\"R1 (fake-verify-before-claim) targets verifying completion claims before reporting success/done; this cluster is about violating explicit scope/operational constraints during the work itself, an unrelated failure mode.\"},{\"existing\":\"R2\",\"verdict\":\"clear\",\"reason\":\"R2 (Fake Release Discipline) governs running a verification command before reporting a fake release complete; this cluster has nothing to do with release verification, it's about respecting explicit 'don't touch X' / 'no network' constraints.\"},{\"existing\":\"R3\",\"verdict\":\"clear\",\"reason\":\"R3's own dedup notes describe it as covering an unconfirmed destructive delete (a specific irreversible action needing confirmation), which is mechanically hookable. This cluster is broader and non-mechanical — arbitrary semantic constraints (formatter, tests, no-network/plan) that can't be caught by a fixed hook pattern — so it needs a standing instruction rather than extending R3's delete-confirmation hook.\"}],\"confidence\":0.85}",
+    "session_id": "4a8120ae-7053-49b3-bdfe-de38457dfec4",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "confidence": 0.85,
+      "dedup": [
+        {
+          "existing": "R1",
+          "reason": "R1 (fake-verify-before-claim) targets verifying completion claims before reporting success/done; this cluster is about violating explicit scope/operational constraints during the work itself, an unrelated failure mode.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R2",
+          "reason": "R2 (Fake Release Discipline) governs running a verification command before reporting a fake release complete; this cluster has nothing to do with release verification, it's about respecting explicit 'don't touch X' / 'no network' constraints.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R3",
+          "reason": "R3's own dedup notes describe it as covering an unconfirmed destructive delete (a specific irreversible action needing confirmation), which is mechanically hookable. This cluster is broader and non-mechanical — arbitrary semantic constraints (formatter, tests, no-network/plan) that can't be caught by a fixed hook pattern — so it needs a standing instruction rather than extending R3's delete-confirmation hook.",
+          "verdict": "clear"
+        }
+      ],
+      "evidence": [
+        {
+          "incident_id": 1,
+          "quote": "You ignored the no-network constraint; stop changing the plan."
+        },
+        {
+          "incident_id": 3,
+          "quote": "I told you to leave the formatter alone, and it was changed."
+        },
+        {
+          "incident_id": 5,
+          "quote": "Follow the instructions: this patch must not touch tests."
+        }
+      ],
+      "failure_statement": "When a user gives an explicit negative constraint mid-task (a file/area to leave unchanged, or an operational limit like \"no network\"), the agent silently violates it later in the same session — either by editing the excluded area or by re-planning around the stated limit — without flagging the conflict before acting.",
+      "remedy_content": {
+        "body": "When the user states an explicit negative constraint during a task — a file, module, or area to leave unchanged (e.g. \"don't touch the formatter,\" \"this patch must not touch tests\"), or an operational limit (e.g. \"no network calls\") — treat it as binding for the rest of the task, not just the turn it was given in. Before finishing or before any re-plan, check your diff/plan against every such constraint still in effect and confirm none were violated or silently dropped. If a later step seems to require violating one, stop and ask rather than proceeding.",
+        "heading": "# Respect Explicit Do-Not-Touch / Operational Constraints",
+        "target": "global"
+      },
+      "remedy_type": "claude-md",
+      "routing_rationale": "All three promoted incidents are the same shape: the agent was given an explicit, in-scope constraint on what NOT to change (no-network / don't touch the formatter / don't touch tests) and violated it during otherwise-unrelated work. This is a behavioral-discipline gap, not a missing capability, so a skill is wrong — there's no multi-step procedure to teach, just a standing rule to hold constant. A hook is also wrong: the constraints are ad-hoc and semantic per conversation (\"the formatter,\" \"no network,\" \"the plan\") — there's no fixed file path, command, or pattern a hook could mechanically gate on across arbitrary future sessions. That leaves the cheapest fix that actually targets the failure: a short standing claude-md rule instructing the agent to track any explicit \"don't touch / don't do X\" constraint for the rest of the task and self-check its diff/plan against it before finishing. Incidents span two projects (aurora, cinder) with no project-specific hook or config involved, so this belongs at global scope, not a per-project block."
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 108,
+    "total_cost_usd": 0.1146825,
+    "ttft_ms": 29920,
+    "ttft_stream_ms": 1514,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 4919,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 4919,
+      "cache_read_input_tokens": 28515,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 4919,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 4919,
+          "cache_read_input_tokens": 28515,
+          "input_tokens": 6768,
+          "output_tokens": 3754,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 3754,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "c4901aff-8552-48a6-96b7-9ed28de56546"
+  }
+}

@@ -159,7 +159,10 @@ def test_only_llm_module_may_construct_a_claude_subprocess() -> None:
 
 @pytest.mark.real_llm
 @pytest.mark.skipif(os.environ.get("S2S_REAL_LLM") != "1", reason="set S2S_REAL_LLM=1 to opt in")
-def test_real_claude_smoke_is_explicitly_opt_in() -> None:
+def test_real_claude_smoke_is_explicitly_opt_in(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    monkeypatch.setenv("S2S_HOME", str(tmp_path / "home"))
     text, schema = load_prompt("echo", 1)
     response = call(
         f"{text}\n\nMessage: smoke",
@@ -169,3 +172,58 @@ def test_real_claude_smoke_is_explicitly_opt_in() -> None:
         timeout_s=120,
     )
     assert isinstance(response["message"], str)
+
+
+def test_transport_uses_real_user_home_and_private_neutral_cwd(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    """Sandbox HOME overrides steer pipeline writes, never claude credentials.
+
+    Also: the neutral cwd must be per-process and 0o700 (a predictable shared
+    path would allow local CLAUDE.md prompt-injection into pipeline calls).
+    """
+    import os as _os
+    import pwd as _pwd
+    import stat as _stat
+
+    from s2s import llm
+
+    captured: dict[str, object] = {}
+
+    def fake_run(argv, **kwargs):
+        captured["env"] = kwargs["env"]
+        captured["cwd"] = kwargs["cwd"]
+
+        class Done:
+            returncode = 0
+            stdout = '{"result": {"ok": true}, "usage": {}, "total_cost_usd": 0}'
+            stderr = ""
+
+        return Done()
+
+    monkeypatch.setattr(llm.subprocess, "run", fake_run)
+    request = llm.LLMRequest(
+        argv=("claude",),
+        prompt="p",
+        schema={"type": "object"},
+        model="haiku",
+        stage="test",
+        timeout_s=5,
+        env={
+            "HOME": str(tmp_path / "fake-home"),
+            "CLAUDE_CONFIG_DIR": str(tmp_path / "fake-home" / ".claude"),
+            "PATH": _os.environ.get("PATH", ""),
+        },
+    )
+    llm.default_response_provider(request)
+
+    real_home = _pwd.getpwuid(_os.getuid()).pw_dir
+    assert captured["env"]["HOME"] == real_home
+    # A sandboxed CLAUDE_CONFIG_DIR must never reach the transport (it
+    # relocates claude's credentials); the process-start value wins.
+    assert "CLAUDE_CONFIG_DIR" not in captured["env"] or captured["env"][
+        "CLAUDE_CONFIG_DIR"
+    ] == llm._PROCESS_START_CLAUDE_CONFIG_DIR
+    mode = _os.stat(captured["cwd"]).st_mode
+    assert _stat.S_IMODE(mode) == 0o700
+    assert "s2s-neutral-cwd-" in str(captured["cwd"])

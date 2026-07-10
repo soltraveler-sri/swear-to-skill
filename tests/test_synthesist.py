@@ -124,9 +124,9 @@ def test_overlap_is_linked_revision_not_sibling(ledger: Ledger, mock_claude) -> 
     # The existing proposal's old promoted incident is not part of this run.
     ledger.transition_incident(1, "in-proposal", reason="old proposal")
     incident_id = _promoted(ledger, "NEW", index=1)
-    dedup = [{"existing": f"proposal #{existing}", "verdict": "overlap", "reason": "Same rule."}]
+    dedup = [{"existing": "R1", "verdict": "overlap", "reason": "Same rule."}]
     response = _proposal(incident_id, "claude-md", dedup=dedup)
-    response["overlap_action"] = {"revises": f"proposal #{existing}"}
+    response["overlap_action"] = {"revises": "R1"}
     mock_claude.enqueue_response(_envelope(response))
 
     _synthesize(ledger)
@@ -157,8 +157,10 @@ def test_split_creates_partitioned_proposals_and_rejects_orphans(ledger: Ledger,
     orphan_response["split"] = [_proposal(third, "claude-md"), _proposal(third, "hook")]
     mock_claude.enqueue_response(_envelope(orphan_response))
     mock_claude.enqueue_response(_envelope(orphan_response))
-    with pytest.raises(SynthesisValidationError, match="split evidence"):
-        _synthesize(ledger)
+    orphan_results = _synthesize(ledger)
+    assert orphan_results and orphan_results[-1].error is not None
+    assert "split evidence" in orphan_results[-1].error
+    assert orphan_results[-1].proposal_ids == ()
     assert ledger.get_incident(third).state == "promoted"  # type: ignore[union-attr]
     assert ledger.get_incident(fourth).state == "promoted"  # type: ignore[union-attr]
 
@@ -172,10 +174,14 @@ def test_skill_frontmatter_validation_retries_then_preserves_promoted_on_failure
     mock_claude.enqueue_response(_envelope(invalid))
     mock_claude.enqueue_response(_envelope(invalid))
 
-    with pytest.raises(SynthesisValidationError, match="kebab-case"):
-        _synthesize(ledger)
+    failed_results = _synthesize(ledger)
+    assert failed_results and failed_results[-1].error is not None
+    assert "kebab-case" in failed_results[-1].error
+    assert failed_results[-1].proposal_ids == ()
     assert ledger.get_incident(incident_id).state == "promoted"  # type: ignore[union-attr]
     assert len(mock_claude.invocations()) == 2
+    retry_prompt = str(mock_claude.invocations()[1]["stdin"])
+    assert "Specific validation failure: SKILL.md name must be kebab-case" in retry_prompt
     frontmatter, body = parse_skill_markdown(
         "---\nname: instruction-check\ndescription: Use when constraints must be checked.\n---\n# Check\n"
     )
@@ -198,17 +204,78 @@ def test_prompt_contains_injectable_existing_remedy_digests(ledger: Ledger, mock
     )
     # Existing evidence can be promoted in this isolated fixture; the proposal itself is a digest target.
     dedup = [
-        {"existing": f"skill:{skill_file}", "verdict": "clear", "reason": "Different."},
-        {"existing": f"claude-md:{claude_md}#1", "verdict": "clear", "reason": "Different."},
-        {"existing": f"proposal #{existing}", "verdict": "clear", "reason": "Different."},
+        {"existing": "R1", "verdict": "clear", "reason": "Different."},
+        {"existing": "R2", "verdict": "clear", "reason": "Different."},
+        {"existing": "R3", "verdict": "clear", "reason": "Different."},
     ]
     mock_claude.enqueue_response(_envelope(_proposal(incident_id, "benchmark-only", dedup=dedup)))
 
     _synthesize(ledger, skills_dir=skills, global_claude_md_path=claude_md)
 
     prompt = str(mock_claude.invocations()[0]["stdin"])
+    assert "There are 3 existing-remedy digests." in prompt
+    assert f"[R1] skill:{skill_file}" in prompt
+    assert f"[R2] claude-md:{claude_md}#1" in prompt
+    assert f"[R3] proposal #{existing}" in prompt
     assert "name=existing-rule | description=Use when an existing remedy applies." in prompt
     assert "managed rule" in prompt and "Prior hook" in prompt
+
+
+@pytest.mark.parametrize("use_reference_id", [True, False])
+def test_dedup_accepts_reference_id_and_full_reference(
+    ledger: Ledger, mock_claude, tmp_path: Path, use_reference_id: bool
+) -> None:
+    incident_id = _promoted(ledger, f"DEDUP-{use_reference_id}", singleton=True)
+    skills = tmp_path / "skills"
+    skill_file = skills / "existing" / "SKILL.md"
+    skill_file.parent.mkdir(parents=True)
+    skill_file.write_text(
+        "---\nname: existing-rule\ndescription: Use when an existing remedy applies.\n---\nBody\n",
+        encoding="utf-8",
+    )
+    existing = "R1" if use_reference_id else f"skill:{skill_file}"
+    response = _proposal(
+        incident_id,
+        "benchmark-only",
+        dedup=[{"existing": existing, "verdict": "clear", "reason": "Different."}],
+    )
+    mock_claude.enqueue_response(_envelope(response))
+
+    result = _synthesize(ledger, skills_dir=skills)
+
+    assert result[0].proposal_ids
+
+
+def test_v2_coverage_failure_names_missing_reference_ids(
+    ledger: Ledger, mock_claude, tmp_path: Path
+) -> None:
+    incident_id = _promoted(ledger, "MISSING DEDUP", singleton=True)
+    skills = tmp_path / "skills"
+    skill_file = skills / "existing" / "SKILL.md"
+    skill_file.parent.mkdir(parents=True)
+    skill_file.write_text(
+        "---\nname: existing-rule\ndescription: Use when an existing remedy applies.\n---\nBody\n",
+        encoding="utf-8",
+    )
+    claude_md = tmp_path / "CLAUDE.md"
+    claude_md.write_text(
+        "<!-- s2s:begin -->\nmanaged rule\n<!-- s2s:end -->\n", encoding="utf-8"
+    )
+    incomplete = _proposal(
+        incident_id,
+        "benchmark-only",
+        dedup=[{"existing": "R1", "verdict": "clear", "reason": "Different."}],
+    )
+    mock_claude.enqueue_response(_envelope(incomplete))
+    mock_claude.enqueue_response(_envelope(incomplete))
+
+    result = _synthesize(
+        ledger, skills_dir=skills, global_claude_md_path=claude_md
+    )
+
+    assert result[0].proposal_ids == ()
+    assert result[0].error is not None
+    assert f"dedup missing entries for: R2 (claude-md:{claude_md}#1)" in result[0].error
 
 
 def test_singleton_provenance_is_copied_to_proposal(ledger: Ledger, mock_claude) -> None:
@@ -220,3 +287,20 @@ def test_singleton_provenance_is_copied_to_proposal(ledger: Ledger, mock_claude)
     row = ledger.connection.execute("SELECT singleton, drafted_content FROM proposal").fetchone()
     assert row["singleton"] == 1
     assert json.loads(row["drafted_content"])["singleton"] is True
+
+
+def test_duplicate_evidence_citations_are_normalized_not_fatal(
+    ledger: Ledger, mock_claude
+) -> None:
+    """Live finding: real models sometimes cite an incident twice; keep first."""
+    incident_id = _promoted(ledger, "dup-evidence")
+    proposal = _proposal(incident_id, "claude-md")
+    proposal["evidence"] = [
+        {"incident_id": incident_id, "quote": "This is not what I asked."},
+        {"incident_id": incident_id, "quote": "This is not what I asked."},
+    ]
+    mock_claude.enqueue_response(_envelope(proposal))
+    results = _synthesize(ledger)
+    assert len(results) == 1 and results[0].proposal_ids
+    stored = ledger.get_proposal(results[0].proposal_ids[0])
+    assert stored is not None

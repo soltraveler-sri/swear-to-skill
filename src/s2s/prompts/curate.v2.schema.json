@@ -1,0 +1,37 @@
+{
+  "type": "object",
+  "required": ["incident_verdicts", "cluster_verdicts"],
+  "properties": {
+    "incident_verdicts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["incident_id", "verdict", "reason"],
+        "properties": {
+          "incident_id": {"type": "integer", "minimum": 1},
+          "verdict": {
+            "type": "string",
+            "enum": ["promote", "park", "dismiss", "reassign", "resurrect"]
+          },
+          "reason": {"type": "string"},
+          "reassign_label": {"type": "string", "enum": []}
+        }
+      }
+    },
+    "cluster_verdicts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["label", "verdict", "reason"],
+        "properties": {
+          "label": {"type": "string", "enum": []},
+          "verdict": {
+            "type": "string",
+            "enum": ["synthesize", "hold", "unworthy"]
+          },
+          "reason": {"type": "string"}
+        }
+      }
+    }
+  }
+}

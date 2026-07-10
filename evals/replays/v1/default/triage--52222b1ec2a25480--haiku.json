@@ -1,0 +1,139 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "52222b1ec2a25480",
+    "model": "haiku",
+    "stage": "triage"
+  },
+  "request": {
+    "model": "haiku",
+    "prompt": "You are the Stage 2 Triager. Review exactly one incident context below.\n\nDetermine whether the message is genuine frustration at THE AGENT'S BEHAVIOR. It is not authentic when it is a quotation, frustration at a third-party tool, self-directed annoyance, or playful or ironic language.\n\nFor an authentic incident, select exactly one label from the supplied menu. 'other' is a legal and expected answer — do NOT force a bad fit; a capable model reviews 'other' regularly.\n\nWrite `one_liner` as a general failure mode with NO project-specific nouns. It is digest text only.\n\nReturn all required fields even when the incident is not authentic; use the best supplied label and a concise explanatory one_liner in that case.\n\nLABEL MENU:\n- premature-completion-claim: said \"done\"/\"fixed\" when it wasn't. Examples: You said this was done, but the failure is still here.; That fix clearly did not work.. Counter-example: The agent said it was still investigating..\n- unverified-change: claimed a fix without running/testing it. Examples: Why did you call it fixed without testing?; Run the checks before claiming success.. Counter-example: The agent ran the requested tests and reported their failure..\n- ignored-instruction: explicit user instruction not followed. Examples: I explicitly told you not to change that.; Please follow the instruction I gave you.. Counter-example: The user changed their own instruction..\n- forgotten-context: lost an earlier constraint mid-session. Examples: We already established that constraint.; You forgot the requirement from earlier.. Counter-example: The constraint was never stated in this session..\n- scope-deviation: did more or less than asked. Examples: I asked for one small change, not a rewrite.; You left out the requested part.. Counter-example: The user requested a broad refactor..\n- hallucinated-interface: invented API/flag/file/behavior. Examples: That flag does not exist.; You made up an interface instead of checking it.. Counter-example: The interface is documented in the repository..\n- destructive-action: deleted/overwrote/reset without care. Examples: Why did you overwrite my work?; Do not delete files without asking.. Counter-example: The user explicitly requested removal of the file..\n- repeated-after-correction: same mistake again after being corrected. Examples: I already corrected you on this.; You repeated the mistake I just pointed out.. Counter-example: This is the first time the issue occurred..\n- shallow-investigation: guessed instead of reading the code/logs. Examples: Please read the error before guessing.; You did not inspect the relevant code.. Counter-example: The agent examined the logs before proposing a cause..\n- misread-request: solved the wrong problem. Examples: That is not what I asked for.; You solved a different problem.. Counter-example: The requested outcome was delivered..\n- overengineering: needless complexity/abstraction. Examples: This is far more complicated than needed.; Please stop adding abstractions for a tiny change.. Counter-example: The added structure is necessary for the requested behavior..\n- environment-mismanagement: wrong dir/branch/deps/tool state. Examples: You are working in the wrong directory.; That is not the branch I asked you to use.. Counter-example: The environment is correct but the implementation is faulty..\n- house-rules-violation: ignored CLAUDE.md / workflow conventions. Examples: You ignored the repository instructions.; Read the project workflow rules first.. Counter-example: No project rule governs this action..\n- tool-misuse: wrong tool, wasteful calls, permission thrash. Examples: Why are you using that tool for this?; Stop retrying a command that cannot work.. Counter-example: The selected tool is appropriate and succeeds..\n- communication-failure: buried the outcome, unclear/false reporting. Examples: Just tell me the outcome clearly.; Your status report is misleading.. Counter-example: The agent gave a clear, accurate outcome..\n- other: no canonical label fits — expected and gardened, never a forced fit. Examples: This is a real agent failure but none of the listed labels fit.; Use this when the menu misses the failure mode.. Counter-example: A supplied canonical label plainly fits..\n\nINCIDENT CONTEXT:\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nYou ignored the no-network constraint; stop changing the plan.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\n",
+    "schema": {
+      "properties": {
+        "authentic": {
+          "type": "boolean"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "label": {
+          "enum": [
+            "premature-completion-claim",
+            "unverified-change",
+            "ignored-instruction",
+            "forgotten-context",
+            "scope-deviation",
+            "hallucinated-interface",
+            "destructive-action",
+            "repeated-after-correction",
+            "shallow-investigation",
+            "misread-request",
+            "overengineering",
+            "environment-mismanagement",
+            "house-rules-violation",
+            "tool-misuse",
+            "communication-failure",
+            "other"
+          ],
+          "type": "string"
+        },
+        "one_liner": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            1,
+            2,
+            3
+          ],
+          "type": "integer"
+        }
+      },
+      "required": [
+        "authentic",
+        "reason",
+        "label",
+        "one_liner",
+        "severity",
+        "confidence"
+      ],
+      "type": "object"
+    },
+    "stage": "triage"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 14750,
+    "duration_ms": 15063,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-haiku-4-5-20251001": {
+        "cacheCreationInputTokens": 13312,
+        "cacheReadInputTokens": 46385,
+        "contextWindow": 200000,
+        "costUSD": 0.037581500000000004,
+        "inputTokens": 19,
+        "maxOutputTokens": 32000,
+        "outputTokens": 1260,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 3,
+    "permission_denials": [],
+    "result": "{\"authentic\":true,\"confidence\":0.75,\"label\":\"ignored-instruction\",\"one_liner\":\"Violated an explicit operational constraint that was previously established\",\"reason\":\"User reports that agent ignored a 'no-network constraint' — an explicit limitation on how to proceed. The phrase 'stop changing the plan' reinforces that the agent acted against stated instructions. Without the full preceding context (request and activity digest), confidence is moderate, but the frustration centers on a direct instruction being disregarded.\",\"severity\":2}",
+    "session_id": "40a52c0b-23ce-4d46-af04-11abffcf54c0",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "authentic": true,
+      "confidence": 0.75,
+      "label": "ignored-instruction",
+      "one_liner": "Violated an explicit operational constraint that was previously established",
+      "reason": "User reports that agent ignored a 'no-network constraint' — an explicit limitation on how to proceed. The phrase 'stop changing the plan' reinforces that the agent acted against stated instructions. Without the full preceding context (request and activity digest), confidence is moderate, but the frustration centers on a direct instruction being disregarded.",
+      "severity": 2
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 114,
+    "total_cost_usd": 0.037581500000000004,
+    "ttft_ms": 10439,
+    "ttft_stream_ms": 1402,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 13312,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 13312,
+      "cache_read_input_tokens": 46385,
+      "inference_geo": "not_available",
+      "input_tokens": 19,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 1011,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 1011,
+          "cache_read_input_tokens": 29343,
+          "input_tokens": 10,
+          "output_tokens": 285,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 1260,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "d301bd89-c19c-4c29-9b3d-610843f86511"
+  }
+}

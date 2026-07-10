@@ -21,7 +21,7 @@ from .triager import context_for_incident
 
 
 PROMPT_NAME = "curate"
-PROMPT_VERSION = 1
+PROMPT_VERSION = 2
 GARDEN_PROMPT_NAME = "garden"
 GARDEN_PROMPT_VERSION = 1
 LAST_PASS_META_KEY = "curator.last_pass_at"
@@ -514,6 +514,7 @@ def _apply_response(
     duplicate_ids = {item_id for item_id, count in Counter(incident_ids).items() if count > 1}
     applied_ids: set[int] = set()
     rejected_entry_ids: set[int] = set()
+    valid_incident_verdicts: list[tuple[_PackEntry, str, str, str | None]] = []
     for raw in raw_incident_verdicts:
         assert isinstance(raw, dict)
         incident_id = raw.get("incident_id")
@@ -546,26 +547,7 @@ def _apply_response(
             continue
         assert isinstance(verdict, str) and isinstance(reason, str)
         assert reassign_label is None or isinstance(reassign_label, str)
-        singleton = verdict == "promote" and _cluster_size(ledger, entry.incident.label) == 1
-        try:
-            ledger.apply_curator_incident_verdict(
-                incident_id,
-                verdict,
-                reason=reason,
-                reassign_label=reassign_label,
-                singleton=singleton,
-            )
-        except LedgerError as error:
-            records.append(
-                _ReportVerdict("incident", subject, verdict, reason, f"rejected: {error}")
-            )
-            rejected_entry_ids.add(incident_id)
-            rejected += 1
-            continue
-        applied_ids.add(incident_id)
-        applied_incident += 1
-        suffix = " (singleton provenance)" if singleton else ""
-        records.append(_ReportVerdict("incident", subject, verdict, reason, f"applied{suffix}"))
+        valid_incident_verdicts.append((entry, verdict, reason, reassign_label))
 
     for incident_id, entry in entries_by_id.items():
         if incident_id not in incident_ids:
@@ -589,6 +571,16 @@ def _apply_response(
     duplicate_labels = {
         label for label, count in Counter(cluster_labels).items() if count > 1
     }
+    # A valid member-level reassign still removes that incident from its old
+    # cluster. All other cluster synthesis effects are committed before member
+    # verdicts so same-pass park/dismiss cannot silently undo fast-tracking.
+    reassigned_ids = {
+        entry.incident.id
+        for entry, verdict, _, _ in valid_incident_verdicts
+        if verdict == "reassign"
+    }
+    cluster_promoted_ids: set[int] = set()
+    cluster_promoted_labels: dict[int, str] = {}
     for raw in raw_cluster_verdicts:
         assert isinstance(raw, dict)
         label = raw.get("label")
@@ -618,7 +610,9 @@ def _apply_response(
                 open_members = [
                     incident
                     for incident in ledger.incidents_in_state("open")
-                    if incident.label == label and incident.id not in rejected_entry_ids
+                    if incident.label == label
+                    and incident.id not in rejected_entry_ids
+                    and incident.id not in reassigned_ids
                 ]
                 cluster_size = _cluster_size(ledger, label)
                 for incident in open_members:
@@ -629,6 +623,8 @@ def _apply_response(
                         singleton=cluster_size == 1,
                     )
                     applied_ids.add(incident.id)
+                    cluster_promoted_ids.add(incident.id)
+                    cluster_promoted_labels[incident.id] = label
                     applied_incident += 1
                     records.append(
                         _ReportVerdict(
@@ -648,6 +644,65 @@ def _apply_response(
             continue
         applied_cluster += 1
         records.append(_ReportVerdict("cluster", label, verdict, reason, "applied"))
+
+    conflicts: dict[tuple[str, str], list[int]] = {}
+    for entry, verdict, reason, reassign_label in valid_incident_verdicts:
+        incident_id = entry.incident.id
+        subject = str(incident_id)
+        if incident_id in cluster_promoted_ids:
+            if verdict in {"park", "dismiss"}:
+                label = cluster_promoted_labels[incident_id]
+                conflicts.setdefault((label, verdict), []).append(incident_id)
+                records.append(
+                    _ReportVerdict(
+                        "incident",
+                        subject,
+                        verdict,
+                        reason,
+                        "skipped: cluster synthesize precedence",
+                    )
+                )
+                continue
+            if verdict == "promote":
+                records.append(
+                    _ReportVerdict(
+                        "incident",
+                        subject,
+                        verdict,
+                        reason,
+                        "satisfied via cluster synthesize",
+                    )
+                )
+                continue
+
+        singleton = verdict == "promote" and _cluster_size(ledger, entry.incident.label) == 1
+        try:
+            ledger.apply_curator_incident_verdict(
+                incident_id,
+                verdict,
+                reason=reason,
+                reassign_label=reassign_label,
+                singleton=singleton,
+            )
+        except LedgerError as error:
+            records.append(
+                _ReportVerdict("incident", subject, verdict, reason, f"rejected: {error}")
+            )
+            rejected_entry_ids.add(incident_id)
+            rejected += 1
+            continue
+        applied_ids.add(incident_id)
+        applied_incident += 1
+        suffix = " (singleton provenance)" if singleton else ""
+        records.append(_ReportVerdict("incident", subject, verdict, reason, f"applied{suffix}"))
+
+    for (label, verdict), incident_ids_for_conflict in conflicts.items():
+        subjects = ",".join(f"#{incident_id}" for incident_id in sorted(incident_ids_for_conflict))
+        message = f"cluster synthesize overrode {verdict} for {subjects}"
+        logger.warning("Curator verdict conflict: %s", message)
+        records.append(
+            _ReportVerdict("conflict", label, "cluster precedence", message, "logged")
+        )
 
     # A resurfaced parked incident omitted or rejected by the model returns to
     # parked, so it cannot become a silent reviewed-open orphan after this event.

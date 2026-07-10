@@ -130,7 +130,7 @@ def test_record_then_two_replays_are_deterministic_modulo_timestamps(tmp_path: P
 
     assert recorded.proposals == replay_one.proposals == replay_two.proposals == 6
     # Two identical gardening requests intentionally share one content-addressed key.
-    assert len(list((tmp_path / "replays" / "v1" / "default").glob("*.json"))) == 82
+    assert len(list((tmp_path / "replays" / "v1" / "default").glob("*.json"))) == 83
     assert _without_timestamps(_record(replay_one.record_path)) == _without_timestamps(
         _record(replay_two.record_path)
     )
@@ -244,6 +244,8 @@ def test_quick_run_copies_only_the_documented_subset(tmp_path: Path) -> None:
         "c03-u2",
         "c05-u2",
     }
+    assert record["fed_annotations"] == list(evalrun.quick_subset(evalrun._load_manifest(CORPUS)))
+    assert record["fed_annotation_projects"]["c02-u1"] == "aurora"
 
 
 def test_eval_stage_models_are_honored_and_record_is_scorer_ready(tmp_path: Path) -> None:

@@ -179,7 +179,8 @@ For each detection, build a **context pack** by walking the `parentUuid` chain:
 the user request that preceded the incident, a compact digest of what the agent
 did (tool calls summarized, not raw dumps), the frustrated message itself, and the
 following exchange (how/whether it got resolved). Then one `claude -p
---output-format json --json-schema … --model haiku --bare` call answers:
+--output-format json --json-schema … --model haiku` call (neutral-cwd,
+no session persistence) answers:
 
 1. **Authenticity:** is this genuine frustration *at the agent's behavior*?
    (Not: quoting, venting about a flaky third-party, self-directed, playful.)
@@ -358,7 +359,7 @@ Rules that make this fragmentation-proof by construction:
 | Synthesize | Sonnet/Opus | per promoted cluster (rare) | promotion |
 | Audit | none + Curator | ~0 | continuous / piggybacks on Curate |
 
-All LLM calls go through the user's `claude -p` (subscription auth, `--bare` for
+All LLM calls go through the user's `claude -p` (subscription auth, neutral-cwd isolation for
 reproducibility, `--json-schema` for structure). Costs are logged per run and
 surfaced. Defaults keep steady-state spend at pennies/week; backfilling 1,000+
 historical sessions is a one-time, explicitly confirmed operation with a cost

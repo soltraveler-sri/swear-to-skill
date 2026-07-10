@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 from time import perf_counter
 from typing import TypeAlias, TypeVar
 
@@ -22,8 +23,13 @@ from .ledger import Ledger
 
 CLAUDE_BASE_ARGS = ("claude", "-p", "--output-format", "json")
 # These flags are load-bearing: omitting session suppression makes the scanner ingest
-# transcripts from its own calls, while --bare keeps user configuration out of runs.
-CLAUDE_REQUIRED_FLAGS = ("--bare", "--no-session-persistence")
+# transcripts from its own calls, and slash-command/skill resolution would let user
+# skills leak into pipeline prompts. NOTE: `--bare` is deliberately absent — it skips
+# OAuth/credential resolution in current CLIs (built for API-key CI), which breaks
+# subscription-authenticated users. Context isolation comes instead from running the
+# subprocess in a neutral empty working directory (see NEUTRAL_CWD below), which
+# prevents project CLAUDE.md/skill pickup.
+CLAUDE_REQUIRED_FLAGS = ("--no-session-persistence", "--disable-slash-commands")
 CORRECTIVE_SUFFIX = (
     "\n\nYour previous response was not valid for the required JSON schema. "
     "Return only a corrected JSON result that exactly satisfies the schema."
@@ -155,7 +161,7 @@ def call(
     model: str,
     stage: str,
     effort: str | None = None,
-    timeout_s: float = 120,
+    timeout_s: float = 300,
 ) -> dict[str, object]:
     """Run one structured Claude request, retrying malformed output exactly once.
 
@@ -265,9 +271,53 @@ def _call_once(
         )
 
 
+@lru_cache(maxsize=1)
+def _neutral_cwd() -> str:
+    """An empty directory for claude subprocesses.
+
+    Running from a neutral cwd prevents `claude -p` from loading whatever
+    project CLAUDE.md/skills surround the caller's working directory —
+    the context-isolation role `--bare` used to play before it proved to
+    also skip subscription credentials.
+    """
+
+    # mkdtemp gives a per-process, 0o700, uniquely named directory. A fixed
+    # predictable path in shared /tmp would let another local user pre-create
+    # it and plant a CLAUDE.md that `claude -p` would ingest as project
+    # context — prompt injection into every pipeline call.
+    return tempfile.mkdtemp(prefix="s2s-neutral-cwd-")
+
+
+def _real_user_home() -> str:
+    """The invoking OS user's actual home, independent of $HOME overrides.
+
+    Claude CLI authentication (OAuth/credentials under the user's real
+    ~/.claude) must follow the OS user. Sandboxed eval runs override $HOME so
+    the PIPELINE writes to fake targets — but the model transport still needs
+    the real credentials, or every live call fails "Not logged in".
+    """
+
+    import pwd
+
+    return pwd.getpwuid(os.getuid()).pw_dir
+
+
+# Snapshot the auth-relevant environment at import time — before any eval
+# sandbox mutates os.environ. CLAUDE_CONFIG_DIR relocates ALL claude storage
+# including credentials, so a sandboxed value must never reach the transport;
+# a user's own pre-existing value must always be honored.
+_PROCESS_START_CLAUDE_CONFIG_DIR = os.environ.get("CLAUDE_CONFIG_DIR")
+
+
 def default_response_provider(request: LLMRequest) -> dict[str, object]:
     """Execute the real Claude transport and return its parsed JSON envelope."""
 
+    env = dict(request.env)
+    env["HOME"] = _real_user_home()
+    if _PROCESS_START_CLAUDE_CONFIG_DIR is None:
+        env.pop("CLAUDE_CONFIG_DIR", None)
+    else:
+        env["CLAUDE_CONFIG_DIR"] = _PROCESS_START_CLAUDE_CONFIG_DIR
     completed = subprocess.run(
         list(request.argv),
         input=request.prompt,
@@ -275,17 +325,34 @@ def default_response_provider(request: LLMRequest) -> dict[str, object]:
         text=True,
         timeout=request.timeout_s,
         check=False,
-        env=dict(request.env),
+        env=env,
+        cwd=_neutral_cwd(),
     )
     if completed.returncode != 0:
         stderr = completed.stderr.strip()
-        if _looks_like_auth_error(stderr):
+        # The CLI frequently reports failures as a JSON envelope on stdout
+        # with a nonzero exit; losing stdout makes those undiagnosable.
+        stdout_head = completed.stdout.strip()[:500]
+        if _looks_like_auth_error(stderr) or _looks_like_auth_error(stdout_head):
             raise ClaudeAuthError(
                 "Claude CLI is not authenticated; run `claude login` and try again."
             )
-        detail = f": {stderr}" if stderr else ""
+        detail = "".join(
+            part
+            for part in (
+                f": {stderr}" if stderr else "",
+                f" [stdout: {stdout_head}]" if stdout_head else "",
+            )
+        )
+        flags = [a for a in request.argv if a.startswith("--") or a in ("claude", "-p")]
+        env_fingerprint = {
+            key: env.get(key, "<unset>")
+            for key in ("HOME", "S2S_HOME", "CLAUDE_CONFIG_DIR", "PATH")
+        }
+        env_fingerprint["PATH"] = str(env_fingerprint["PATH"])[:120]
         raise ClaudeProcessError(
-            f"Claude CLI exited with status {completed.returncode}{detail}"
+            f"Claude CLI exited with status {completed.returncode}{detail} "
+            f"(flags={flags} model={request.model} env={env_fingerprint})"
         )
     parsed = _parse_json(completed.stdout, "Claude CLI response")
     if not isinstance(parsed, dict):

@@ -309,7 +309,7 @@ def render_markdown(
             lines.append(
                 f"| {metric.get('metric', 'unknown')} | {_number(metric.get('value'))} | "
                 f"{metric.get('op', '')} {_number(metric.get('threshold'))} | "
-                f"{'PASS' if metric.get('pass') else 'FAIL'} |"
+                f"{_metric_verdict(metric)} |"
             )
     lines.extend(_markdown_excerpts("Narrative excerpts", excerpts))
     if spotlights:
@@ -354,7 +354,7 @@ def render_html(
 <title>swear-to-skill · greenlight report</title>
 <style>
 :root {{ color-scheme:dark; --ink:#eee8dc; --muted:#aaa294; --paper:#181715; --panel:#24221f; --line:#393630; --pass:#7fb9a3; --fail:#dd7658; --partial:#e6a54b; }}
-* {{ box-sizing:border-box }} body {{ margin:0; background:var(--paper); color:var(--ink); font:15px/1.5 ui-sans-serif,system-ui,sans-serif }} main {{ max-width:1040px; margin:auto; padding:46px 24px }} h1 {{ font:500 clamp(2rem,5vw,4rem)/1.05 ui-serif,Georgia,serif; letter-spacing:-.05em; margin:4px 0 12px }} h2 {{ margin:46px 0 15px; font-size:.8rem; letter-spacing:.12em; text-transform:uppercase; color:var(--muted) }} h3 {{ margin:0 0 10px; font-size:1rem }} .eyebrow,.muted,.evidence,.note {{ color:var(--muted) }} .eyebrow {{ font-size:.76rem; letter-spacing:.12em; text-transform:uppercase }} .banner {{ padding:17px 19px; border:1px solid var(--line); border-left-width:6px; border-radius:10px; font-weight:700; letter-spacing:.04em }} .pass {{ border-left-color:var(--pass) }} .fail {{ border-left-color:var(--fail) }} .partial,.wiring {{ border-left-color:var(--partial) }} .card,.spotlight {{ padding:18px; margin:12px 0; border:1px solid var(--line); border-radius:10px; background:var(--panel) }} .chain {{ display:grid; gap:9px }} .chain dt {{ color:var(--muted); font-size:.75rem; text-transform:uppercase; letter-spacing:.08em }} .chain dd {{ margin:0 }} q {{ color:var(--ink) }} table {{ width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums }} th,td {{ padding:9px 7px; border-bottom:1px solid var(--line); text-align:left }} th {{ color:var(--muted); font-size:.75rem; text-transform:uppercase; letter-spacing:.06em }} td:nth-child(n+2),th:nth-child(n+2) {{ text-align:right }} .metric-pass {{ color:var(--pass) }} .metric-fail {{ color:var(--fail) }} footer {{ margin-top:50px; padding-top:18px; border-top:1px solid var(--line); color:var(--muted); font-size:.9rem }} @media(max-width:640px) {{ main {{ padding:30px 16px }} table {{ font-size:.82rem }} }}
+* {{ box-sizing:border-box }} body {{ margin:0; background:var(--paper); color:var(--ink); font:15px/1.5 ui-sans-serif,system-ui,sans-serif }} main {{ max-width:1040px; margin:auto; padding:46px 24px }} h1 {{ font:500 clamp(2rem,5vw,4rem)/1.05 ui-serif,Georgia,serif; letter-spacing:-.05em; margin:4px 0 12px }} h2 {{ margin:46px 0 15px; font-size:.8rem; letter-spacing:.12em; text-transform:uppercase; color:var(--muted) }} h3 {{ margin:0 0 10px; font-size:1rem }} .eyebrow,.muted,.evidence,.note {{ color:var(--muted) }} .eyebrow {{ font-size:.76rem; letter-spacing:.12em; text-transform:uppercase }} .banner {{ padding:17px 19px; border:1px solid var(--line); border-left-width:6px; border-radius:10px; font-weight:700; letter-spacing:.04em }} .pass {{ border-left-color:var(--pass) }} .fail {{ border-left-color:var(--fail) }} .partial,.wiring {{ border-left-color:var(--partial) }} .card,.spotlight {{ padding:18px; margin:12px 0; border:1px solid var(--line); border-radius:10px; background:var(--panel) }} .chain {{ display:grid; gap:9px }} .chain dt {{ color:var(--muted); font-size:.75rem; text-transform:uppercase; letter-spacing:.08em }} .chain dd {{ margin:0 }} q {{ color:var(--ink) }} table {{ width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums }} th,td {{ padding:9px 7px; border-bottom:1px solid var(--line); text-align:left }} th {{ color:var(--muted); font-size:.75rem; text-transform:uppercase; letter-spacing:.06em }} td:nth-child(n+2),th:nth-child(n+2) {{ text-align:right }} .metric-pass {{ color:var(--pass) }} .metric-fail {{ color:var(--fail) }} .metric-info {{ color:var(--partial) }} footer {{ margin-top:50px; padding-top:18px; border-top:1px solid var(--line); color:var(--muted); font-size:.9rem }} @media(max-width:640px) {{ main {{ padding:30px 16px }} table {{ font-size:.82rem }} }}
 </style>
 </head>
 <body><main>
@@ -473,10 +473,26 @@ def _html_scores(scores: Mapping[str, object], verdict: str) -> str:
     if verdict == "WIRING CHECK ONLY":
         return "<section><h2>Scores</h2><div class=card><strong>Scores withheld.</strong> This mock run checks wiring only; it is not an evaluation.</div></section>"
     rows = "".join(
-        f"<tr><td>{escape(str(metric.get('metric', 'unknown')))}</td><td>{escape(_number(metric.get('value')))}</td><td>{escape(str(metric.get('op', '')))} {escape(_number(metric.get('threshold')))}</td><td class={'metric-pass' if metric.get('pass') else 'metric-fail'}>{'PASS' if metric.get('pass') else 'FAIL'}</td></tr>"
+        f"<tr><td>{escape(str(metric.get('metric', 'unknown')))}</td><td>{escape(_number(metric.get('value')))}</td><td>{escape(str(metric.get('op', '')))} {escape(_number(metric.get('threshold')))}</td><td class={_metric_class(metric)}>{_metric_verdict(metric)}</td></tr>"
         for metric in _rows(scores, "metrics")
     )
     return f"<section><h2>Thresholds</h2><div class=card><table><thead><tr><th>Metric</th><th>Value</th><th>Threshold</th><th>Verdict</th></tr></thead><tbody>{rows}</tbody></table></div></section>"
+
+
+def _metric_verdict(metric: Mapping[str, object]) -> str:
+    if metric.get("excluded") is True:
+        return f"INFO · {metric.get('note', 'excluded')}"
+    if metric.get("flag") == "small-sample":
+        return "INFO · small-sample"
+    return "PASS" if metric.get("pass") else "FAIL"
+
+
+def _metric_class(metric: Mapping[str, object]) -> str:
+    if metric.get("excluded") is True:
+        return "metric-info"
+    if metric.get("flag") == "small-sample":
+        return "metric-info"
+    return "metric-pass" if metric.get("pass") else "metric-fail"
 
 
 def _markdown_excerpts(title: str, excerpts: Sequence[Excerpt]) -> list[str]:

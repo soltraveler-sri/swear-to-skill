@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import argparse
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from importlib.metadata import PackageNotFoundError, version
 import json
 import os
@@ -492,7 +492,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             for metric in scores["metrics"]:  # type: ignore[union-attr]
                 print(
                     f"{metric['metric']}: {metric['value']} {metric['op']} "
-                    f"{metric['threshold']} {'PASS' if metric['pass'] else 'FAIL'}"
+                    f"{metric['threshold']} {_metric_terminal_verdict(metric)}"
                 )
         if report.verdict == "WIRING CHECK ONLY":
             print("greenlight: WIRING CHECK ONLY — not an evaluation")
@@ -502,7 +502,6 @@ def main(argv: Sequence[str] | None = None) -> int:
                 f"(exit {exit_code_for_verdict(report.verdict)})"
             )
         return exit_code_for_verdict(report.verdict)
-
     if args.command == "hook":
         if args.hook_event == "session-end":
             from .archiver import handle_session_end
@@ -523,3 +522,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     issue = COMMAND_ISSUES[args.command]
     print(f"{args.command}: not implemented yet (issue #{issue})")
     return 0
+
+
+def _metric_terminal_verdict(metric: Mapping[str, object]) -> str:
+    """Render applicability separately from the metric's numeric verdict."""
+
+    if metric.get("excluded") is True:
+        return f"INFO ({metric.get('note', 'excluded')})"
+    return "PASS" if metric.get("pass") is True else "FAIL"
