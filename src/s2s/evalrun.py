@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager, redirect_stdout
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 from hashlib import sha256
 from io import StringIO
@@ -85,6 +86,10 @@ class EvalRunConfig:
     stages: tuple[str, ...] = STAGE_ORDER
     keep: bool = False
     profile: str = PROFILE_PLACEHOLDER
+    # Repeat runs use fresh sandboxes and identical corpus inputs.  ``cycles``
+    # reserves the pump-tranche record shape; one is the normal single pump.
+    repeat: int = 1
+    cycles: int = 1
     triage: EvalStageConfig = EvalStageConfig("haiku")
     curate: EvalStageConfig = EvalStageConfig("sonnet")
     synthesize: EvalStageConfig = EvalStageConfig("sonnet")
@@ -404,6 +409,22 @@ class MockProvider:
         }
 
 
+class _RetryTrackingProvider:
+    """Count validation corrective calls without changing pipeline APIs."""
+
+    def __init__(self, upstream: llm.ResponseProvider) -> None:
+        self.upstream = upstream
+        self.deterministic = bool(getattr(upstream, "deterministic", False))
+        self.requests: Counter[str] = Counter()
+        self.retries: Counter[str] = Counter()
+
+    def __call__(self, request: llm.LLMRequest) -> Mapping[str, object]:
+        self.requests[request.stage] += 1
+        if request.prompt.endswith(llm.CORRECTIVE_SUFFIX) or "Your prior draft failed local validation." in request.prompt:
+            self.retries[request.stage] += 1
+        return self.upstream(request)
+
+
 def parse_stages(value: str | Sequence[str] | None) -> tuple[str, ...]:
     """Parse a comma list and require an ordered pipeline prefix."""
 
@@ -493,6 +514,36 @@ def run_eval(
     *,
     live_provider: llm.ResponseProvider | None = None,
 ) -> EvalRunResult:
+    """Run an eval, adding repeat snapshots for stochastic-stage stability."""
+
+    if config.repeat < 1 or config.cycles < 1:
+        raise EvalRunError("--repeat and --cycles must both be at least 1")
+    # A replay is deterministic by contract, so repeating it would only spend
+    # time and manufacture a stability claim rather than measure one.
+    if config.repeat == 1:
+        return _run_eval_once(config, live_provider=live_provider)
+
+    primary = _run_eval_once(replace(config, repeat=1), live_provider=live_provider)
+    primary_record = _read_record(primary.record_path)
+    mode = str(primary_record.get("mode"))
+    if mode == "replay":
+        primary_record["repeats"] = []
+        primary_record["repeat_exempt"] = "replay is deterministic"
+    else:
+        repeats = [_repeat_snapshot(primary_record)]
+        for _ in range(1, config.repeat):
+            result = _run_eval_once(replace(config, repeat=1, keep=False), live_provider=live_provider)
+            repeats.append(_repeat_snapshot(_read_record(result.record_path)))
+        primary_record["repeats"] = repeats
+    _write_record(primary.record_path, primary_record)
+    return primary
+
+
+def _run_eval_once(
+    config: EvalRunConfig,
+    *,
+    live_provider: llm.ResponseProvider | None = None,
+) -> EvalRunResult:
     """Run the real pipeline inside an isolated filesystem and response transport."""
 
     corpus = Path(config.corpus).resolve()
@@ -505,6 +556,7 @@ def run_eval(
     if config.record and mode != "live":
         raise EvalRunError("--record is valid only with --mode live")
     selected_ids = quick_subset(manifest) if config.quick else None
+    cycle_tranches = _tranches(manifest, selected_ids, config.cycles)
     if mode == "live":
         estimate = estimate_call_counts(manifest, selected_ids, judge_repeat=config.judge_repeat)
         has_calls = False
@@ -559,11 +611,12 @@ def run_eval(
         "proposals": [],
         "context_packs": {},
         "llm_run_log": [],
+        "schema_validation": {"requests": {}, "retries": {}},
         "timings": {},
     }
     sandbox_path: Path | None = None
     try:
-        with _sandbox(corpus, manifest, selected_ids, config, keep=config.keep) as sandbox:
+        with _sandbox(corpus, manifest, cycle_tranches[0], config, keep=config.keep) as sandbox:
             sandbox_path = sandbox.root if config.keep else None
             provider: llm.ResponseProvider | None
             if mode == "mock":
@@ -576,18 +629,32 @@ def run_eval(
                 )
             else:
                 provider = live_provider
-            with llm.using_response_provider(provider):
+            tracked_provider = _RetryTrackingProvider(provider or llm.default_response_provider)
+            with llm.using_response_provider(tracked_provider):
                 # Stage APIs retain their normal estimate/status output. The eval
                 # CLI owns one concise summary (and live already estimated above),
                 # so suppress duplicate internal chatter without changing calls.
                 with redirect_stdout(StringIO()):
-                    _drive_pipeline(
-                        sandbox,
-                        stages,
-                        annotations,
-                        record,
-                        deterministic=mode in {"mock", "replay"},
-                    )
+                    if config.cycles == 1:
+                        _drive_pipeline(
+                            sandbox,
+                            stages,
+                            annotations,
+                            record,
+                            deterministic=mode in {"mock", "replay"},
+                        )
+                    else:
+                        _drive_cycles(
+                            sandbox,
+                            corpus,
+                            manifest,
+                            cycle_tranches,
+                            config,
+                            stages,
+                            annotations,
+                            record,
+                            deterministic=mode in {"mock", "replay"},
+                        )
                     # The pipeline artifact is complete before the independent
                     # judge phase consumes it; a judge failure still marks the
                     # enclosing eval record failed in the outer handler.
@@ -608,6 +675,10 @@ def run_eval(
                         "status": judge_result["status"],
                     }
                     _capture_run_log(record)
+            record["schema_validation"] = {
+                "requests": dict(tracked_provider.requests),
+                "retries": dict(tracked_provider.retries),
+            }
             record["status"] = "complete"
             record["completed_at"] = _utc_now()
             _write_record(record_path, record)
@@ -631,6 +702,144 @@ def run_eval(
         triaged=len(triage),
         proposals=len(proposals),
     )
+
+
+def _tranches(
+    manifest: Mapping[str, object], selected_ids: Sequence[str] | None, cycles: int
+) -> list[tuple[str, ...]]:
+    """Partition the selected corpus deterministically for pump-cycle evals."""
+
+    wanted = set(selected_ids) if selected_ids is not None else None
+    rows = [
+        item for item in manifest["incidents"]
+        if isinstance(item, dict) and (wanted is None or str(item["uuid"]) in wanted)
+    ]  # type: ignore[index]
+    ids = [str(item["uuid"]) for item in rows]
+    if cycles == 1:
+        return [tuple(ids)]
+    # A transcript is the archive/scanner unit.  Splitting one across tranches
+    # would deliberately rewrite an archived source and turn this eval into a
+    # test of that rewrite path rather than an O(new) pump cycle.
+    by_session: dict[str, list[str]] = {}
+    for item in rows:
+        by_session.setdefault(str(item["session"]), []).append(str(item["uuid"]))
+    target = max(1, math.ceil(len(ids) / cycles))
+    tranches: list[list[str]] = [[]]
+    for members in by_session.values():
+        if tranches[-1] and len(tranches[-1]) + len(members) > target:
+            tranches.append([])
+        tranches[-1].extend(members)
+    while len(tranches) > cycles:
+        tranches[-2].extend(tranches.pop())
+    return [tuple(tranche) for tranche in tranches]
+
+
+def _cycle_record() -> dict[str, object]:
+    return {
+        "archive": {},
+        "detections": [],
+        "triage_verdicts": [],
+        "curator": {"passes": [], "incident_verdicts": [], "cluster_verdicts": []},
+        "proposals": [],
+        "llm_run_log": [],
+        "timings": {},
+    }
+
+
+def _drive_cycles(
+    sandbox: _Sandbox,
+    corpus: Path,
+    manifest: Mapping[str, object],
+    tranches: Sequence[Sequence[str]],
+    config: EvalRunConfig,
+    stages: tuple[str, ...],
+    annotations: Sequence[_Annotation],
+    record: dict[str, object],
+    *,
+    deterministic: bool,
+) -> None:
+    """Feed growing transcript tranches through one durable sandbox ledger."""
+
+    all_ids: list[str] = []
+    all_detections: list[object] = []
+    all_triage: list[object] = []
+    reports: list[dict[str, object]] = []
+    seen_incident_ids: set[object] = set()
+    seen_corpus_ids: set[object] = set()
+    for index, tranche in enumerate(tranches):
+        all_ids.extend(tranche)
+        if index:
+            # Updating the archived source re-enqueues only changed sessions;
+            # scanner-level keys retain old incidents and admit only new ones.
+            _fabricate_sandbox(sandbox, corpus, manifest, tuple(all_ids), config)
+        cycle = _cycle_record()
+        _drive_pipeline(sandbox, stages, annotations, cycle, deterministic=deterministic)
+        detections = cycle["detections"]
+        triage = cycle["triage_verdicts"]
+        run_log = cycle["llm_run_log"]
+        assert isinstance(detections, list) and isinstance(triage, list) and isinstance(run_log, list)
+        duplicate_corpus_ids = [
+            item.get("corpus_incident_id")
+            for item in detections
+            if isinstance(item, dict)
+            and item.get("corpus_incident_id") is not None
+            and item.get("corpus_incident_id") in seen_corpus_ids
+        ]
+        new_detections = [
+            item
+            for item in detections
+            if isinstance(item, dict)
+            and item.get("incident_id") not in seen_incident_ids
+            and (
+                item.get("corpus_incident_id") is None
+                or item.get("corpus_incident_id") not in seen_corpus_ids
+            )
+        ]
+        seen_incident_ids.update(
+            item.get("incident_id") for item in new_detections if isinstance(item, dict)
+        )
+        seen_corpus_ids.update(
+            item.get("corpus_incident_id")
+            for item in new_detections
+            if isinstance(item, dict) and item.get("corpus_incident_id") is not None
+        )
+        all_detections.extend(new_detections)
+        all_triage.extend(triage)
+        curator = cycle["curator"]
+        assert isinstance(curator, dict)
+        passes = curator.get("passes", [])
+        curator_packs = sum(1 for item in passes if isinstance(item, dict))
+        reports.append(
+            {
+                "cycle": index + 1,
+                "tranche_incident_ids": list(tranche),
+                "new_incidents": len(new_detections),
+                "curator_packs": curator_packs,
+                "idempotent": not duplicate_corpus_ids,
+                "duplicate_corpus_incident_ids": duplicate_corpus_ids,
+                "state_machine_integrity": all(
+                    isinstance(item, dict)
+                    and item.get("state") in {
+                        "detected", "triaged", "dismissed-triage", "open", "promoted",
+                        "parked", "dismissed-reviewed", "in-proposal", "remedied",
+                    }
+                    for item in triage
+                ),
+                # The record exposes the actual calls; an empty tranche must
+                # never trigger curation, and a non-empty one has a finite,
+                # input-bounded pack count rather than a corpus replay.
+                "on_new_economics": (not new_detections and curator_packs == 0)
+                or (bool(new_detections) and curator_packs <= len(new_detections)),
+            }
+        )
+        record["archive"] = cycle["archive"]
+        record["curator"] = cycle["curator"]
+        record["proposals"] = cycle["proposals"]
+        record["llm_run_log"] = cycle["llm_run_log"]
+        record["timings"] = cycle["timings"]
+    record["detections"] = all_detections
+    record["triage_verdicts"] = all_triage
+    record["cycles"] = reports
 
 
 def _drive_pipeline(
@@ -861,10 +1070,10 @@ def _fabricate_sandbox(
     selected_ids: Sequence[str] | None,
     config: EvalRunConfig,
 ) -> None:
-    sandbox.projects_dir.mkdir(parents=True)
-    sandbox.codex_home.joinpath("sessions").mkdir(parents=True)
-    sandbox.skills_dir.mkdir(parents=True)
-    sandbox.s2s_home.mkdir(parents=True)
+    sandbox.projects_dir.mkdir(parents=True, exist_ok=True)
+    sandbox.codex_home.joinpath("sessions").mkdir(parents=True, exist_ok=True)
+    sandbox.skills_dir.mkdir(parents=True, exist_ok=True)
+    sandbox.s2s_home.mkdir(parents=True, exist_ok=True)
     selected = set(selected_ids) if selected_ids is not None else None
     incidents = [item for item in manifest["incidents"] if isinstance(item, dict)]  # type: ignore[index]
     selected_sessions = {
@@ -1123,6 +1332,24 @@ def _write_record(path: Path, record: Mapping[str, object]) -> None:
     temporary = path.with_suffix(".json.tmp")
     temporary.write_text(_stable_json(record, indent=2) + "\n", encoding="utf-8")
     temporary.replace(path)
+
+
+def _read_record(path: Path) -> dict[str, object]:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):  # pragma: no cover - protected by _write_record
+        raise EvalRunError(f"eval record is not an object: {path}")
+    return value
+
+
+def _repeat_snapshot(record: Mapping[str, object]) -> dict[str, object]:
+    """Keep exactly the stochastic-stage facts the stability scorer compares."""
+
+    return {
+        "triage_verdicts": record.get("triage_verdicts", []),
+        "curator": record.get("curator", {}),
+        "llm_run_log": record.get("llm_run_log", []),
+        "schema_validation": record.get("schema_validation", {}),
+    }
 
 
 def _run_id() -> str:

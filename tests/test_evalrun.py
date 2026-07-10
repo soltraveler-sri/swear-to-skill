@@ -290,3 +290,15 @@ def test_auto_mode_prefers_mock_until_replays_exist(tmp_path: Path) -> None:
     replay_dir.mkdir(parents=True)
     (replay_dir / "one.json").write_text("{}", encoding="utf-8")
     assert evalrun._resolve_mode("auto", replay_dir) == "replay"
+
+
+def test_repeat_and_tranche_cycles_emit_scorer_inputs(tmp_path: Path) -> None:
+    result = evalrun.run_eval(_config(tmp_path, repeat=2, cycles=3))
+    record = _record(result.record_path)
+
+    assert len(record["repeats"]) == 2  # type: ignore[arg-type]
+    assert len(record["cycles"]) == 3  # type: ignore[arg-type]
+    assert len({item["corpus_incident_id"] for item in record["detections"]}) == 36  # type: ignore[index]
+    assert all(item["idempotent"] for item in record["cycles"])  # type: ignore[index]
+    assert all(item["state_machine_integrity"] for item in record["cycles"])  # type: ignore[index]
+    assert all(item["on_new_economics"] for item in record["cycles"])  # type: ignore[index]

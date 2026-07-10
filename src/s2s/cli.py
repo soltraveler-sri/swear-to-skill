@@ -79,7 +79,9 @@ def build_parser() -> argparse.ArgumentParser:
     eval_parser.add_argument("--stages")
     eval_parser.add_argument("--keep", action="store_true")
     eval_parser.add_argument("--corpus", type=Path)
+    eval_parser.add_argument("--thresholds", type=Path)
     eval_parser.add_argument("--repeat", type=int, default=1)
+    eval_parser.add_argument("--cycles", type=int, default=1)
 
     hook_parser = subparsers.add_parser("hook")
     hook_subparsers = hook_parser.add_subparsers(dest="hook_event")
@@ -430,6 +432,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "eval":
         from .evalrun import DEFAULT_CORPUS, EvalRunConfig, EvalRunError, parse_stages, run_eval
+        from .evalscore import EvalScoreError, score_files
 
         try:
             config = EvalRunConfig.production_defaults(
@@ -441,9 +444,16 @@ def main(argv: Sequence[str] | None = None) -> int:
                 stages=parse_stages(args.stages),
                 keep=args.keep,
                 judge_repeat=args.repeat,
+                repeat=args.repeat,
+                cycles=args.cycles,
             )
             result = run_eval(config)
-        except (EvalRunError, ValueError, OSError) as error:
+            scores = score_files(
+                result.record_path,
+                (args.corpus or DEFAULT_CORPUS) / "manifest.json",
+                thresholds_path=args.thresholds,
+            )
+        except (EvalRunError, EvalScoreError, ValueError, OSError) as error:
             print(f"eval failed: {error}", file=sys.stderr)
             return 1
         if result.mode == "mock":
@@ -455,13 +465,24 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"proposals: {result.proposals}")
         print(f"record: {result.record_path}")
         print(f"judge results: {result.judge_results_path}")
+        print(f"scores: {result.record_path.with_name('scores.json')}")
         print(
             f"sandbox: preserved at {result.sandbox_path}"
             if result.sandbox_path is not None
             else "sandbox: removed"
         )
-        print("eval pipeline: PASS")
-        return 0
+        if scores["status"] == "withheld":
+            print("mode=mock: scores withheld")
+            print("eval pipeline: PASS")
+            return 0
+        for metric in scores["metrics"]:  # type: ignore[union-attr]
+            print(
+                f"{metric['metric']}: {metric['value']} {metric['op']} "
+                f"{metric['threshold']} {'PASS' if metric['pass'] else 'FAIL'}"
+            )
+        passed = scores["status"] == "pass"
+        print(f"eval pipeline: {'PASS' if passed else 'FAIL'}")
+        return 0 if passed else 1
 
     if args.command == "hook":
         if args.hook_event == "session-end":

@@ -1,0 +1,21 @@
+# Deterministic-eval gates.  Values are deliberately conservative defaults and
+# may be overridden with ``s2s eval --thresholds path/to/thresholds.toml``.
+
+[thresholds]
+detection_recall = 0.95
+scaffold_filter_precision = 1.0
+authenticity_precision = 0.90
+authenticity_recall = 0.90
+label_agreement = 0.80
+exact_label_agreement = 0.70
+convergence = 0.80
+fast_track_recall = 0.90
+singleton_ratio_max = 0.25
+other_share_max = 0.20
+spam_precision = 0.95
+dedup_catch_rate = 1.0
+claude_md_share = 0.70
+stability_label_flip_rate_max = 0.05
+stability_authenticity_flip_rate_max = 0.05
+stability_schema_retry_rate_max = 0.05
+invariants = 1.0
