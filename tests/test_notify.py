@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+import socketserver
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from threading import Thread
@@ -91,6 +92,7 @@ def test_init_round_trip_installs_both_hooks(monkeypatch: pytest.MonkeyPatch, tm
 
 def test_webhook_payload_shape_and_failure_swallowing(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     monkeypatch.setenv("S2S_HOME", str(tmp_path))
+    monkeypatch.setattr(notify, "WEBHOOK_TIMEOUT_S", 0.25)
     (tmp_path / "config.toml").write_text(
         '[notifications]\ndesktop = false\nwebhook_url = "http://127.0.0.1:0/notify"\n'
         'events = ["proposal_pending"]\n',
@@ -111,7 +113,15 @@ def test_webhook_payload_shape_and_failure_swallowing(monkeypatch: pytest.Monkey
         def log_message(self, *_args):
             return
 
-    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    class QuietBindServer(ThreadingHTTPServer):
+        def server_bind(self):
+            # HTTPServer.server_bind calls socket.getfqdn(), a reverse-DNS
+            # lookup that can stall ~35s on some resolvers. Tests skip it.
+            socketserver.TCPServer.server_bind(self)
+            self.server_name = "localhost"
+            self.server_port = self.socket.getsockname()[1]
+
+    server = QuietBindServer(("127.0.0.1", 0), Handler)
     server_url = f"http://127.0.0.1:{server.server_port}/notify"
     server_thread = Thread(target=server.serve_forever, daemon=True)
     server_thread.start()

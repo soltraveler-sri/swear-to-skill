@@ -95,9 +95,13 @@ def _send_desktop(text: str) -> None:
         _log_failure("desktop notification failed", error)
 
 
-def _send_webhook(url: str, payload: dict[str, object]) -> None:
+WEBHOOK_TIMEOUT_S = 5.0
+
+
+def _send_webhook(url: str, payload: dict[str, object], *, timeout_s: float | None = None) -> None:
     """POST a JSON webhook, retrying one time and swallowing every failure."""
 
+    timeout = WEBHOOK_TIMEOUT_S if timeout_s is None else timeout_s
     body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     request = urllib.request.Request(
         url,
@@ -107,7 +111,7 @@ def _send_webhook(url: str, payload: dict[str, object]) -> None:
     )
     for attempt in range(2):
         try:
-            with urllib.request.urlopen(request, timeout=5):
+            with urllib.request.urlopen(request, timeout=timeout):
                 pass
             return
         except Exception as error:

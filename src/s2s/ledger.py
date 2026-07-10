@@ -1463,11 +1463,6 @@ class Ledger:
                     "synthesis proposal drafted",
                     None,
                 )
-        # This is the durable proposal-pending emission point. Keep it after
-        # commit so a notification never claims work that was rolled back.
-        from .notify import emit
-
-        emit("proposal_pending", proposal_count=len(proposal_ids))
         return proposal_ids
 
     def create_remedy(
