@@ -106,6 +106,13 @@ class Auditor:
 
 
 @dataclass(frozen=True)
+class EvalSettings:
+    """Eval transport default; ``auto`` prefers replay only when cache exists."""
+
+    mode: str = "auto"
+
+
+@dataclass(frozen=True)
 class Config:
     """Complete configuration available before any optional features exist."""
 
@@ -117,6 +124,7 @@ class Config:
     curator: Curator = Curator()
     sources: Sources = Sources()
     auditor: Auditor = Auditor()
+    eval: EvalSettings = EvalSettings()
 
 
 def _section(document: dict[str, object], name: str) -> dict[str, object]:
@@ -169,6 +177,7 @@ def load_config(config_path: Path | None = None) -> Config:
     curator = _section(document, "curator")
     sources = _section(document, "sources")
     auditor = _section(document, "auditor")
+    eval_section = _section(document, "eval")
     defaults = Config()
     # Codex is opt-out when its normal rollout root exists; otherwise preserve a
     # quiet default for machines that have never used Codex.
@@ -284,6 +293,14 @@ def load_config(config_path: Path | None = None) -> Config:
                 "meaningful_drop_fraction",
                 defaults.auditor.meaningful_drop_fraction,
             ),
+        ),
+        eval=EvalSettings(
+            mode=(
+                configured_mode
+                if (configured_mode := _str(eval_section, "mode", defaults.eval.mode))
+                in {"auto", "mock", "replay"}
+                else defaults.eval.mode
+            )
         ),
     )
 
