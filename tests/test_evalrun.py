@@ -78,6 +78,19 @@ def test_cli_exposes_all_eval_controls() -> None:
     assert args.corpus == CORPUS
 
 
+def test_rescore_run_refreshes_existing_score_and_report_artifacts(tmp_path: Path) -> None:
+    result = evalrun.run_eval(_config(tmp_path, stages=("scan",)))
+
+    rescored = evalrun.rescore_run(result.record_path.parent, corpus=CORPUS)
+
+    assert rescored.record_path == result.record_path
+    assert rescored.scores_path.is_file()
+    assert rescored.report_markdown_path.is_file()
+    assert rescored.report_html_path.is_file()
+    assert json.loads(rescored.scores_path.read_text(encoding="utf-8"))["status"] == "withheld"
+    assert rescored.verdict == "WIRING CHECK ONLY"
+
+
 def test_sandbox_canary_and_child_environment_audit(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

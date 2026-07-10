@@ -12,6 +12,7 @@ convergence = 0.80
 fast_track_recall = 0.90
 singleton_ratio_max = 0.25
 other_share_max = 0.20
+spam_clean = 1.0
 spam_precision = 0.95
 dedup_catch_rate = 1.0
 claude_md_share = 0.70

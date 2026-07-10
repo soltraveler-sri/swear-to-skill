@@ -182,6 +182,17 @@ class EvalRunResult:
     proposals: int
 
 
+@dataclass(frozen=True)
+class EvalRescoreResult:
+    """Artifacts refreshed from an already-completed eval record."""
+
+    record_path: Path
+    scores_path: Path
+    report_markdown_path: Path
+    report_html_path: Path
+    verdict: str
+
+
 def load_profile(name: str, *, root: Path = PROFILE_ROOT) -> EvalProfile:
     """Load one named profile and reject every non-comparison control surface."""
 
@@ -632,6 +643,42 @@ def run_eval(
         primary_record["repeats"] = repeats
     _write_record(primary.record_path, primary_record)
     return primary
+
+
+def rescore_run(
+    run_dir: Path,
+    *,
+    corpus: Path = DEFAULT_CORPUS,
+    thresholds_path: Path | None = None,
+) -> EvalRescoreResult:
+    """Refresh scores and report without rerunning an eval pipeline or judge.
+
+    The caller supplies an existing run directory, whose ``record.json`` and
+    ``judge-results.json`` remain the only run facts used by this operation.
+    """
+
+    record_path = Path(run_dir) / "record.json"
+    judge_path = record_path.with_name("judge-results.json")
+    if not record_path.is_file():
+        raise EvalRunError(f"rescore requires an existing record.json: {record_path}")
+    if not judge_path.is_file():
+        raise EvalRunError(f"rescore requires an existing judge-results.json: {judge_path}")
+    manifest_path = Path(corpus) / "manifest.json"
+    if not manifest_path.is_file():
+        raise EvalRunError(f"rescore requires corpus manifest: {manifest_path}")
+
+    from .evalreport import write_report
+    from .evalscore import score_files
+
+    score_files(record_path, manifest_path, thresholds_path=thresholds_path)
+    report = write_report(record_path, thresholds_path=thresholds_path)
+    return EvalRescoreResult(
+        record_path=record_path,
+        scores_path=record_path.with_name("scores.json"),
+        report_markdown_path=report.markdown_path,
+        report_html_path=report.html_path,
+        verdict=report.verdict,
+    )
 
 
 def run_matrix(
