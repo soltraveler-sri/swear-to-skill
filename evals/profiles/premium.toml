@@ -7,7 +7,7 @@ prompt_version = "v1"
 
 [curate]
 model = "sonnet"
-prompt_version = "v1"
+prompt_version = "v2"
 
 [synthesize]
 model = "opus"

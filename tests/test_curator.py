@@ -241,9 +241,14 @@ def test_cluster_synthesize_promotes_reviewed_open_members_and_unworthy_is_durab
     result = run_pass(ledger, assume_yes=True)
 
     assert ledger.get_incident(reviewed_open).state == "promoted"  # type: ignore[union-attr]
-    assert ledger.get_incident(arrival).state == "parked"  # type: ignore[union-attr]
+    assert ledger.get_incident(arrival).state == "promoted"  # type: ignore[union-attr]
     assert result.applied_cluster_verdicts == 1
     assert ledger.curator_cluster_decisions()[0].verdict == "synthesize"
+    assert result.report_path is not None
+    assert (
+        f"cluster synthesize overrode park for #{arrival}"
+        in result.report_path.read_text(encoding="utf-8")
+    )
 
     unworthy_arrival = _add_triaged(
         ledger, "UNWORTHY ARRIVAL", label="tool-misuse", index=2
@@ -266,6 +271,91 @@ def test_cluster_synthesize_promotes_reviewed_open_members_and_unworthy_is_durab
     )
 
 
+def test_cluster_synthesize_overrides_member_parks_and_logs_one_conflict(
+    ledger: Ledger, mock_claude
+) -> None:
+    incident_ids = [
+        _add_triaged(ledger, "PARK CONFLICT ONE", index=0),
+        _add_triaged(ledger, "PARK CONFLICT TWO", index=1),
+        _add_triaged(ledger, "PARK CONFLICT THREE", index=2),
+    ]
+    mock_claude.enqueue_response(
+        _envelope(
+            [_verdict(incident_id, "park") for incident_id in incident_ids],
+            [
+                {
+                    "label": "ignored-instruction",
+                    "verdict": "synthesize",
+                    "reason": "One combined remedy covers all members.",
+                }
+            ],
+        )
+    )
+
+    result = run_pass(ledger, assume_yes=True)
+
+    assert all(ledger.get_incident(item).state == "promoted" for item in incident_ids)  # type: ignore[union-attr]
+    assert result.applied_incident_verdicts == len(incident_ids)
+    assert result.rejected_verdicts == 0
+    assert result.report_path is not None
+    subjects = ",".join(f"#{incident_id}" for incident_id in incident_ids)
+    report = result.report_path.read_text(encoding="utf-8")
+    assert f"cluster synthesize overrode park for {subjects}" in report
+    assert run_pass(ledger, assume_yes=True).calls == 0
+
+
+def test_cluster_synthesize_overrides_member_dismiss_and_logs_conflict(
+    ledger: Ledger, mock_claude
+) -> None:
+    incident_id = _add_triaged(ledger, "DISMISS CONFLICT")
+    mock_claude.enqueue_response(
+        _envelope(
+            [_verdict(incident_id, "dismiss")],
+            [
+                {
+                    "label": "ignored-instruction",
+                    "verdict": "synthesize",
+                    "reason": "The incident should be fast-tracked.",
+                }
+            ],
+        )
+    )
+
+    result = run_pass(ledger, assume_yes=True)
+
+    assert ledger.get_incident(incident_id).state == "promoted"  # type: ignore[union-attr]
+    assert result.report_path is not None
+    assert (
+        f"cluster synthesize overrode dismiss for #{incident_id}"
+        in result.report_path.read_text(encoding="utf-8")
+    )
+
+
+def test_cluster_hold_does_not_override_member_parks(ledger: Ledger, mock_claude) -> None:
+    incident_ids = [
+        _add_triaged(ledger, "HELD PARK ONE", index=0),
+        _add_triaged(ledger, "HELD PARK TWO", index=1),
+    ]
+    mock_claude.enqueue_response(
+        _envelope(
+            [_verdict(incident_id, "park") for incident_id in incident_ids],
+            [
+                {
+                    "label": "ignored-instruction",
+                    "verdict": "hold",
+                    "reason": "Wait for more evidence.",
+                }
+            ],
+        )
+    )
+
+    result = run_pass(ledger, assume_yes=True)
+
+    assert all(ledger.get_incident(item).state == "parked" for item in incident_ids)  # type: ignore[union-attr]
+    assert result.report_path is not None
+    assert "cluster synthesize overrode" not in result.report_path.read_text(encoding="utf-8")
+
+
 def test_prompt_contains_northstar_asymmetry_instruction_verbatim() -> None:
     template, _ = load_prompt("curate", 1)
     required = (
@@ -274,6 +364,15 @@ def test_prompt_contains_northstar_asymmetry_instruction_verbatim() -> None:
         "To keep items apart you must state why one remedy could not cover both."
     )
     assert required in template
+
+
+def test_curate_v2_warns_against_member_verdicts_for_synthesized_clusters() -> None:
+    template, _ = load_prompt("curate", 2)
+
+    assert (
+        "If you give a cluster the synthesize verdict, do NOT also park or dismiss its members; "
+        "member-level verdicts are for incidents you are NOT fast-tracking."
+    ) in template
 
 
 def test_pass_due_uses_count_or_persisted_elapsed_time(ledger: Ledger) -> None:

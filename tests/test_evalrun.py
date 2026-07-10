@@ -130,7 +130,7 @@ def test_record_then_two_replays_are_deterministic_modulo_timestamps(tmp_path: P
 
     assert recorded.proposals == replay_one.proposals == replay_two.proposals == 6
     # Two identical gardening requests intentionally share one content-addressed key.
-    assert len(list((tmp_path / "replays" / "v1" / "default").glob("*.json"))) == 82
+    assert len(list((tmp_path / "replays" / "v1" / "default").glob("*.json"))) == 83
     assert _without_timestamps(_record(replay_one.record_path)) == _without_timestamps(
         _record(replay_two.record_path)
     )

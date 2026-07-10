@@ -63,7 +63,7 @@ parallelism = 2
 # Prompt versions are published assets under src/s2s/prompts. Adding a version
 # means adding its .md and .schema.json files; callers read these pins directly.
 triage = "v1"
-curate = "v1"
+curate = "v2"
 garden = "v1"
 synthesize = "v2"
 judge_remedy = "v1"
