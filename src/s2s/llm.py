@@ -302,11 +302,22 @@ def _real_user_home() -> str:
     return pwd.getpwuid(os.getuid()).pw_dir
 
 
+# Snapshot the auth-relevant environment at import time — before any eval
+# sandbox mutates os.environ. CLAUDE_CONFIG_DIR relocates ALL claude storage
+# including credentials, so a sandboxed value must never reach the transport;
+# a user's own pre-existing value must always be honored.
+_PROCESS_START_CLAUDE_CONFIG_DIR = os.environ.get("CLAUDE_CONFIG_DIR")
+
+
 def default_response_provider(request: LLMRequest) -> dict[str, object]:
     """Execute the real Claude transport and return its parsed JSON envelope."""
 
     env = dict(request.env)
     env["HOME"] = _real_user_home()
+    if _PROCESS_START_CLAUDE_CONFIG_DIR is None:
+        env.pop("CLAUDE_CONFIG_DIR", None)
+    else:
+        env["CLAUDE_CONFIG_DIR"] = _PROCESS_START_CLAUDE_CONFIG_DIR
     completed = subprocess.run(
         list(request.argv),
         input=request.prompt,
@@ -319,13 +330,29 @@ def default_response_provider(request: LLMRequest) -> dict[str, object]:
     )
     if completed.returncode != 0:
         stderr = completed.stderr.strip()
-        if _looks_like_auth_error(stderr):
+        # The CLI frequently reports failures as a JSON envelope on stdout
+        # with a nonzero exit; losing stdout makes those undiagnosable.
+        stdout_head = completed.stdout.strip()[:500]
+        if _looks_like_auth_error(stderr) or _looks_like_auth_error(stdout_head):
             raise ClaudeAuthError(
                 "Claude CLI is not authenticated; run `claude login` and try again."
             )
-        detail = f": {stderr}" if stderr else ""
+        detail = "".join(
+            part
+            for part in (
+                f": {stderr}" if stderr else "",
+                f" [stdout: {stdout_head}]" if stdout_head else "",
+            )
+        )
+        flags = [a for a in request.argv if a.startswith("--") or a in ("claude", "-p")]
+        env_fingerprint = {
+            key: env.get(key, "<unset>")
+            for key in ("HOME", "S2S_HOME", "CLAUDE_CONFIG_DIR", "PATH")
+        }
+        env_fingerprint["PATH"] = str(env_fingerprint["PATH"])[:120]
         raise ClaudeProcessError(
-            f"Claude CLI exited with status {completed.returncode}{detail}"
+            f"Claude CLI exited with status {completed.returncode}{detail} "
+            f"(flags={flags} model={request.model} env={env_fingerprint})"
         )
     parsed = _parse_json(completed.stdout, "Claude CLI response")
     if not isinstance(parsed, dict):
