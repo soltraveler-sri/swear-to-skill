@@ -128,6 +128,8 @@ Full live golden-corpus results (v2 prompts, 2026-07-10) are strong across all
 three triage models: detection recall and dedup-as-revision catch 1.0, stability
 (flip rates) 0.0, pipeline invariants 1.0, and ~0.1–0.2 remedies per incident.
 
+Full methodology, run IDs, and results: [evals/RESULTS.md](evals/RESULTS.md).
+
 | Triage model | Authenticity precision | Authenticity recall | Label agreement | Convergence | Evidence contamination |
 | --- | ---: | ---: | ---: | ---: | --- |
 | Haiku (previous default) | 0.89 | 0.96 | 0.64 | 0.4 | some (spam precision 0.85) |
