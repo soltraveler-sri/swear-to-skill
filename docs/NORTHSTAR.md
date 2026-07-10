@@ -262,6 +262,8 @@ is recorded in a git-tracked state dir with provenance (cluster, incidents,
 proposal), tagged in-file (`<!-- s2s:remedy-id -->` / frontmatter comment), and
 removable via `s2s rollback <remedy-id>`.
 
+Pipeline-generated skills are installed with an `s2s-` name prefix, providing at-a-glance operator provenance. Claude Code discovers skills only as `skills/*/SKILL.md`, so this namespace must live in the skill name rather than an extra directory level or renamed file.
+
 ### Stage 6 — Auditor (deterministic + periodic judgment)
 
 Stage 1 never stops running, so outcome data is free: for each installed remedy,

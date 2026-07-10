@@ -20,11 +20,29 @@ from .triager import context_for_incident
 PROMPT_NAME = "synthesize"
 PROMPT_VERSION = 2
 SKILL_NAME_RE = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
+GENERATED_SKILL_PREFIX = "s2s-"
+COMPANION_SKILL_NAME = "s2s"
 MANAGED_BLOCK_RE = re.compile(r"<!--\s*s2s:begin\s*-->(.*?)<!--\s*s2s:end\s*-->", re.DOTALL)
 
 
 class SynthesisValidationError(ValueError):
     """Raised when a schema-valid Synthesist response violates Stage 4 laws."""
+
+
+def installed_skill_name(name: str) -> str:
+    """Return the operator-visible name used for pipeline-generated skills."""
+
+    if name == COMPANION_SKILL_NAME or name.startswith(GENERATED_SKILL_PREFIX):
+        return name
+    return f"{GENERATED_SKILL_PREFIX}{name}"
+
+
+def skill_dedup_name(name: str) -> str:
+    """Return a generated skill's logical name for proposal/digest comparison."""
+
+    if name.startswith(GENERATED_SKILL_PREFIX):
+        return name.removeprefix(GENERATED_SKILL_PREFIX)
+    return name
 
 
 @dataclass(frozen=True)
@@ -216,7 +234,8 @@ def collect_remedy_surface(
             skill_rows.append(
                 (
                     f"skill:{_surface_path(path, reference_root)}",
-                    f"name={frontmatter['name']} | description={frontmatter['description']}",
+                    f"name={skill_dedup_name(frontmatter['name'])} | "
+                    f"description={frontmatter['description']}",
                 )
             )
 

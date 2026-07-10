@@ -143,7 +143,7 @@ def test_confidence_bars_and_singleton_escalation(
         remedy = ledger.remedy_for_proposal(proposal.id)
         assert remedy is not None and remedy.provenance == "auto"
         artifact = (
-            targets.skills_dir / "autonomy-check" / "SKILL.md"
+            targets.skills_dir / "s2s-autonomy-check" / "SKILL.md"
             if remedy_type == "skill"
             else targets.global_claude_md
         )
