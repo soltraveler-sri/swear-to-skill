@@ -550,7 +550,106 @@ swear-to-skill/
 
 ---
 
-## 15. Build order
+## 15. Eval harness — proving quality, not just function
+
+The test suite proves the machine works; the eval harness proves the machine is
+*good*. It exists for two audiences: **a prospective user** who likes the idea
+but won't point an autonomous remedy-writer at their real workflow on faith —
+they run the evals, watch the whole pipeline operate on a safe corpus with
+Claude genuinely in the loop, and get a greenlight (or not) plus legible
+evidence; and **us**, measuring output quality to decide where to improve
+prompts, raise reasoning effort, or change models.
+
+### 15.1 The golden corpus (safe by construction)
+
+A curated, fully synthetic transcript corpus — fabricated projects and sessions
+in the real Claude Code JSONL schema (and Codex rollout schema), with planted
+incidents. Every planted incident carries a **ground-truth annotation**:
+authentic frustration or decoy (venting at a third-party tool, quoting, playful
+swearing); its true failure-mode cluster (the corpus contains K clusters spread
+across projects, plus genuine singletons); whether it is remedy-worthy and the
+expected remedy *shape*; and near-duplicates of remedies that already "exist"
+(to test dedup). The corpus is data, versioned in-repo, with a lint that
+enforces schema validity and privacy-safety (no real names, paths, or code).
+Evals never read a user's real transcripts unless explicitly pointed at them.
+
+### 15.2 Sandboxed, three-mode execution
+
+Every eval run fabricates a disposable environment (tmp `S2S_HOME`, fake
+`$HOME` targets) — the proven smoke-test pattern, productized. Three modes:
+
+- **`mock`** — canned responses; free; proves wiring (CI default).
+- **`replay`** — recorded real-model responses replayed deterministically;
+  free; the regression baseline.
+- **`live`** — real `claude` calls end to end; costs real money (estimated
+  up front, confirm-gated, with a `--quick` subset); the trust-building run
+  and the only mode that measures real model behavior.
+
+### 15.3 What gets measured
+
+Deterministic, ground-truth-scored metrics:
+- **Detection recall** (planted trigger phrases found) and scaffold-filter
+  precision.
+- **Triage quality**: authenticity precision/recall against annotations;
+  label agreement with ground-truth clusters.
+- **Convergence score** (the anti-fragmentation gauge, §6 rule 5): do the K
+  planted clusters converge — singleton ratio vs expected, recurrence
+  fast-tracks fired, `other` share. A corpus that should cluster and doesn't
+  is a failing eval, not a silent death.
+- **Spam precision** (the anti-clutter gauge): decoys and unworthy incidents
+  that must NOT become remedies; remedies-per-incident ratio; dedup catch
+  rate on planted near-duplicates; remedy-type routing distribution
+  (`claude-md` should dominate; skills should be rare).
+- **Stability**: N-run repeat of stochastic stages on identical inputs —
+  label flip rate, verdict flip rate, schema-retry rate. "Works" and "works
+  reliably" are different claims.
+- **Pipeline invariants over time**: repeated pump cycles over a growing
+  corpus — idempotence, state-machine integrity, O(new) economics hold on
+  the tenth run, not just the first.
+
+Model-graded (LLM-judge) metrics, rubric-driven, judge model configurable and
+distinct from the system-under-test by default:
+- **Remedy quality rubric**: actionable, general without vagueness, trigger
+  quality of skill descriptions, no project-specific nouns leaked, correct
+  routing rationale.
+- **Counterfactual prevention** (goal-level, not action-level): *would this
+  remedy, had it existed, plausibly have prevented the planted incidents it
+  was synthesized from?* A proposal being created is not success; a remedy
+  that addresses the actual failure is.
+- Judge prompts are versioned files, same as pipeline prompts.
+
+### 15.4 The greenlight report
+
+One command (`s2s eval`) produces machine-readable results plus a
+human-readable report: a PASS/FAIL greenlight against thresholds, per-metric
+scores, cost of the run, and **narrative excerpts** that make the pipeline
+legible — e.g. *found "not what I asked" in session X → extracted context
+showing the agent renamed the wrong file → triaged `ignored-instruction`
+(authentic, 0.91) → clustered with 2 prior incidents → synthesized a
+CLAUDE.md rule: "…" → judge: would have prevented 3/3 (excerpt)*. Exit code
+reflects the gate so CI can consume it.
+
+### 15.5 A/B experiment matrix
+
+Named experiment profiles vary the pipeline's judgment surfaces: per-stage
+**model** (including Codex-integration users' models), **reasoning effort**,
+and **prompt version** (prompts are versioned files precisely so arms can pin
+them — for the Triager, Curator, Synthesist, and the judge itself). The
+runner executes the same corpus per arm and emits a comparative report
+(metric deltas, cost deltas, stability deltas). This is how "should the
+Synthesist be Opus?" or "does prompt v2 reduce fragmentation?" become
+measurements instead of opinions. Prompt changes re-run the replay baseline
+like code regressions (prompts are second-class code nowhere in this repo).
+
+### 15.6 Honest limits
+
+Evals measure the pipeline on a synthetic corpus; they do not certify
+performance on any individual's real transcripts, and live-mode scores vary
+with model versions. The report says so. The corpus is also a public target —
+overfitting prompts to the corpus is a known hazard; the A/B runner's held-out
+flag (`--corpus <alt>`) and corpus versioning exist to keep us honest.
+
+## 16. Build order
 
 1. **Sprint 1 — Substrate:** repo scaffold, ledger, Claude Code adapter +
    defensive parser, archiver + SessionEnd hook, backfill, scanner + vendored
@@ -562,6 +661,10 @@ swear-to-skill/
    policy) + install/rollback substrate, notifications, `/s2s` companion skill.
 4. **Sprint 4 — The loop:** Auditor, revise/retire, autonomy policy + guardrails,
    Codex adapter, docs/README/CI/packaging, public release hygiene.
+5. **Sprint 5 — Eval harness (§15):** golden corpus + annotations, sandboxed
+   three-mode runner, deterministic scorers (convergence, spam precision,
+   stability), LLM-judge rubrics + counterfactual grading, greenlight report,
+   A/B experiment matrix.
 
 The sprint milestones and PR-scoped issues in the GitHub tracker are the
 authoritative decomposition of this build order.
