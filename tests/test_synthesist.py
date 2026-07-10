@@ -157,8 +157,10 @@ def test_split_creates_partitioned_proposals_and_rejects_orphans(ledger: Ledger,
     orphan_response["split"] = [_proposal(third, "claude-md"), _proposal(third, "hook")]
     mock_claude.enqueue_response(_envelope(orphan_response))
     mock_claude.enqueue_response(_envelope(orphan_response))
-    with pytest.raises(SynthesisValidationError, match="split evidence"):
-        _synthesize(ledger)
+    orphan_results = _synthesize(ledger)
+    assert orphan_results and orphan_results[-1].error is not None
+    assert "split evidence" in orphan_results[-1].error
+    assert orphan_results[-1].proposal_ids == ()
     assert ledger.get_incident(third).state == "promoted"  # type: ignore[union-attr]
     assert ledger.get_incident(fourth).state == "promoted"  # type: ignore[union-attr]
 
@@ -172,8 +174,10 @@ def test_skill_frontmatter_validation_retries_then_preserves_promoted_on_failure
     mock_claude.enqueue_response(_envelope(invalid))
     mock_claude.enqueue_response(_envelope(invalid))
 
-    with pytest.raises(SynthesisValidationError, match="kebab-case"):
-        _synthesize(ledger)
+    failed_results = _synthesize(ledger)
+    assert failed_results and failed_results[-1].error is not None
+    assert "kebab-case" in failed_results[-1].error
+    assert failed_results[-1].proposal_ids == ()
     assert ledger.get_incident(incident_id).state == "promoted"  # type: ignore[union-attr]
     assert len(mock_claude.invocations()) == 2
     frontmatter, body = parse_skill_markdown(
@@ -220,3 +224,20 @@ def test_singleton_provenance_is_copied_to_proposal(ledger: Ledger, mock_claude)
     row = ledger.connection.execute("SELECT singleton, drafted_content FROM proposal").fetchone()
     assert row["singleton"] == 1
     assert json.loads(row["drafted_content"])["singleton"] is True
+
+
+def test_duplicate_evidence_citations_are_normalized_not_fatal(
+    ledger: Ledger, mock_claude
+) -> None:
+    """Live finding: real models sometimes cite an incident twice; keep first."""
+    incident_id = _promoted(ledger, "dup-evidence")
+    proposal = _proposal(incident_id, "claude-md")
+    proposal["evidence"] = [
+        {"incident_id": incident_id, "quote": "This is not what I asked."},
+        {"incident_id": incident_id, "quote": "This is not what I asked."},
+    ]
+    mock_claude.enqueue_response(_envelope(proposal))
+    results = _synthesize(ledger)
+    assert len(results) == 1 and results[0].proposal_ids
+    stored = ledger.get_proposal(results[0].proposal_ids[0])
+    assert stored is not None
