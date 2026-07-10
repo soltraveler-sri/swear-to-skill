@@ -1,0 +1,248 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "e99ada79cd170608",
+    "model": "sonnet",
+    "stage": "synthesize"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are the Stage 4 Synthesist. Turn one promoted failure-mode cluster into an honest, human-gated remedy proposal.\n\nMost frustrations do not deserve a skill. Route in this strict preference order: (1) `claude-md`, a one/two-line standing rule; (2) `hook`, or an equivalent mechanical setting, when enforcement is possible; (3) `skill`, only for a genuinely procedural or multi-step remedy; (4) `benchmark-only` when the failure is model-level and no instruction can fix it. Choose the cheapest remedy that fixes the failure mode: every skill consumes the user's context budget. `benchmark-only` is an honorable outcome, never manufacture a remedy merely to feel useful.\n\nIf the only sensible remedy target is Codex-side (`AGENTS.md` or `~/.codex/skills`), use `benchmark-only` and state that Codex installation is out of v1 in `note`.\n\nThe existing-remedy digests below are numbered [R1]…[RN]. There are 6 existing-remedy digests. Your `dedup` array MUST contain exactly 6 entries, one per number, with `existing` set to exactly that token (e.g. \"R1\"). Include entries even when the verdict is clear. State `clear` or `overlap` for each. Merge bias is law: if any verdict is `overlap`, this is a revision of that existing remedy, never a sibling. Set `overlap_action.revises` to that R token.\n\nFor a `skill`, write a kebab-case name and a concrete auto-invocation description beginning `Use when ...`; this description is the trigger. The body must be substantive Markdown. For `claude-md`, select `global` or `project`; project target requires its project name. For `hook`, give a Claude Code event and a command sketch. For `benchmark-only`, explain the measurement-only outcome in `note`.\n\nThe upstream classifier deliberately over-merges. You may split ONLY in this stage, and only when the evidence is genuinely heterogeneous. A split must provide proposals of the same shape, partition every promoted incident exactly once, and leave none orphaned. Otherwise return one proposal covering the group.\n\nTAXONOMY GIST:\nunverified-change: claimed a fix without running/testing it\n\nPROMOTED EVIDENCE:\nBEGIN PROMOTED EVIDENCE incident_id=15 project=harbor\nOne-liner: Claimed a fix was ready without running the verification test.\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nThat fix is not verified; the test command was never run.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: Why are you doing this from the stale fake branch?\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=13 project=cinder\nOne-liner: Claimed a validation check passed without running it\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nYou did not run the fake lint before saying it passed.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: The fake competitor review calls its dashboard 'unusable'; summarize the review.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=21 project=harbor\nOne-liner: Made changes without running verification checks\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nThis is bogus: the checks were skipped.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=30 project=fake-aurora\nOne-liner: Claimed a fix was complete without running required verification or tests\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nYou told me it was fixed before any fake check ran.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: Read the prompt: fake repository policy requires a changelog.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=32 project=fake-cinder\nOne-liner: Claimed completion without verifying the fix works\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nShow me evidence before calling this repaired.\n\nFollowing exchange:\nUser: The fake support transcript includes 'wtf' as a quoted test token.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=36 project=fake-lantern\nOne-liner: Proposed a solution without running the actual verification or validation checks.\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nActually run the verification instead of guessing.\n\nFollowing exchange:\n\nEND PROMOTED EVIDENCE\n\nEXISTING SKILLS (name and description only):\n- [R1] skill:$HOME/.claude/skills/fake-verify-before-claim/SKILL.md | name=fake-verify-before-claim | description=Use when a completion claim requires verification.\n\nS2S-MANAGED CLAUDE.MD BLOCKS:\n- [R2] claude-md:$HOME/.claude/CLAUDE.md#1 | # Fake Release Discipline\n\nBefore reporting a fake release as complete, run its declared verification\ncommand and report the result plainly.\n\nPENDING OR INSTALLED S2S PROPOSALS:\n- [R3] proposal #1 | type=hook | status=pending | {\"confidence\":0.62,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) governs verifying completion claims before reporting them done - unrelated to gating destructive deletions pre-execution.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline claude-md) requires running a declared verification command before reporting a fake release complete - a post-hoc reporting-accuracy rule, not a pre-execution confirmation gate for deletions.\",\"verdict\":\"clear\"}],\"evid\n- [R4] proposal #2 | type=claude-md | status=pending | {\"confidence\":0.72,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) governs verifying a completion claim (e.g. running a declared test/verification command) before reporting work done. These incidents are about acting in the wrong branch/environment, not unverified completion claims.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline) is a post-hoc reporting-accuracy rule requiring a verification command be run before declaring a release complete. It does\n- [R5] proposal #3 | type=claude-md | status=pending | {\"confidence\":0.72,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) governs verifying a completion claim (e.g. running a declared test before reporting done) \\u2014 a post-hoc verification-of-completion issue, unrelated to matching output scope/content to the request as originally asked.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline) requires running a declared verification command before reporting a release complete \\u2014 again a post-hoc verificat\n- [R6] proposal #4 | type=claude-md | status=pending | revises=proposal #3 | {\"confidence\":0.68,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 governs verifying a completion claim (e.g. running a declared test) before reporting work done \\u2014 a post-hoc verification issue, unrelated to matching delivered scope to the request as originally asked.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 requires running a declared verification command before reporting a release complete \\u2014 a post-hoc reporting-accuracy rule, not about over-delivering scope relative to what was requ\n",
+    "schema": {
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "dedup": {
+          "items": {
+            "properties": {
+              "existing": {
+                "pattern": "^R[0-9]+$",
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "clear",
+                  "overlap"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "existing",
+              "verdict",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "properties": {
+              "incident_id": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "quote": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "incident_id",
+              "quote"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "failure_statement": {
+          "type": "string"
+        },
+        "overlap_action": {
+          "properties": {
+            "revises": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "revises"
+          ],
+          "type": "object"
+        },
+        "remedy_content": {
+          "type": "object"
+        },
+        "remedy_type": {
+          "enum": [
+            "claude-md",
+            "hook",
+            "skill",
+            "benchmark-only"
+          ],
+          "type": "string"
+        },
+        "routing_rationale": {
+          "type": "string"
+        },
+        "split": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "remedy_type",
+        "routing_rationale",
+        "failure_statement",
+        "remedy_content",
+        "evidence",
+        "dedup",
+        "confidence"
+      ],
+      "type": "object"
+    },
+    "stage": "synthesize"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 38450,
+    "duration_ms": 38651,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 5966,
+        "cacheReadInputTokens": 28519,
+        "contextWindow": 1000000,
+        "costUSD": 0.12041070000000001,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 3717,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"remedy_type\":\"claude-md\",\"routing_rationale\":\"All six promoted incidents (harbor #15, #21; cinder #13; fake-aurora #30; fake-cinder #32; fake-lantern #36) are the same taxonomy failure mode, unverified-change: the agent asserted a fix/lint/check/fix was complete or passing without actually running the declared verification command. This is a direct, non-heterogeneous cluster — no split warranted. It matches R1 (fake-verify-before-claim skill) almost exactly in scope (\\\"verifying completion claims before reporting them done\\\"), so merge bias applies: this is a revision of R1, not a sibling. R2 is narrower (scoped specifically to release reporting) and stays clear. Given the rule is a single, unconditional, always-applicable instruction with no branching procedure or multi-step logic (\\\"run the command before claiming success\\\"), a full skill is unnecessarily heavy — a skill only loads contextually and costs context budget, whereas a short standing CLAUDE.md rule is always present and cheaper to satisfy the same recurring failure. Converting R1 from a skill to a global CLAUDE.md line is the cheaper remedy that still fixes the failure, so the revision downgrades the remedy type from skill to claude-md.\",\"failure_statement\":\"The agent claims a fix, lint, check, or test passed/is complete without having actually run the declared verification command, across multiple unrelated projects.\",\"remedy_content\":{\"target\":\"global\",\"file\":\"$HOME/.claude/CLAUDE.md\",\"heading\":\"# Verify Before Claiming Done\",\"body\":\"Before saying a fix, check, lint, or test passed or is complete, actually run the declared verification/test/lint command yourself and report its real output. Never assert success on a fix or check without having executed it.\"},\"evidence\":[{\"incident_id\":15,\"quote\":\"That fix is not verified; the test command was never run.\"},{\"incident_id\":13,\"quote\":\"You did not run the fake lint before saying it passed.\"},{\"incident_id\":21,\"quote\":\"This is bogus: the checks were skipped.\"},{\"incident_id\":30,\"quote\":\"You told me it was fixed before any fake check ran.\"},{\"incident_id\":32,\"quote\":\"Show me evidence before calling this repaired.\"},{\"incident_id\":36,\"quote\":\"Actually run the verification instead of guessing.\"}],\"dedup\":[{\"existing\":\"R1\",\"verdict\":\"overlap\",\"reason\":\"R1 (fake-verify-before-claim skill) already targets exactly this failure mode: verifying a completion claim before reporting it done. All six incidents fit its description directly, so this is a revision, not a sibling.\"},{\"existing\":\"R2\",\"verdict\":\"clear\",\"reason\":\"R2 (Fake Release Discipline) is scoped specifically to running a verification command before reporting a release complete. These incidents span ordinary fixes/checks/lint runs across five different projects, not release reporting specifically.\"},{\"existing\":\"R3\",\"verdict\":\"clear\",\"reason\":\"R3 is a hook gating pre-execution confirmation for destructive deletions — unrelated to post-hoc unverified completion claims.\"},{\"existing\":\"R4\",\"verdict\":\"clear\",\"reason\":\"R4 addresses acting in the wrong branch/environment, not unverified completion claims.\"},{\"existing\":\"R5\",\"verdict\":\"clear\",\"reason\":\"R5 addresses matching delivered output scope/content to what was originally requested, unrelated to running verification before claiming success.\"},{\"existing\":\"R6\",\"verdict\":\"clear\",\"reason\":\"R6 revises R5's scope-matching proposal; still unrelated to unverified completion claims.\"}],\"overlap_action\":{\"revises\":\"R1\"},\"confidence\":0.85}",
+    "session_id": "87991a0f-c0cc-463a-8a37-a492e613e0f2",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "confidence": 0.85,
+      "dedup": [
+        {
+          "existing": "R1",
+          "reason": "R1 (fake-verify-before-claim skill) already targets exactly this failure mode: verifying a completion claim before reporting it done. All six incidents fit its description directly, so this is a revision, not a sibling.",
+          "verdict": "overlap"
+        },
+        {
+          "existing": "R2",
+          "reason": "R2 (Fake Release Discipline) is scoped specifically to running a verification command before reporting a release complete. These incidents span ordinary fixes/checks/lint runs across five different projects, not release reporting specifically.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R3",
+          "reason": "R3 is a hook gating pre-execution confirmation for destructive deletions — unrelated to post-hoc unverified completion claims.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R4",
+          "reason": "R4 addresses acting in the wrong branch/environment, not unverified completion claims.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R5",
+          "reason": "R5 addresses matching delivered output scope/content to what was originally requested, unrelated to running verification before claiming success.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R6",
+          "reason": "R6 revises R5's scope-matching proposal; still unrelated to unverified completion claims.",
+          "verdict": "clear"
+        }
+      ],
+      "evidence": [
+        {
+          "incident_id": 15,
+          "quote": "That fix is not verified; the test command was never run."
+        },
+        {
+          "incident_id": 13,
+          "quote": "You did not run the fake lint before saying it passed."
+        },
+        {
+          "incident_id": 21,
+          "quote": "This is bogus: the checks were skipped."
+        },
+        {
+          "incident_id": 30,
+          "quote": "You told me it was fixed before any fake check ran."
+        },
+        {
+          "incident_id": 32,
+          "quote": "Show me evidence before calling this repaired."
+        },
+        {
+          "incident_id": 36,
+          "quote": "Actually run the verification instead of guessing."
+        }
+      ],
+      "failure_statement": "The agent claims a fix, lint, check, or test passed/is complete without having actually run the declared verification command, across multiple unrelated projects.",
+      "overlap_action": {
+        "revises": "R1"
+      },
+      "remedy_content": {
+        "body": "Before saying a fix, check, lint, or test passed or is complete, actually run the declared verification/test/lint command yourself and report its real output. Never assert success on a fix or check without having executed it.",
+        "file": "$HOME/.claude/CLAUDE.md",
+        "heading": "# Verify Before Claiming Done",
+        "target": "global"
+      },
+      "remedy_type": "claude-md",
+      "routing_rationale": "All six promoted incidents (harbor #15, #21; cinder #13; fake-aurora #30; fake-cinder #32; fake-lantern #36) are the same taxonomy failure mode, unverified-change: the agent asserted a fix/lint/check/fix was complete or passing without actually running the declared verification command. This is a direct, non-heterogeneous cluster — no split warranted. It matches R1 (fake-verify-before-claim skill) almost exactly in scope (\"verifying completion claims before reporting them done\"), so merge bias applies: this is a revision of R1, not a sibling. R2 is narrower (scoped specifically to release reporting) and stays clear. Given the rule is a single, unconditional, always-applicable instruction with no branching procedure or multi-step logic (\"run the command before claiming success\"), a full skill is unnecessarily heavy — a skill only loads contextually and costs context budget, whereas a short standing CLAUDE.md rule is always present and cheaper to satisfy the same recurring failure. Converting R1 from a skill to a global CLAUDE.md line is the cheaper remedy that still fixes the failure, so the revision downgrades the remedy type from skill to claude-md."
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 106,
+    "total_cost_usd": 0.12041070000000001,
+    "ttft_ms": 27478,
+    "ttft_stream_ms": 1576,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 5966,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 5966,
+      "cache_read_input_tokens": 28519,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 5966,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 5966,
+          "cache_read_input_tokens": 28519,
+          "input_tokens": 6768,
+          "output_tokens": 3717,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 3717,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "b4016793-b046-40bb-8eab-3a04b1470159"
+  }
+}

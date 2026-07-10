@@ -68,65 +68,65 @@
   },
   "response": {
     "api_error_status": null,
-    "duration_api_ms": 36169,
-    "duration_ms": 36476,
+    "duration_api_ms": 11567,
+    "duration_ms": 11869,
     "fast_mode_state": "off",
     "is_error": false,
     "modelUsage": {
       "claude-haiku-4-5-20251001": {
-        "cacheCreationInputTokens": 11497,
-        "cacheReadInputTokens": 50444,
+        "cacheCreationInputTokens": 9024,
+        "cacheReadInputTokens": 50448,
         "contextWindow": 200000,
-        "costUSD": 0.045067399999999994,
+        "costUSD": 0.0279918,
         "inputTokens": 19,
         "maxOutputTokens": 32000,
-        "outputTokens": 3402,
+        "outputTokens": 976,
         "webSearchRequests": 0
       }
     },
     "num_turns": 3,
     "permission_denials": [],
-    "result": "{\"authentic\":true,\"confidence\":0.85,\"label\":\"ignored-instruction\",\"one_liner\":\"Modified a component despite explicit instruction to leave it unchanged.\",\"reason\":\"User gave an explicit instruction to leave the formatter alone, but the formatter was changed anyway. The agent's 'synthetic acknowledgement' indicates it said yes without actually following through.\",\"severity\":2}",
-    "session_id": "88af2430-bc91-40de-8022-e21f12e8d404",
+    "result": "{\"authentic\":true,\"label\":\"ignored-instruction\",\"one_liner\":\"Explicit instruction not to modify a component was ignored\",\"reason\":\"The user stated 'I told you to leave the formatter alone, and it was changed.' This is a direct contradiction between an explicit instruction and the agent's actual behavior. The agent either acknowledged the instruction synthetically without performing it, or actively violated the stated constraint.\",\"severity\":2,\"confidence\":0.95}",
+    "session_id": "c382a54f-13c1-4a96-890f-673e1a5ce43c",
     "stop_reason": "tool_use",
     "structured_output": {
       "authentic": true,
-      "confidence": 0.85,
+      "confidence": 0.95,
       "label": "ignored-instruction",
-      "one_liner": "Modified a component despite explicit instruction to leave it unchanged.",
-      "reason": "User gave an explicit instruction to leave the formatter alone, but the formatter was changed anyway. The agent's 'synthetic acknowledgement' indicates it said yes without actually following through.",
+      "one_liner": "Explicit instruction not to modify a component was ignored",
+      "reason": "The user stated 'I told you to leave the formatter alone, and it was changed.' This is a direct contradiction between an explicit instruction and the agent's actual behavior. The agent either acknowledged the instruction synthetically without performing it, or actively violated the stated constraint.",
       "severity": 2
     },
     "subtype": "success",
     "terminal_reason": "completed",
-    "time_to_request_ms": 108,
-    "total_cost_usd": 0.045067399999999994,
-    "ttft_ms": 32664,
-    "ttft_stream_ms": 974,
+    "time_to_request_ms": 99,
+    "total_cost_usd": 0.0279918,
+    "ttft_ms": 7507,
+    "ttft_stream_ms": 1211,
     "type": "result",
     "usage": {
       "cache_creation": {
-        "ephemeral_1h_input_tokens": 11497,
+        "ephemeral_1h_input_tokens": 9024,
         "ephemeral_5m_input_tokens": 0
       },
-      "cache_creation_input_tokens": 11497,
-      "cache_read_input_tokens": 50444,
+      "cache_creation_input_tokens": 9024,
+      "cache_read_input_tokens": 50448,
       "inference_geo": "not_available",
       "input_tokens": 19,
       "iterations": [
         {
           "cache_creation": {
-            "ephemeral_1h_input_tokens": 3211,
+            "ephemeral_1h_input_tokens": 738,
             "ephemeral_5m_input_tokens": 0
           },
-          "cache_creation_input_tokens": 3211,
-          "cache_read_input_tokens": 29365,
+          "cache_creation_input_tokens": 738,
+          "cache_read_input_tokens": 29367,
           "input_tokens": 10,
-          "output_tokens": 227,
+          "output_tokens": 274,
           "type": "message"
         }
       ],
-      "output_tokens": 3402,
+      "output_tokens": 976,
       "server_tool_use": {
         "web_fetch_requests": 0,
         "web_search_requests": 0
@@ -134,6 +134,6 @@
       "service_tier": "standard",
       "speed": "standard"
     },
-    "uuid": "2f9b0703-cece-4a3d-a478-8620d55a784c"
+    "uuid": "c28ae091-27bd-4420-b253-2f33f72804d9"
   }
 }

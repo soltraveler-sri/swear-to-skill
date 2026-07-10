@@ -1,0 +1,219 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "720f42994c9752c0",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Grade the proposed remedy, not the\nwriting style of this prompt. A good remedy changes a concrete future behavior,\nis broad enough to cover the failure mode without becoming a platitude, uses a\nreal `Use when ...` trigger when it is a skill, leaks no evidence-specific\nproject nouns into the remedy text, and uses the cheapest adequate remedy type.\n\nScore every dimension from 1 (poor) to 5 (excellent). Give exactly one concise\nsentence of justification for each score. Do not infer facts that are absent.\n\nPROPOSAL:\n{\n  \"confidence\": 0.72,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"R1 (fake-verify-before-claim) governs verifying a completion claim (e.g. running a declared test/verification command) before reporting work done. These incidents are about acting in the wrong branch/environment, not unverified completion claims.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"R2 (Fake Release Discipline) is a post-hoc reporting-accuracy rule requiring a verification command be run before declaring a release complete. It doesn't address confirming the correct environment/branch before or during work.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R3\",\n      \"reason\": \"R3 is a pending hook proposal for a pre-execution confirmation gate on destructive deletions — an unrelated failure mode (irreversible action safety, not environment/branch mismatch).\",\n      \"verdict\": \"clear\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 16,\n      \"quote\": \"Why are you doing this from the stale fake branch?\"\n    },\n    {\n      \"incident_id\": 6,\n      \"quote\": \"Read the prompt: this is the wrong fake environment.\"\n    },\n    {\n      \"incident_id\": 7,\n      \"quote\": \"Read the prompt: this is the wrong fake environment.\"\n    }\n  ],\n  \"failure_statement\": \"The agent proceeds with a task in the wrong branch/directory/environment relative to what the user specified, and — even after being told or having already been corrected — retries or continues without re-reading the prompt to confirm the correct environment first.\",\n  \"remedy_content\": {\n    \"target\": \"global\",\n    \"text\": \"# Environment Verification\\n\\nBefore acting, confirm the current branch/directory/environment matches what the prompt specifies (e.g. check `git branch`, `pwd`, config). If told you're in the wrong one, stop and re-read the prompt for the correct target before retrying — don't repeat the same action in the same state.\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"All three promoted incidents (16, 6, 7) show the same pattern: the agent operates in — or keeps operating in — a branch/directory/environment other than the one the user specified or already corrected it to, without re-checking the prompt's stated environment before acting or retrying. This is a lightweight verify-context problem, not a multi-step procedure (rules out skill) and not something a mechanical pre/post-tool-use hook can reliably detect (a hook has no generic way to know \\\"the environment the prompt specifies\\\" — that requires reading and understanding the prompt, which only the agent can do). A short standing instruction to check current environment state against what was specified, and to stop and re-verify when corrected, is the cheapest fix. None of the three existing remedies touch environment/branch verification — R1 and R2 are both about verifying completion/release claims before reporting done, and R3 (pending) is a destructive-deletion confirmation gate — so this is a new, distinct remedy rather than a revision of any of them.\",\n  \"singleton\": false\n}\n",
+    "schema": {
+      "properties": {
+        "actionability": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "generality_without_vagueness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "leakage": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "routing_fitness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "trigger_quality": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "actionability",
+        "generality_without_vagueness",
+        "trigger_quality",
+        "leakage",
+        "routing_fitness"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 33589,
+    "duration_ms": 33795,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 4548,
+        "cacheReadInputTokens": 28513,
+        "contextWindow": 1000000,
+        "costUSD": 0.1057659,
+        "inputTokens": 7183,
+        "maxOutputTokens": 64000,
+        "outputTokens": 3225,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"actionability\":{\"score\":4,\"justification\":\"The remedy specifies concrete checks (git branch, pwd, config) and a concrete behavioral rule on correction (stop, re-read prompt, don't repeat the same action), giving the agent a clear procedure rather than just an aspiration.\"},\"generality_without_vagueness\":{\"score\":4,\"justification\":\"It generalizes across branch/directory/environment mismatches with concrete verification examples, avoiding both over-narrow specificity and empty platitude, though \\\"confirm... matches\\\" still leaves the actual matching method to the agent's judgment.\"},\"trigger_quality\":{\"score\":3,\"justification\":\"As a claude-md addition there's no formal 'Use when' clause required, but the embedded trigger (\\\"before acting\\\" / \\\"if told you're in the wrong one\\\") is broad and always-on rather than tied to a specific detectable signal, so it's serviceable but not sharp.\"},\"leakage\":{\"score\":5,\"justification\":\"The remedy text uses only generic terms (branch/directory/environment, git branch, pwd, config) with no evidence-specific nouns like \\\"fake\\\" or \\\"stale\\\" leaking from the incident quotes.\"},\"routing_fitness\":{\"score\":4,\"justification\":\"The routing rationale correctly rules out a skill (not a multi-step procedure) and a hook (mechanical detection can't parse \\\"what the prompt specifies\\\"), making a short standing claude-md instruction a reasonable, low-cost fit for this verify-before-acting failure mode.\"}}",
+    "session_id": "3b03bcb8-7387-4e75-9af0-47b74782889b",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "actionability": {
+        "justification": "The remedy specifies concrete checks (git branch, pwd, config) and a concrete behavioral rule on correction (stop, re-read prompt, don't repeat the same action), giving the agent a clear procedure rather than just an aspiration.",
+        "score": 4
+      },
+      "generality_without_vagueness": {
+        "justification": "It generalizes across branch/directory/environment mismatches with concrete verification examples, avoiding both over-narrow specificity and empty platitude, though \"confirm... matches\" still leaves the actual matching method to the agent's judgment.",
+        "score": 4
+      },
+      "leakage": {
+        "justification": "The remedy text uses only generic terms (branch/directory/environment, git branch, pwd, config) with no evidence-specific nouns like \"fake\" or \"stale\" leaking from the incident quotes.",
+        "score": 5
+      },
+      "routing_fitness": {
+        "justification": "The routing rationale correctly rules out a skill (not a multi-step procedure) and a hook (mechanical detection can't parse \"what the prompt specifies\"), making a short standing claude-md instruction a reasonable, low-cost fit for this verify-before-acting failure mode.",
+        "score": 4
+      },
+      "trigger_quality": {
+        "justification": "As a claude-md addition there's no formal 'Use when' clause required, but the embedded trigger (\"before acting\" / \"if told you're in the wrong one\") is broad and always-on rather than tied to a specific detectable signal, so it's serviceable but not sharp.",
+        "score": 3
+      }
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 99,
+    "total_cost_usd": 0.1057659,
+    "ttft_ms": 28520,
+    "ttft_stream_ms": 1204,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 4548,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 4548,
+      "cache_read_input_tokens": 28513,
+      "inference_geo": "not_available",
+      "input_tokens": 7183,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 4548,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 4548,
+          "cache_read_input_tokens": 28513,
+          "input_tokens": 7183,
+          "output_tokens": 3225,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 3225,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "3fc8cfaa-e3ba-4051-bf0b-f0ebf470ff00"
+  }
+}

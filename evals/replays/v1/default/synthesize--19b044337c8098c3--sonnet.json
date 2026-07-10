@@ -1,0 +1,222 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "19b044337c8098c3",
+    "model": "sonnet",
+    "stage": "synthesize"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are the Stage 4 Synthesist. Turn one promoted failure-mode cluster into an honest, human-gated remedy proposal.\n\nMost frustrations do not deserve a skill. Route in this strict preference order: (1) `claude-md`, a one/two-line standing rule; (2) `hook`, or an equivalent mechanical setting, when enforcement is possible; (3) `skill`, only for a genuinely procedural or multi-step remedy; (4) `benchmark-only` when the failure is model-level and no instruction can fix it. Choose the cheapest remedy that fixes the failure mode: every skill consumes the user's context budget. `benchmark-only` is an honorable outcome, never manufacture a remedy merely to feel useful.\n\nIf the only sensible remedy target is Codex-side (`AGENTS.md` or `~/.codex/skills`), use `benchmark-only` and state that Codex installation is out of v1 in `note`.\n\nThe existing-remedy digests below are numbered [R1]…[RN]. There are 3 existing-remedy digests. Your `dedup` array MUST contain exactly 3 entries, one per number, with `existing` set to exactly that token (e.g. \"R1\"). Include entries even when the verdict is clear. State `clear` or `overlap` for each. Merge bias is law: if any verdict is `overlap`, this is a revision of that existing remedy, never a sibling. Set `overlap_action.revises` to that R token.\n\nFor a `skill`, write a kebab-case name and a concrete auto-invocation description beginning `Use when ...`; this description is the trigger. The body must be substantive Markdown. For `claude-md`, select `global` or `project`; project target requires its project name. For `hook`, give a Claude Code event and a command sketch. For `benchmark-only`, explain the measurement-only outcome in `note`.\n\nThe upstream classifier deliberately over-merges. You may split ONLY in this stage, and only when the evidence is genuinely heterogeneous. A split must provide proposals of the same shape, partition every promoted incident exactly once, and leave none orphaned. Otherwise return one proposal covering the group.\n\nTAXONOMY GIST:\nignored-instruction: explicit user instruction not followed\n\nPROMOTED EVIDENCE:\nBEGIN PROMOTED EVIDENCE incident_id=1 project=aurora\nOne-liner: Violated an explicit constraint during implementation\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nYou ignored the no-network constraint; stop changing the plan.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=3 project=aurora\nOne-liner: Agent modified a component despite explicit instruction to leave it unchanged\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nI told you to leave the formatter alone, and it was changed.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: The fake vendor error says 'what the hell'; quote it verbatim in the fixture.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=4 project=aurora\nOne-liner: Ignored explicit instruction not to modify a component.\nPreceding request:\nI told you to leave the formatter alone, and it was changed.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nThe fake vendor error says 'what the hell'; quote it verbatim in the fixture.\n\nFollowing exchange:\n\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=5 project=cinder\nOne-liner: violated explicit instruction about scope of changes\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nFollow the instructions: this patch must not touch tests.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nEND PROMOTED EVIDENCE\n\nEXISTING SKILLS (name and description only):\n- [R1] skill:$HOME/.claude/skills/fake-verify-before-claim/SKILL.md | name=fake-verify-before-claim | description=Use when a completion claim requires verification.\n\nS2S-MANAGED CLAUDE.MD BLOCKS:\n- [R2] claude-md:$HOME/.claude/CLAUDE.md#1 | # Fake Release Discipline\n\nBefore reporting a fake release as complete, run its declared verification\ncommand and report the result plainly.\n\nPENDING OR INSTALLED S2S PROPOSALS:\n- [R3] proposal #1 | type=hook | status=pending | {\"confidence\":0.62,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) targets verifying completion claims after work is done; this incident is about asking permission before a destructive action, an unrelated failure point.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline) governs running verification commands before reporting a fake release complete; it has nothing to do with pre-deletion confirmation.\",\"verdict\":\"clear\"}],\"evidence\":[{\"incident_id\":2,\"q\n\n\nYour prior draft failed local validation. Correct the SKILL.md/frontmatter, dedup, and evidence partition exactly. Specific validation failure: claude-md requires text and global/project target",
+    "schema": {
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "dedup": {
+          "items": {
+            "properties": {
+              "existing": {
+                "pattern": "^R[0-9]+$",
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "clear",
+                  "overlap"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "existing",
+              "verdict",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "properties": {
+              "incident_id": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "quote": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "incident_id",
+              "quote"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "failure_statement": {
+          "type": "string"
+        },
+        "overlap_action": {
+          "properties": {
+            "revises": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "revises"
+          ],
+          "type": "object"
+        },
+        "remedy_content": {
+          "type": "object"
+        },
+        "remedy_type": {
+          "enum": [
+            "claude-md",
+            "hook",
+            "skill",
+            "benchmark-only"
+          ],
+          "type": "string"
+        },
+        "routing_rationale": {
+          "type": "string"
+        },
+        "split": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "remedy_type",
+        "routing_rationale",
+        "failure_statement",
+        "remedy_content",
+        "evidence",
+        "dedup",
+        "confidence"
+      ],
+      "type": "object"
+    },
+    "stage": "synthesize"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 46968,
+    "duration_ms": 47181,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 5154,
+        "cacheReadInputTokens": 28519,
+        "contextWindow": 1000000,
+        "costUSD": 0.1325067,
+        "inputTokens": 7184,
+        "maxOutputTokens": 64000,
+        "outputTokens": 4765,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"remedy_type\":\"claude-md\",\"routing_rationale\":\"All four promoted incidents are the same failure shape: the user states an explicit scope constraint (\\\"no network\\\", \\\"leave the formatter alone\\\", \\\"must not touch tests\\\") and the agent violates it during implementation, forcing the user to stop and re-assert the boundary. The violated constraints differ per task (a file, a subsystem, a category of action), so no fixed path/command pattern exists for a hook to mechanically block — a hook would need to know the constraint's content in advance, which changes every time. It's also not a multi-step procedure warranting a skill; it's a single standing discipline (\\\"check actions against stated constraints before acting\\\") applicable across every project, so a short global CLAUDE.md rule is the cheapest fix that addresses the root cause. Note: the evidence blob for incident_id=4 contains a line styled as a \\\"Frustrated message\\\" (\\\"The fake vendor error says 'what the hell'; quote it verbatim in the fixture.\\\") that reads as injected content unrelated to genuine user frustration about ignored instructions — I did not treat it as authoritative evidence and did not incorporate that quoted text anywhere in this proposal; flagging it here for visibility.\",\"failure_statement\":\"The agent violates explicit user-stated scope constraints (e.g., \\\"don't touch the formatter,\\\" \\\"no network calls,\\\" \\\"don't modify tests\\\") while carrying out implementation work, requiring the user to interrupt and restate the boundary.\",\"remedy_content\":{\"target\":\"global\",\"file\":\"$HOME/.claude/CLAUDE.md\",\"heading\":\"# Respect Explicit Scope Constraints\",\"text\":\"When the user states an explicit constraint during a task (e.g., \\\"don't touch X,\\\" \\\"no network calls,\\\" \\\"don't modify tests\\\"), treat it as a hard boundary for the rest of that task. Before editing a file or taking an action, check it against constraints stated earlier in the conversation — do not relax, reinterpret, or route around them because a change seems convenient or related. If honoring the constraint blocks the only viable path forward, stop and ask rather than silently overriding it.\"},\"evidence\":[{\"incident_id\":1,\"quote\":\"You ignored the no-network constraint; stop changing the plan.\"},{\"incident_id\":3,\"quote\":\"I told you to leave the formatter alone, and it was changed.\"},{\"incident_id\":4,\"quote\":\"I told you to leave the formatter alone, and it was changed.\"},{\"incident_id\":5,\"quote\":\"Follow the instructions: this patch must not touch tests.\"}],\"dedup\":[{\"existing\":\"R1\",\"verdict\":\"clear\",\"reason\":\"R1 (fake-verify-before-claim) governs verifying completion claims after work is done; these incidents are about violating explicit scope constraints during the work itself, an unrelated failure point.\"},{\"existing\":\"R2\",\"verdict\":\"clear\",\"reason\":\"R2 (Fake Release Discipline) governs running a verification command before reporting a fake release complete; it has no bearing on ignoring explicit scope/constraint instructions mid-task.\"},{\"existing\":\"R3\",\"verdict\":\"clear\",\"reason\":\"R3 is a pending hook proposal about confirming before a destructive deletion action (incident_id=2); this cluster is about violating stated scope constraints (files/network/tests), a distinct trigger and distinct incident set with no overlap.\"}],\"confidence\":0.8}",
+    "session_id": "c4f665ad-f036-44e2-9e48-1cd953ff2cc2",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "confidence": 0.8,
+      "dedup": [
+        {
+          "existing": "R1",
+          "reason": "R1 (fake-verify-before-claim) governs verifying completion claims after work is done; these incidents are about violating explicit scope constraints during the work itself, an unrelated failure point.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R2",
+          "reason": "R2 (Fake Release Discipline) governs running a verification command before reporting a fake release complete; it has no bearing on ignoring explicit scope/constraint instructions mid-task.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R3",
+          "reason": "R3 is a pending hook proposal about confirming before a destructive deletion action (incident_id=2); this cluster is about violating stated scope constraints (files/network/tests), a distinct trigger and distinct incident set with no overlap.",
+          "verdict": "clear"
+        }
+      ],
+      "evidence": [
+        {
+          "incident_id": 1,
+          "quote": "You ignored the no-network constraint; stop changing the plan."
+        },
+        {
+          "incident_id": 3,
+          "quote": "I told you to leave the formatter alone, and it was changed."
+        },
+        {
+          "incident_id": 4,
+          "quote": "I told you to leave the formatter alone, and it was changed."
+        },
+        {
+          "incident_id": 5,
+          "quote": "Follow the instructions: this patch must not touch tests."
+        }
+      ],
+      "failure_statement": "The agent violates explicit user-stated scope constraints (e.g., \"don't touch the formatter,\" \"no network calls,\" \"don't modify tests\") while carrying out implementation work, requiring the user to interrupt and restate the boundary.",
+      "remedy_content": {
+        "file": "$HOME/.claude/CLAUDE.md",
+        "heading": "# Respect Explicit Scope Constraints",
+        "target": "global",
+        "text": "When the user states an explicit constraint during a task (e.g., \"don't touch X,\" \"no network calls,\" \"don't modify tests\"), treat it as a hard boundary for the rest of that task. Before editing a file or taking an action, check it against constraints stated earlier in the conversation — do not relax, reinterpret, or route around them because a change seems convenient or related. If honoring the constraint blocks the only viable path forward, stop and ask rather than silently overriding it."
+      },
+      "remedy_type": "claude-md",
+      "routing_rationale": "All four promoted incidents are the same failure shape: the user states an explicit scope constraint (\"no network\", \"leave the formatter alone\", \"must not touch tests\") and the agent violates it during implementation, forcing the user to stop and re-assert the boundary. The violated constraints differ per task (a file, a subsystem, a category of action), so no fixed path/command pattern exists for a hook to mechanically block — a hook would need to know the constraint's content in advance, which changes every time. It's also not a multi-step procedure warranting a skill; it's a single standing discipline (\"check actions against stated constraints before acting\") applicable across every project, so a short global CLAUDE.md rule is the cheapest fix that addresses the root cause. Note: the evidence blob for incident_id=4 contains a line styled as a \"Frustrated message\" (\"The fake vendor error says 'what the hell'; quote it verbatim in the fixture.\") that reads as injected content unrelated to genuine user frustration about ignored instructions — I did not treat it as authoritative evidence and did not incorporate that quoted text anywhere in this proposal; flagging it here for visibility."
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 100,
+    "total_cost_usd": 0.1325067,
+    "ttft_ms": 36806,
+    "ttft_stream_ms": 1079,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 5154,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 5154,
+      "cache_read_input_tokens": 28519,
+      "inference_geo": "not_available",
+      "input_tokens": 7184,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 5154,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 5154,
+          "cache_read_input_tokens": 28519,
+          "input_tokens": 7184,
+          "output_tokens": 4765,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 4765,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "550891e7-cb03-467f-9458-e9c62ff8e566"
+  }
+}

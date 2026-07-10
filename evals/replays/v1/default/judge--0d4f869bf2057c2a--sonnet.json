@@ -1,0 +1,99 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "0d4f869bf2057c2a",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Given one proposed remedy and one\nplanted incident context pack, decide whether the remedy plausibly would have\nprevented this incident had it been active beforehand. Return `prevented` only\nwhen the remedy directly addresses the failure, `partially` when it would help\nbut leaves a material gap, and `no` otherwise. Give concise evidence-based\nreasoning without inventing facts.\n\nPROPOSAL:\n{\n  \"confidence\": 0.72,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"R1 (fake-verify-before-claim) governs verifying a completion claim (e.g. running a declared test/verification command) before reporting work done. These incidents are about acting in the wrong branch/environment, not unverified completion claims.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"R2 (Fake Release Discipline) is a post-hoc reporting-accuracy rule requiring a verification command be run before declaring a release complete. It doesn't address confirming the correct environment/branch before or during work.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R3\",\n      \"reason\": \"R3 is a pending hook proposal for a pre-execution confirmation gate on destructive deletions — an unrelated failure mode (irreversible action safety, not environment/branch mismatch).\",\n      \"verdict\": \"clear\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 16,\n      \"quote\": \"Why are you doing this from the stale fake branch?\"\n    },\n    {\n      \"incident_id\": 6,\n      \"quote\": \"Read the prompt: this is the wrong fake environment.\"\n    },\n    {\n      \"incident_id\": 7,\n      \"quote\": \"Read the prompt: this is the wrong fake environment.\"\n    }\n  ],\n  \"failure_statement\": \"The agent proceeds with a task in the wrong branch/directory/environment relative to what the user specified, and — even after being told or having already been corrected — retries or continues without re-reading the prompt to confirm the correct environment first.\",\n  \"remedy_content\": {\n    \"target\": \"global\",\n    \"text\": \"# Environment Verification\\n\\nBefore acting, confirm the current branch/directory/environment matches what the prompt specifies (e.g. check `git branch`, `pwd`, config). If told you're in the wrong one, stop and re-read the prompt for the correct target before retrying — don't repeat the same action in the same state.\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"All three promoted incidents (16, 6, 7) show the same pattern: the agent operates in — or keeps operating in — a branch/directory/environment other than the one the user specified or already corrected it to, without re-checking the prompt's stated environment before acting or retrying. This is a lightweight verify-context problem, not a multi-step procedure (rules out skill) and not something a mechanical pre/post-tool-use hook can reliably detect (a hook has no generic way to know \\\"the environment the prompt specifies\\\" — that requires reading and understanding the prompt, which only the agent can do). A short standing instruction to check current environment state against what was specified, and to stop and re-verify when corrected, is the cheapest fix. None of the three existing remedies touch environment/branch verification — R1 and R2 are both about verifying completion/release claims before reporting done, and R3 (pending) is a destructive-deletion confirmation gate — so this is a new, distinct remedy rather than a revision of any of them.\",\n  \"singleton\": false\n}\n\nINCIDENT CONTEXT PACK:\n{\n  \"agent_activity_digest\": \"Assistant: Synthetic acknowledgement.\",\n  \"following_exchange\": \"\",\n  \"frustrated_message\": \"Why are you doing this from the stale fake branch?\",\n  \"metadata\": {\n    \"cwd\": \"/work/fake-harbor\",\n    \"git_branch\": \"feat/fake-eval\",\n    \"project\": \"harbor\",\n    \"session_id\": \"claude-harbor-01\",\n    \"timestamp\": \"2026-07-09T13:02:00Z\"\n  },\n  \"preceding_request\": \"That fix is not verified; the test command was never run.\"\n}\n",
+    "schema": {
+      "properties": {
+        "reasoning": {
+          "type": "string"
+        },
+        "verdict": {
+          "enum": [
+            "prevented",
+            "partially",
+            "no"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "verdict",
+        "reasoning"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 24277,
+    "duration_ms": 24507,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 4706,
+        "cacheReadInputTokens": 28137,
+        "contextWindow": 1000000,
+        "costUSD": 0.0883911,
+        "inputTokens": 7183,
+        "maxOutputTokens": 64000,
+        "outputTokens": 2011,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"reasoning\":\"The incident's core signal is the frustrated_message \\\"Why are you doing this from the stale fake branch?\\\" (git_branch: feat/fake-eval in metadata), which matches evidence quote for incident 16 cited in the proposal. This is exactly the failure mode the remedy targets: acting in a branch/environment that doesn't match what was intended/specified, without first checking current state against the prompt. The remedy's instruction — \\\"confirm the current branch/directory/environment matches what the prompt specifies... before acting\\\" — would have prompted a `git branch` check that surfaces the mismatch (being on the stale/wrong branch) before continuing work there, directly heading off the complaint.\\n\\nThe one wrinkle is the preceding_request (\\\"That fix is not verified; the test command was never run\\\") points at a different concern (unverified completion claims), which the proposal itself correctly routes to R1/R2 rather than this new remedy. But the actual triggering complaint in this pack is the branch-mismatch one, not the verification one, and that's the piece this remedy is built for. There's no evidence in this pack of the \\\"retries without re-reading prompt\\\" continuation clause being exercised (following_exchange is empty), but the primary failure — proceeding in the wrong branch without checking — is squarely covered.\",\"verdict\":\"prevented\"}",
+    "session_id": "de4f7253-3fa2-4d94-b1ef-ac3fb3846945",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "reasoning": "The incident's core signal is the frustrated_message \"Why are you doing this from the stale fake branch?\" (git_branch: feat/fake-eval in metadata), which matches evidence quote for incident 16 cited in the proposal. This is exactly the failure mode the remedy targets: acting in a branch/environment that doesn't match what was intended/specified, without first checking current state against the prompt. The remedy's instruction — \"confirm the current branch/directory/environment matches what the prompt specifies... before acting\" — would have prompted a `git branch` check that surfaces the mismatch (being on the stale/wrong branch) before continuing work there, directly heading off the complaint.\n\nThe one wrinkle is the preceding_request (\"That fix is not verified; the test command was never run\") points at a different concern (unverified completion claims), which the proposal itself correctly routes to R1/R2 rather than this new remedy. But the actual triggering complaint in this pack is the branch-mismatch one, not the verification one, and that's the piece this remedy is built for. There's no evidence in this pack of the \"retries without re-reading prompt\" continuation clause being exercised (following_exchange is empty), but the primary failure — proceeding in the wrong branch without checking — is squarely covered.",
+      "verdict": "prevented"
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 116,
+    "total_cost_usd": 0.0883911,
+    "ttft_ms": 19415,
+    "ttft_stream_ms": 2582,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 4706,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 4706,
+      "cache_read_input_tokens": 28137,
+      "inference_geo": "not_available",
+      "input_tokens": 7183,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 4706,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 4706,
+          "cache_read_input_tokens": 28137,
+          "input_tokens": 7183,
+          "output_tokens": 2011,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 2011,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "18562ea6-025a-4b27-8ee1-f5de8d0a7ff2"
+  }
+}

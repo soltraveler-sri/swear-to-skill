@@ -1,0 +1,219 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "3920e5032a879e4b",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Grade the proposed remedy, not the\nwriting style of this prompt. A good remedy changes a concrete future behavior,\nis broad enough to cover the failure mode without becoming a platitude, uses a\nreal `Use when ...` trigger when it is a skill, leaks no evidence-specific\nproject nouns into the remedy text, and uses the cheapest adequate remedy type.\n\nScore every dimension from 1 (poor) to 5 (excellent). Give exactly one concise\nsentence of justification for each score. Do not infer facts that are absent.\n\nPROPOSAL:\n{\n  \"confidence\": 0.55,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"R1 (fake-verify-before-claim) addresses verifying completion claims before reporting them done. This incident is about delivering unrequested extra scope (a demo beyond the requested single file), not about unverified completion claims.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"R2 is a claude-md rule requiring running a fake release's declared verification command before claiming completion. Unrelated to over-delivering scope on a simple file request.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R3\",\n      \"reason\": \"R3's own dedup notes describe it as covering a destructive delete performed in violation of a standing user constraint — a different failure (destructive action vs. a standing prohibition) from this incident's over-delivery of unrequested scope on a narrow file request.\",\n      \"verdict\": \"clear\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 6,\n      \"quote\": \"That's not what I asked; the request was a one-file note.\"\n    }\n  ],\n  \"failure_statement\": \"When a user specifies a narrow, explicit deliverable (e.g. \\\"just a one-file note\\\"), the assistant sometimes delivers additional, unrequested artifacts (e.g. extra demo files/scaffolding), causing the user to have to correct scope after the fact.\",\n  \"remedy_content\": {\n    \"target\": \"global\",\n    \"text\": \"# Match Delivery to Requested Scope\\n\\nWhen the user specifies a narrow, explicit deliverable (e.g. \\\"just one file,\\\" \\\"a single note\\\"), deliver exactly that. Do not add extra files, demos, or scaffolding beyond what was asked — if broader scope seems valuable, propose it separately rather than including it unasked.\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"Single incident: user asked for a narrowly-scoped deliverable (\\\"a one-file note\\\") and the assistant delivered more than requested, drawing an explicit correction. This is a plain scope-deviation failure with no mechanical signal a hook could check (scope match requires judgment, not a lint rule), and it's not procedural/multi-step enough to warrant a skill — it's a one-line standing discipline (\\\"match delivery to requested scope\\\") that fits the cheapest tier, claude-md. No existing remedy (verification-before-claiming-done, or a destructive-delete constraint) covers scope-matching, so this is a new addition rather than a revision.\",\n  \"singleton\": true\n}\n",
+    "schema": {
+      "properties": {
+        "actionability": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "generality_without_vagueness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "leakage": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "routing_fitness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "trigger_quality": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "actionability",
+        "generality_without_vagueness",
+        "trigger_quality",
+        "leakage",
+        "routing_fitness"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 15205,
+    "duration_ms": 15403,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 4381,
+        "cacheReadInputTokens": 28513,
+        "contextWindow": 1000000,
+        "costUSD": 0.0776289,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 1499,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"actionability\":{\"score\":4,\"justification\":\"The remedy gives a concrete behavioral directive (deliver exactly the requested scope, don't add extra files/demos, propose extras separately) rather than a vague sentiment.\"},\"generality_without_vagueness\":{\"score\":4,\"justification\":\"It generalizes the failure pattern (narrow request → unrequested extra artifacts) with concrete examples without collapsing into an empty platitude like 'be careful.'\"},\"trigger_quality\":{\"score\":4,\"justification\":\"Not a skill so no formal 'Use when...' header is required, but the applicability condition is clearly embedded in the first clause ('when the user specifies a narrow, explicit deliverable').\"},\"leakage\":{\"score\":5,\"justification\":\"The remedy text uses only generic phrasing and illustrative examples ('one file,' 'a single note') with no project-specific nouns or identifiers from the incident.\"},\"routing_fitness\":{\"score\":4,\"justification\":\"A one-line standing discipline with no mechanical/lint-checkable signal and no multi-step procedure fits claude-md as the cheapest adequate tier rather than a skill or hook.\"}}",
+    "session_id": "7d4ca464-4832-4a46-b144-9e79adc3ef63",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "actionability": {
+        "justification": "The remedy gives a concrete behavioral directive (deliver exactly the requested scope, don't add extra files/demos, propose extras separately) rather than a vague sentiment.",
+        "score": 4
+      },
+      "generality_without_vagueness": {
+        "justification": "It generalizes the failure pattern (narrow request → unrequested extra artifacts) with concrete examples without collapsing into an empty platitude like 'be careful.'",
+        "score": 4
+      },
+      "leakage": {
+        "justification": "The remedy text uses only generic phrasing and illustrative examples ('one file,' 'a single note') with no project-specific nouns or identifiers from the incident.",
+        "score": 5
+      },
+      "routing_fitness": {
+        "justification": "A one-line standing discipline with no mechanical/lint-checkable signal and no multi-step procedure fits claude-md as the cheapest adequate tier rather than a skill or hook.",
+        "score": 4
+      },
+      "trigger_quality": {
+        "justification": "Not a skill so no formal 'Use when...' header is required, but the applicability condition is clearly embedded in the first clause ('when the user specifies a narrow, explicit deliverable').",
+        "score": 4
+      }
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 106,
+    "total_cost_usd": 0.0776289,
+    "ttft_ms": 11708,
+    "ttft_stream_ms": 1107,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 4381,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 4381,
+      "cache_read_input_tokens": 28513,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 4381,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 4381,
+          "cache_read_input_tokens": 28513,
+          "input_tokens": 6768,
+          "output_tokens": 1499,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 1499,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "d627a1cd-9fcd-475b-8bf8-b49709211dd4"
+  }
+}
