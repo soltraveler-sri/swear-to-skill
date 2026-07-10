@@ -1,0 +1,219 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "0624daa275eb75c9",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Grade the proposed remedy, not the\nwriting style of this prompt. A good remedy changes a concrete future behavior,\nis broad enough to cover the failure mode without becoming a platitude, uses a\nreal `Use when ...` trigger when it is a skill, leaks no evidence-specific\nproject nouns into the remedy text, and uses the cheapest adequate remedy type.\n\nScore every dimension from 1 (poor) to 5 (excellent). Give exactly one concise\nsentence of justification for each score. Do not infer facts that are absent.\n\nPROPOSAL:\n{\n  \"confidence\": 0.74,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"R1 (fake-verify-before-claim) targets verifying completion claims before reporting success; this incident is about delivering unrequested extra scope, a different failure mode.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"R2 (Fake Release Discipline) is about running a verification command before reporting a fake release complete; unrelated to over-delivering beyond requested scope.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R3\",\n      \"reason\": \"R3 (pending hook) addresses unconfirmed destructive deletes — a mechanically detectable, permission-gated action. This incident is about adding unrequested extra deliverables (a scope-size violation), which a hook cannot detect; different failure mode and different remedy shape.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R4\",\n      \"reason\": \"R4 (pending claude-md) already covers violating an explicit scope/method constraint mid-task (e.g., do-not-touch, no-network). This incident's request implicitly bounded scope to a single file, and the agent exceeded it — the same underlying scope-deviation failure mode. Per merge bias, this revises R4 rather than creating a sibling proposal.\",\n      \"verdict\": \"overlap\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 6,\n      \"quote\": \"That's not what I asked; the request was a one-file note.\"\n    }\n  ],\n  \"failure_statement\": \"Agent delivered more than the requested scope (added extra unrequested content/files) when the user explicitly asked for a single one-file note.\",\n  \"overlap_action\": {\n    \"revises\": \"proposal #2\"\n  },\n  \"remedy_content\": {\n    \"target\": \"global\",\n    \"text\": \"# Scope Discipline\\n\\nWhen the user specifies scope (e.g., \\\"just a one-file note,\\\" \\\"only fix X\\\"), deliver exactly that — no extra files, demos, or unrequested additions. If something beyond scope seems worth doing, mention it as a suggestion rather than including it in the deliverable.\\n\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"This is a plain scope-deviation: the user asked for a single-file note and got extra unrequested deliverables (their own words: \\\"That's not what I asked; the request was a one-file note\\\"). Nothing here requires multi-step procedure (ruling out skill) and there's no mechanical signal a hook could gate on before the fact (scope creep isn't a detectable file/command pattern, ruling out hook) — a one-line standing rule to deliver exactly what was asked and flag extras as suggestions rather than including them is sufficient and cheapest. R4 is an existing pending claude-md proposal already covering \\\"violating an explicit scope/method constraint mid-task\\\" — this incident is the same taxonomy failure (scope-deviation: did more than asked), so per merge bias this revises R4 rather than creating a sibling proposal.\",\n  \"singleton\": true\n}\n",
+    "schema": {
+      "properties": {
+        "actionability": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "generality_without_vagueness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "leakage": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "routing_fitness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "trigger_quality": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "actionability",
+        "generality_without_vagueness",
+        "trigger_quality",
+        "leakage",
+        "routing_fitness"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 29541,
+    "duration_ms": 29739,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 4552,
+        "cacheReadInputTokens": 28509,
+        "contextWindow": 1000000,
+        "costUSD": 0.0978087,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 2776,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"actionability\":{\"score\":4,\"justification\":\"The rule gives a concrete behavioral change (deliver exactly the requested scope, surface extras as suggestions instead of adding them) that is directly checkable against future outputs.\"},\"generality_without_vagueness\":{\"score\":4,\"justification\":\"It generalizes to any scope-bounded request rather than just one-file notes, and stays concrete (\\\"no extra files, demos, or unrequested additions\\\") instead of collapsing into a vague platitude like \\\"stay on task.\\\"\"},\"trigger_quality\":{\"score\":3,\"justification\":\"As a claude-md standing rule rather than a skill it isn't held to a formal \\\"Use when...\\\" trigger, but its situational cue (\\\"when the user specifies scope\\\") is still loosely bounded and leaves \\\"specifies scope\\\" open to interpretation.\"},\"leakage\":{\"score\":4,\"justification\":\"The remedy text is written generically, though the parenthetical example \\\"just a one-file note\\\" is lifted almost verbatim from the incident quote rather than being a fully generic illustration.\"},\"routing_fitness\":{\"score\":5,\"justification\":\"The rationale correctly rules out skill (no multi-step procedure) and hook (scope creep isn't mechanically detectable pre-action) and lands on a one-line claude-md rule, which is the cheapest adequate remedy type for this failure mode.\"}}",
+    "session_id": "c499edc2-59cc-4f79-a337-6bf04272fede",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "actionability": {
+        "justification": "The rule gives a concrete behavioral change (deliver exactly the requested scope, surface extras as suggestions instead of adding them) that is directly checkable against future outputs.",
+        "score": 4
+      },
+      "generality_without_vagueness": {
+        "justification": "It generalizes to any scope-bounded request rather than just one-file notes, and stays concrete (\"no extra files, demos, or unrequested additions\") instead of collapsing into a vague platitude like \"stay on task.\"",
+        "score": 4
+      },
+      "leakage": {
+        "justification": "The remedy text is written generically, though the parenthetical example \"just a one-file note\" is lifted almost verbatim from the incident quote rather than being a fully generic illustration.",
+        "score": 4
+      },
+      "routing_fitness": {
+        "justification": "The rationale correctly rules out skill (no multi-step procedure) and hook (scope creep isn't mechanically detectable pre-action) and lands on a one-line claude-md rule, which is the cheapest adequate remedy type for this failure mode.",
+        "score": 5
+      },
+      "trigger_quality": {
+        "justification": "As a claude-md standing rule rather than a skill it isn't held to a formal \"Use when...\" trigger, but its situational cue (\"when the user specifies scope\") is still loosely bounded and leaves \"specifies scope\" open to interpretation.",
+        "score": 3
+      }
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 95,
+    "total_cost_usd": 0.0978087,
+    "ttft_ms": 24986,
+    "ttft_stream_ms": 1347,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 4552,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 4552,
+      "cache_read_input_tokens": 28509,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 4552,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 4552,
+          "cache_read_input_tokens": 28509,
+          "input_tokens": 6768,
+          "output_tokens": 2776,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 2776,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "24b4a7e3-f749-4b0c-849e-1b36723098ac"
+  }
+}

@@ -35,6 +35,42 @@ def _minimal_record(manifest: dict[str, object]) -> dict[str, object]:
     }
 
 
+def _subset_record(manifest: dict[str, object], fed_ids: list[str]) -> dict[str, object]:
+    incidents = {str(item["uuid"]): item for item in manifest["incidents"]}  # type: ignore[index]
+    detections = []
+    triage = []
+    context_packs: dict[str, object] = {}
+    projects = {"c01-u1": "aurora", "c02-u1": "aurora", "c03-u1": "aurora", "c04-u1": "cinder", "c05-u1": "cinder"}
+    for incident_id, corpus_id in enumerate(fed_ids, start=1):
+        truth = incidents[corpus_id]
+        if truth["lexicon_hit_expected"] is not True:
+            continue
+        detections.append({"incident_id": incident_id, "corpus_incident_id": corpus_id})
+        triage.append(
+            {
+                "incident_id": incident_id,
+                "corpus_incident_id": corpus_id,
+                "authentic": truth["authentic"],
+                "label": truth["cluster_id"] if truth["cluster_id"] not in {"singleton", "decoy"} else "other",
+            }
+        )
+        if corpus_id in projects:
+            context_packs[str(incident_id)] = {"metadata": {"project": projects[corpus_id]}}
+    return {
+        "mode": "replay",
+        "fed_annotations": fed_ids,
+        "fed_annotation_projects": {
+            corpus_id: projects[corpus_id] for corpus_id in fed_ids if corpus_id in projects
+        },
+        "detections": detections,
+        "triage_verdicts": triage,
+        "context_packs": context_packs,
+        "curator": {"cluster_verdicts": [{"label": "ignored-instruction", "verdict": "synthesize"}]},
+        "proposals": [],
+        "llm_run_log": [],
+    }
+
+
 def test_hand_built_record_has_exact_deterministic_scores() -> None:
     scores = score_record(_minimal_record(_manifest()), _manifest())
     metrics = {item["metric"]: item for item in scores["metrics"]}
@@ -58,6 +94,63 @@ def test_threshold_failure_and_evidence_integrity() -> None:
     broken["evidence"] = ["record:/does-not-exist"]
     with pytest.raises(EvalScoreError, match="does not resolve"):
         validate_evidence_pointers({"record": record, "manifest": manifest}, [broken])
+
+
+def test_quick_subset_scores_only_fed_annotations() -> None:
+    manifest = _manifest()
+    record = _subset_record(manifest, list(evalrun.quick_subset(manifest)))
+    metrics = {item["metric"]: item for item in score_record(record, manifest)["metrics"]}
+
+    assert metrics["detection_recall"].get("found") == metrics["detection_recall"].get("expected") == 7
+    assert metrics["lexicon_gap"]["value"] == 0.125
+    assert metrics["convergence"]["value"] == 1.0
+    assert metrics["recurrence_fast_track_recall"]["value"] == 1.0
+    assert metrics["dedup_catch_rate"]["expected"] == 0
+
+
+def test_subset_excludes_one_member_clusters_with_traceable_note() -> None:
+    manifest = _manifest()
+    record = _subset_record(manifest, ["c01-u1", "c06-u1", "c02-u2"])
+    convergence = next(item for item in score_record(record, manifest)["metrics"] if item["metric"] == "convergence")
+
+    assert convergence["clusters"] == []
+    assert convergence["excluded_clusters"] == [
+        {"cluster": "ignored-instruction", "fed_members": 1},
+        {"cluster": "premature-completion-claim", "fed_members": 1},
+    ]
+    assert convergence["flag"] == "small-sample"
+    assert any(pointer.startswith("manifest:/incidents/") for pointer in convergence["evidence"])
+
+
+def test_full_corpus_provenance_preserves_pinned_scores() -> None:
+    manifest = _manifest()
+    record = _minimal_record(manifest)
+    baseline = score_record(record, manifest)
+    record["fed_annotations"] = [item["uuid"] for item in manifest["incidents"]]  # type: ignore[index]
+
+    assert score_record(record, manifest) == baseline
+    metrics = {item["metric"]: item["value"] for item in baseline["metrics"]}
+    assert metrics == {
+        "detection_recall": 0.277778,
+        "lexicon_gap": 0.052632,
+        "scaffold_filter_precision": 1.0,
+        "authenticity_precision": 1.0,
+        "authenticity_recall": 1.0,
+        "label_agreement": 0.36,
+        "exact_label_agreement": 0.4,
+        "convergence": 0.4,
+        "singleton_ratio": 0.333333,
+        "recurrence_fast_track_recall": 0.4,
+        "other_share": 0.1,
+        "spam_precision": 1.0,
+        "remedies_per_authentic_incident": 0.074074,
+        "dedup_catch_rate": 1.0,
+        "claude_md_dominance": 1.0,
+        "stability_label_flip_rate": 0.0,
+        "stability_authenticity_flip_rate": 0.0,
+        "stability_schema_retry_rate": 0.0,
+        "pipeline_invariants": 1.0,
+    }
 
 
 def test_mock_run_writes_withheld_scores(tmp_path: Path) -> None:

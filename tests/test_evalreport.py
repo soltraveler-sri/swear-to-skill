@@ -77,6 +77,20 @@ def test_quote_cap_and_missing_evidence_are_honest(tmp_path: Path) -> None:
     assert "context_packs pointer is unavailable" in rendered
 
 
+def test_small_sample_metric_renders_as_info_not_failure() -> None:
+    record = {"mode": "replay"}
+    scores = {
+        "status": "pass",
+        "metrics": [{"metric": "dedup_catch_rate", "value": 0.0, "threshold": 0.95, "op": ">=", "pass": None, "flag": "small-sample", "evidence": []}],
+    }
+    markdown = evalreport.render_markdown(record, scores, {}, "PASS", (), (), Path("thresholds.toml"), False)
+    html = evalreport.render_html(record, scores, {}, "PASS", (), (), Path("thresholds.toml"), False)
+
+    assert "INFO · small-sample" in markdown
+    assert "INFO · small-sample" in html
+    assert "FAIL" not in markdown
+
+
 @pytest.mark.parametrize(
     ("verdict", "code"),
     [("PASS", 0), ("FAIL", 1), ("PARTIAL", 2), ("WIRING CHECK ONLY", 0)],
