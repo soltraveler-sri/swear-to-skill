@@ -14,6 +14,7 @@ from datetime import datetime
 import json
 import logging
 from pathlib import Path
+import re
 from typing import Any, Iterator
 
 from s2s.paths import claude_projects_dir, resolve_paths
@@ -33,6 +34,8 @@ SCAFFOLD_PREFIXES = (
     "<user-prompt-submit-hook>",
 )
 TOOL_TARGET_KEYS = ("file_path", "path", "command", "query", "pattern", "url", "target")
+COMMAND_NAME_RE = re.compile(r"<command-name>\s*/?([^<\s]+)\s*</command-name>", re.IGNORECASE)
+SKILL_LAUNCH_RE = re.compile(r"\bLaunching skill:\s*([A-Za-z0-9][A-Za-z0-9._-]*)")
 
 
 @dataclass(frozen=True)
@@ -63,6 +66,20 @@ class SessionMetadata:
     last_timestamp: str | None
     duration_seconds: float | None
     malformed_line_count: int
+
+
+@dataclass(frozen=True)
+class SkillUsage:
+    """One mechanically observed s2s skill invocation."""
+
+    skill_name: str
+    session_id: str
+    source: str
+    used_at: str
+
+    @property
+    def is_companion(self) -> bool:
+        return self.skill_name == "s2s"
 
 
 @dataclass(frozen=True)
@@ -173,6 +190,40 @@ def extract_user_messages(path: Path) -> list[UserMessage]:
         messages.append(record)
 
     return messages
+
+
+def extract_skill_usages(path: Path) -> list[SkillUsage]:
+    """Extract supported slash-command and Skill-tool invocation records.
+
+    This path is intentionally independent from direct-message extraction: a
+    usage carrier is telemetry, never a frustration candidate.
+    """
+
+    transcript_path = Path(path)
+    fallback_session_id = transcript_path.stem
+    usages: list[SkillUsage] = []
+    seen: set[tuple[str, str, str]] = set()
+    for parsed in _iter_json_lines(transcript_path):
+        data = parsed.data
+        message = _mapping(data.get("message"))
+        content = message.get("content") if message is not None else None
+        names: list[str] = []
+        if data.get("type") == "user" and message is not None and message.get("role") == "user":
+            names.extend(_command_names(_content_text(content)))
+            if isinstance(content, list):
+                for block in content:
+                    if isinstance(block, dict) and block.get("type") == "tool_result":
+                        names.extend(_launched_skill_names(_content_text(block.get("content"))))
+        session_id = _string(data.get("sessionId")) or fallback_session_id
+        used_at = _string(data.get("timestamp")) or ""
+        for name in names:
+            if not _is_s2s_skill(name):
+                continue
+            key = (name, session_id, used_at)
+            if key not in seen:
+                seen.add(key)
+                usages.append(SkillUsage(name, session_id, "claude-code", used_at))
+    return usages
 
 
 def extract_session_metadata(path: Path) -> SessionMetadata:
@@ -337,7 +388,37 @@ def _direct_user_message(data: dict[str, Any], project: str, fallback_session_id
 
 def _is_scaffold(content: str) -> bool:
     normalized = content.lstrip()
-    return any(marker in content for marker in SCAFFOLD_CONTENT_MARKERS) or normalized.startswith(SCAFFOLD_PREFIXES)
+    return (
+        COMMAND_NAME_RE.search(content) is not None
+        or any(marker in content for marker in SCAFFOLD_CONTENT_MARKERS)
+        or normalized.startswith(SCAFFOLD_PREFIXES)
+    )
+
+
+def _command_names(text: str) -> list[str]:
+    return [match.group(1).strip().lstrip("/") for match in COMMAND_NAME_RE.finditer(text)]
+
+
+def _launched_skill_names(text: str) -> list[str]:
+    return [match.group(1).strip() for match in SKILL_LAUNCH_RE.finditer(text)]
+
+
+def _is_s2s_skill(name: str) -> bool:
+    return name == "s2s" or name.startswith("s2s-")
+
+
+def _content_text(value: object) -> str:
+    """Flatten only textual content from an observed transcript field."""
+
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        return "\n".join(
+            text for key in ("text", "content", "output") if (text := _content_text(value.get(key)))
+        )
+    if isinstance(value, list):
+        return "\n".join(text for item in value if (text := _content_text(item)))
+    return ""
 
 
 def _ancestor_chain(target: _TranscriptLine, by_uuid: dict[str, _TranscriptLine]) -> list[_TranscriptLine]:

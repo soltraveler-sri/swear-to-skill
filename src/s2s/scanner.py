@@ -20,6 +20,7 @@ from typing import Any
 from .adapters.claude_code import (
     UserMessage,
     extract_session_metadata,
+    extract_skill_usages,
     extract_user_messages,
     iter_archived_sessions,
 )
@@ -322,15 +323,25 @@ def scan_transcript(
     patterns = compile_patterns(active_lexicon)
     if source == SOURCE:
         extract_messages = extract_user_messages
+        extract_usages = extract_skill_usages
         metadata = extract_session_metadata(transcript_path)
     elif source == "codex":
         extract_messages = codex.extract_user_messages
+        extract_usages = codex.extract_skill_usages
         metadata = codex.extract_session_metadata(transcript_path)
     else:
         raise ValueError(f"unsupported transcript source: {source}")
     detections: list[Detection] = []
     incidents_created = 0
     duplicates_skipped = 0
+
+    for usage in extract_usages(transcript_path):
+        ledger.record_skill_usage(
+            skill_name=usage.skill_name,
+            session_id=usage.session_id,
+            source=usage.source,
+            used_at=usage.used_at,
+        )
 
     for user_message in extract_messages(transcript_path):
         hits = tuple(match_message(user_message.message, patterns))
@@ -417,6 +428,13 @@ def scan_codex_history(ledger: Ledger, *, root: Path | None = None, lexicon: dic
     history = codex.history_path(root)
     if not history.is_file():
         return 0
+    for usage in codex.extract_skill_usages(history, root=root):
+        ledger.record_skill_usage(
+            skill_name=usage.skill_name,
+            session_id=usage.session_id,
+            source=usage.source,
+            used_at=usage.used_at,
+        )
     patterns = compile_patterns(lexicon if lexicon is not None else load_lexicon())
     created = 0
     metadata_by_session: dict[str, Any] = {}
