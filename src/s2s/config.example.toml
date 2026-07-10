@@ -65,7 +65,7 @@ parallelism = 2
 triage = "v1"
 curate = "v1"
 garden = "v1"
-synthesize = "v1"
+synthesize = "v2"
 judge_remedy = "v1"
 judge_counterfactual = "v1"
 

@@ -68,65 +68,65 @@
   },
   "response": {
     "api_error_status": null,
-    "duration_api_ms": 29178,
-    "duration_ms": 29462,
+    "duration_api_ms": 24170,
+    "duration_ms": 24553,
     "fast_mode_state": "off",
     "is_error": false,
     "modelUsage": {
       "claude-haiku-4-5-20251001": {
-        "cacheCreationInputTokens": 10769,
+        "cacheCreationInputTokens": 10239,
         "cacheReadInputTokens": 50455,
         "contextWindow": 200000,
-        "costUSD": 0.0404025,
+        "costUSD": 0.0366775,
         "inputTokens": 19,
         "maxOutputTokens": 32000,
-        "outputTokens": 2760,
+        "outputTokens": 2227,
         "webSearchRequests": 0
       }
     },
     "num_turns": 3,
     "permission_denials": [],
-    "result": "{\"authentic\":true,\"confidence\":0.65,\"label\":\"misread-request\",\"one_liner\":\"Delivered a broader solution when a single-file change was requested\",\"severity\":2,\"reason\":\"The frustrated message expresses what appears to be genuine frustration at a scope mismatch—the user explicitly states they asked for a 'one-file note' but received something else. The follow-up quip appears to be a separate, joking aside rather than a retraction of the frustration. The core issue is a misalignment between request and delivery.\"}",
-    "session_id": "d36d57d8-e5c1-4424-bac6-a10fef3d338d",
+    "result": "{\"authentic\":true,\"label\":\"scope-deviation\",\"one_liner\":\"Delivered more than requested or overcomplicated what was asked for\",\"severity\":2,\"confidence\":0.7,\"reason\":\"The user clearly states 'That's not what I asked' and specifies the request was for 'a one-file note'—implying simplicity and containment. The agent appears to have done something more complex or broader in scope. The frustration is direct and unambiguous about the agent's behavior, not a quotation or joke. The follow-up user comment ('My future self will say this is awful...that is a joke') is a lighthearted aside, not reframing the original frustration.\"}",
+    "session_id": "c7149542-5f3c-4737-aa65-fd213b34ed86",
     "stop_reason": "tool_use",
     "structured_output": {
       "authentic": true,
-      "confidence": 0.65,
-      "label": "misread-request",
-      "one_liner": "Delivered a broader solution when a single-file change was requested",
-      "reason": "The frustrated message expresses what appears to be genuine frustration at a scope mismatch—the user explicitly states they asked for a 'one-file note' but received something else. The follow-up quip appears to be a separate, joking aside rather than a retraction of the frustration. The core issue is a misalignment between request and delivery.",
+      "confidence": 0.7,
+      "label": "scope-deviation",
+      "one_liner": "Delivered more than requested or overcomplicated what was asked for",
+      "reason": "The user clearly states 'That's not what I asked' and specifies the request was for 'a one-file note'—implying simplicity and containment. The agent appears to have done something more complex or broader in scope. The frustration is direct and unambiguous about the agent's behavior, not a quotation or joke. The follow-up user comment ('My future self will say this is awful...that is a joke') is a lighthearted aside, not reframing the original frustration.",
       "severity": 2
     },
     "subtype": "success",
     "terminal_reason": "completed",
-    "time_to_request_ms": 98,
-    "total_cost_usd": 0.0404025,
-    "ttft_ms": 24561,
-    "ttft_stream_ms": 1178,
+    "time_to_request_ms": 202,
+    "total_cost_usd": 0.0366775,
+    "ttft_ms": 19396,
+    "ttft_stream_ms": 2002,
     "type": "result",
     "usage": {
       "cache_creation": {
-        "ephemeral_1h_input_tokens": 10769,
+        "ephemeral_1h_input_tokens": 10239,
         "ephemeral_5m_input_tokens": 0
       },
-      "cache_creation_input_tokens": 10769,
+      "cache_creation_input_tokens": 10239,
       "cache_read_input_tokens": 50455,
       "inference_geo": "not_available",
       "input_tokens": 19,
       "iterations": [
         {
           "cache_creation": {
-            "ephemeral_1h_input_tokens": 2476,
+            "ephemeral_1h_input_tokens": 1946,
             "ephemeral_5m_input_tokens": 0
           },
-          "cache_creation_input_tokens": 2476,
+          "cache_creation_input_tokens": 1946,
           "cache_read_input_tokens": 29374,
           "input_tokens": 10,
-          "output_tokens": 320,
+          "output_tokens": 317,
           "type": "message"
         }
       ],
-      "output_tokens": 2760,
+      "output_tokens": 2227,
       "server_tool_use": {
         "web_fetch_requests": 0,
         "web_search_requests": 0
@@ -134,6 +134,6 @@
       "service_tier": "standard",
       "speed": "standard"
     },
-    "uuid": "0b7a34e7-f1c0-4aa1-8e24-c8af452a40cb"
+    "uuid": "ca1bf07a-b3f5-4715-9982-81dbd29d0691"
   }
 }
