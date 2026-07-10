@@ -41,7 +41,7 @@ def test_codex_prefix_routes_strips_model_and_uses_ephemeral_structured_exec(moc
     invocation = mock_codex.invocations()
     assert len(invocation) == 1
     argv = invocation[0]["argv"]
-    assert argv[:3] == ["--ask-for-approval", "never", "exec"]
+    assert argv[:5] == ["-c", "mcp_servers={}", "--ask-for-approval", "never", "exec"]
     assert argv[argv.index("--model") + 1] == "gpt-5.6-luna"
     assert "codex:gpt-5.6-luna" not in argv
     assert "--json" in argv and "--output-schema" in argv

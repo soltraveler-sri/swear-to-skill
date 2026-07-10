@@ -1,0 +1,219 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "3772cec50435954c",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Grade the proposed remedy, not the\nwriting style of this prompt. A good remedy changes a concrete future behavior,\nis broad enough to cover the failure mode without becoming a platitude, uses a\nreal `Use when ...` trigger when it is a skill, leaks no evidence-specific\nproject nouns into the remedy text, and uses the cheapest adequate remedy type.\n\nScore every dimension from 1 (poor) to 5 (excellent). Give exactly one concise\nsentence of justification for each score. Do not infer facts that are absent.\n\nPROPOSAL:\n{\n  \"confidence\": 0.62,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"R1 (fake-verify-before-claim) already governs verifying completion claims before reporting them done; incident 31's failure — declaring something fixed before a check ran and before a documented changelog policy was applied — is the same failure mode (premature completion claim), so this revises R1's body to explicitly cover checking documented project policy, not just running a command.\",\n      \"verdict\": \"overlap\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"R2 (Fake Release Discipline claude-md block) is scoped specifically to running a release's declared verification command; incident 31 is about a general completion claim and a changelog policy, not release verification specifically, and R1 is the closer, broader match to revise instead.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R3\",\n      \"reason\": \"R3 (pending hook proposal) addresses confirming before destructive file deletion, an unrelated failure mode with no overlap to premature completion claims.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R4\",\n      \"reason\": \"R4 (pending claude-md proposal) addresses acting on the wrong/stale git branch, an unrelated failure mode with no overlap to premature completion claims.\",\n      \"verdict\": \"clear\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 31,\n      \"quote\": \"Read the prompt: fake repository policy requires a changelog.\"\n    }\n  ],\n  \"failure_statement\": \"The agent declares work complete (or claims something is \\\"fixed\\\") without first reading and applying documented project policy that governs completion (e.g., a required changelog entry) and without running the declared verification check — repeating a pattern already flagged once before in this project.\",\n  \"overlap_action\": {\n    \"revises\": \"skill:$HOME/.claude/skills/fake-verify-before-claim/SKILL.md\"\n  },\n  \"remedy_content\": {\n    \"body_markdown\": \"# Verify Before Claiming Completion\\n\\nBefore telling the user something is fixed, done, or complete:\\n\\n1. **Find the applicable policy.** Check for project-level completion requirements — CONTRIBUTING docs, CLAUDE.md rules, README sections, or explicit instructions in the current prompt/thread — that specify what \\\"done\\\" requires (e.g., a changelog entry, a passing test suite, a specific verification command).\\n2. **Apply it, don't skip it.** If a changelog update, verification script, or other declared step is required, do it before claiming completion — not after the user objects.\\n3. **Run the actual check.** If a verification command or test is declared for this kind of change, run it and report its real output. Never assert a fix worked without having executed the check.\\n4. **Report plainly.** State what you verified and how (\\\"ran X, it passed\\\" / \\\"added the changelog entry per policy Y\\\"), not just \\\"done\\\" or \\\"fixed.\\\"\\n\\nIf you're unsure whether a documented policy applies, search for it (repo docs, CLAUDE.md, prompt instructions) before declaring completion rather than after being corrected.\\n\",\n    \"description\": \"Use when a completion claim requires verification — before reporting a task, fix, or release as done, check documented project policy for required completion steps (changelog entries, verification commands, sign-offs) and actually run/apply them first.\",\n    \"name\": \"fake-verify-before-claim\"\n  },\n  \"remedy_type\": \"skill\",\n  \"routing_rationale\": \"Incident 31 shows the agent declaring work \\\"fixed\\\"/complete before any verification check ran, and separately failing to read and apply a documented project policy (a required changelog entry) before that completion claim. Both symptoms are instances of the same failure mode already covered by R1's skill, fake-verify-before-claim (\\\"Use when a completion claim requires verification\\\") — that skill's scope already spans verification of completion claims generally, which includes checking documented project policy/requirements, not just running a literal verification command. R2's claude-md block is narrower (specifically: run the declared verification command for a release), so it doesn't fully cover the \\\"read documented policy before claiming done\\\" angle. Per merge bias, since R1 overlaps, this is a revision of R1 rather than a new sibling skill — I'm expanding the existing skill's body to explicitly include checking documented project policy (e.g., changelog requirements) as part of pre-completion verification, rather than creating a second skill that would compete for the same trigger.\",\n  \"singleton\": true\n}\n",
+    "schema": {
+      "properties": {
+        "actionability": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "generality_without_vagueness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "leakage": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "routing_fitness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "trigger_quality": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "actionability",
+        "generality_without_vagueness",
+        "trigger_quality",
+        "leakage",
+        "routing_fitness"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 34551,
+    "duration_ms": 34741,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 5016,
+        "cacheReadInputTokens": 28513,
+        "contextWindow": 1000000,
+        "costUSD": 0.1059339,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 3132,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"actionability\":{\"score\":4,\"justification\":\"The four-step checklist (find policy, apply it, run the actual check, report plainly) gives a concrete behavioral change rather than a vague admonition, though the evidence quote itself doesn't show the agent's actual verification lapse, only a prompt referencing a changelog policy.\"},\"generality_without_vagueness\":{\"score\":4,\"justification\":\"Broadening R1 from 'run a verification command' to 'also check documented completion policy' meaningfully extends coverage of the failure mode while staying anchored to concrete artifacts (changelog, tests, sign-offs) rather than drifting into platitude.\"},\"trigger_quality\":{\"score\":4,\"justification\":\"The revised description retains a real 'Use when a completion claim requires verification...' trigger tied to a concrete pre-completion action, appropriate for a skill.\"},\"leakage\":{\"score\":5,\"justification\":\"The remedy body and description use only generic terms (CONTRIBUTING docs, CLAUDE.md, changelog, verification command) with no evidence-specific project nouns carried into the skill text.\"},\"routing_fitness\":{\"score\":4,\"justification\":\"Revising the existing fake-verify-before-claim skill instead of spawning a new sibling artifact is the cheaper, correctly-scoped choice given the dedup analysis, though the moderate 0.62 confidence and thin single-quote evidence base leave some doubt about whether a full skill revision (vs. a smaller claude-md note) was warranted.\"}}",
+    "session_id": "1847c448-931a-42f9-8306-9a19297fb726",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "actionability": {
+        "justification": "The four-step checklist (find policy, apply it, run the actual check, report plainly) gives a concrete behavioral change rather than a vague admonition, though the evidence quote itself doesn't show the agent's actual verification lapse, only a prompt referencing a changelog policy.",
+        "score": 4
+      },
+      "generality_without_vagueness": {
+        "justification": "Broadening R1 from 'run a verification command' to 'also check documented completion policy' meaningfully extends coverage of the failure mode while staying anchored to concrete artifacts (changelog, tests, sign-offs) rather than drifting into platitude.",
+        "score": 4
+      },
+      "leakage": {
+        "justification": "The remedy body and description use only generic terms (CONTRIBUTING docs, CLAUDE.md, changelog, verification command) with no evidence-specific project nouns carried into the skill text.",
+        "score": 5
+      },
+      "routing_fitness": {
+        "justification": "Revising the existing fake-verify-before-claim skill instead of spawning a new sibling artifact is the cheaper, correctly-scoped choice given the dedup analysis, though the moderate 0.62 confidence and thin single-quote evidence base leave some doubt about whether a full skill revision (vs. a smaller claude-md note) was warranted.",
+        "score": 4
+      },
+      "trigger_quality": {
+        "justification": "The revised description retains a real 'Use when a completion claim requires verification...' trigger tied to a concrete pre-completion action, appropriate for a skill.",
+        "score": 4
+      }
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 103,
+    "total_cost_usd": 0.1059339,
+    "ttft_ms": 29658,
+    "ttft_stream_ms": 1944,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 5016,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 5016,
+      "cache_read_input_tokens": 28513,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 5016,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 5016,
+          "cache_read_input_tokens": 28513,
+          "input_tokens": 6768,
+          "output_tokens": 3132,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 3132,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "10a95cdc-ba90-42ae-97ff-bcb5675efb81"
+  }
+}

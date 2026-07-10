@@ -1,0 +1,219 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "7c4985fd93a19d95",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Grade the proposed remedy, not the\nwriting style of this prompt. A good remedy changes a concrete future behavior,\nis broad enough to cover the failure mode without becoming a platitude, uses a\nreal `Use when ...` trigger when it is a skill, leaks no evidence-specific\nproject nouns into the remedy text, and uses the cheapest adequate remedy type.\n\nScore every dimension from 1 (poor) to 5 (excellent). Give exactly one concise\nsentence of justification for each score. Do not infer facts that are absent.\n\nPROPOSAL:\n{\n  \"confidence\": 0.4,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"R1 (fake-verify-before-claim) governs verifying completion claims before reporting work done; this incident is about solving the wrong problem in the first place, not about verifying a claim afterward — no overlap.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"R2 (Fake Release Discipline) governs running a declared verification command before reporting a release complete; it has nothing to do with the agent answering a different request than the one asked.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R3\",\n      \"reason\": \"R3 is a pending hook proposal about confirming before destructive deletion; unrelated to misreading which task was requested.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R4\",\n      \"reason\": \"R4 is a pending claude-md proposal about acting on the wrong/stale git branch; a different, environment-state failure mode, not a misread of the request's content.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R5\",\n      \"reason\": \"R5 revises R1 to cover premature completion claims against a documented changelog policy; this incident has no premature-claim element — the agent openly did different work, it didn't falsely claim the right work was done.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R6\",\n      \"reason\": \"R6 targets violating explicit scope/action exclusions the user stated in advance (e.g. 'no network') — doing something forbidden. This incident is the inverse shape: the agent wasn't told not to do something, it simply misunderstood/substituted the requested task ('export only') for a different one. Taxonomy also keeps misread-request distinct from scope-constraint violations, so treating as clear rather than merging.\",\n      \"verdict\": \"clear\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 19,\n      \"quote\": \"You solved a different problem; I asked for the export only.\"\n    }\n  ],\n  \"failure_statement\": \"When a user requests a specific, narrowly-scoped action, the agent sometimes substitutes or expands into a different task instead of doing exactly what was asked, without checking first.\",\n  \"remedy_content\": {\n    \"target\": \"global\",\n    \"text\": \"# Answer the Scoped Request\\n\\nWhen the user asks for one specific, narrowly-scoped action (e.g. \\\"just export X\\\", \\\"only do Y\\\"), do exactly that. Don't substitute a different task, broaden scope, or solve an adjacent problem you judge more useful. If you believe a different action is actually needed, say so and ask before proceeding instead of silently doing it.\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"Single thin incident: user asked for one narrow action (\\\"the export only\\\") and the agent did something else entirely — a misread-request failure with no reusable multi-step procedure behind it, so a skill would be overkill. There's no mechanical signal a hook could check (no fixed command/flag to gate), so hook is not viable. A one-line standing rule reminding the agent to do exactly what was scoped and to confirm before substituting a different action is the cheapest fix that addresses the failure directly.\",\n  \"singleton\": true\n}\n",
+    "schema": {
+      "properties": {
+        "actionability": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "generality_without_vagueness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "leakage": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "routing_fitness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "trigger_quality": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "actionability",
+        "generality_without_vagueness",
+        "trigger_quality",
+        "leakage",
+        "routing_fitness"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 31586,
+    "duration_ms": 31776,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 4608,
+        "cacheReadInputTokens": 28513,
+        "contextWindow": 1000000,
+        "costUSD": 0.0984459,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 2796,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"actionability\":{\"score\":3,\"justification\":\"The directive (\\\"do exactly what was asked; ask before substituting\\\") is a clear behavioral rule, but it restates a norm the agent should already follow, so it reads more like a reminder than a mechanism that changes concrete behavior in ambiguous cases.\"},\"generality_without_vagueness\":{\"score\":3,\"justification\":\"The rule generalizes cleanly across domains with concrete illustrative phrasing (\\\"just export X\\\", \\\"only do Y\\\"), but never defines what counts as \\\"narrowly-scoped\\\" versus a request that legitimately implies adjacent steps, leaving the boundary fuzzy.\"},\"trigger_quality\":{\"score\":2,\"justification\":\"This is routed as claude-md rather than a skill, so it carries no scoped \\\"Use when...\\\" trigger at all — it's added as an always-loaded global instruction, which is a low-specificity way to address a single narrow incident.\"},\"leakage\":{\"score\":3,\"justification\":\"The remedy text reuses \\\"export X\\\" as its lead example, directly echoing the evidence incident's specific action rather than choosing a fully independent illustrative verb, though it stops short of naming any project-specific noun.\"},\"routing_fitness\":{\"score\":4,\"justification\":\"Given only one thin, low-confidence incident with no repeatable multi-step procedure and no mechanical gate a hook could check, a lightweight standing claude-md instruction is a reasonable, appropriately cheap choice over building a skill or hook.\"}}",
+    "session_id": "8b309e17-018a-4f81-a822-31da60f23975",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "actionability": {
+        "justification": "The directive (\"do exactly what was asked; ask before substituting\") is a clear behavioral rule, but it restates a norm the agent should already follow, so it reads more like a reminder than a mechanism that changes concrete behavior in ambiguous cases.",
+        "score": 3
+      },
+      "generality_without_vagueness": {
+        "justification": "The rule generalizes cleanly across domains with concrete illustrative phrasing (\"just export X\", \"only do Y\"), but never defines what counts as \"narrowly-scoped\" versus a request that legitimately implies adjacent steps, leaving the boundary fuzzy.",
+        "score": 3
+      },
+      "leakage": {
+        "justification": "The remedy text reuses \"export X\" as its lead example, directly echoing the evidence incident's specific action rather than choosing a fully independent illustrative verb, though it stops short of naming any project-specific noun.",
+        "score": 3
+      },
+      "routing_fitness": {
+        "justification": "Given only one thin, low-confidence incident with no repeatable multi-step procedure and no mechanical gate a hook could check, a lightweight standing claude-md instruction is a reasonable, appropriately cheap choice over building a skill or hook.",
+        "score": 4
+      },
+      "trigger_quality": {
+        "justification": "This is routed as claude-md rather than a skill, so it carries no scoped \"Use when...\" trigger at all — it's added as an always-loaded global instruction, which is a low-specificity way to address a single narrow incident.",
+        "score": 2
+      }
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 100,
+    "total_cost_usd": 0.0984459,
+    "ttft_ms": 26277,
+    "ttft_stream_ms": 1811,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 4608,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 4608,
+      "cache_read_input_tokens": 28513,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 4608,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 4608,
+          "cache_read_input_tokens": 28513,
+          "input_tokens": 6768,
+          "output_tokens": 2796,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 2796,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "34710715-752e-4eb4-aca9-b1f79d75b895"
+  }
+}

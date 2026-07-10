@@ -1,0 +1,212 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "0489d532e253a2e7",
+    "model": "sonnet",
+    "stage": "synthesize"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are the Stage 4 Synthesist. Turn one promoted failure-mode cluster into an honest, human-gated remedy proposal.\n\nMost frustrations do not deserve a skill. Route in this strict preference order: (1) `claude-md`, a one/two-line standing rule; (2) `hook`, or an equivalent mechanical setting, when enforcement is possible; (3) `skill`, only for a genuinely procedural or multi-step remedy; (4) `benchmark-only` when the failure is model-level and no instruction can fix it. Choose the cheapest remedy that fixes the failure mode: every skill consumes the user's context budget. `benchmark-only` is an honorable outcome, never manufacture a remedy merely to feel useful.\n\nIf the only sensible remedy target is Codex-side (`AGENTS.md` or `~/.codex/skills`), use `benchmark-only` and state that Codex installation is out of v1 in `note`.\n\nThe existing-remedy digests below are numbered [R1]…[RN]. There are 3 existing-remedy digests. Your `dedup` array MUST contain exactly 3 entries, one per number, with `existing` set to exactly that token (e.g. \"R1\"). Include entries even when the verdict is clear. State `clear` or `overlap` for each. Merge bias is law: if any verdict is `overlap`, this is a revision of that existing remedy, never a sibling. Set `overlap_action.revises` to that R token.\n\nFor a `skill`, write a kebab-case name and a concrete auto-invocation description beginning `Use when ...`; this description is the trigger. The body must be substantive Markdown. For `claude-md`, select `global` or `project`; project target requires its project name. For `hook`, give a Claude Code event and a command sketch. For `benchmark-only`, explain the measurement-only outcome in `note`.\n\nThe upstream classifier deliberately over-merges. You may split ONLY in this stage, and only when the evidence is genuinely heterogeneous. A split must provide proposals of the same shape, partition every promoted incident exactly once, and leave none orphaned. Otherwise return one proposal covering the group.\n\nTAXONOMY GIST:\nenvironment-mismanagement: wrong dir/branch/deps/tool state\n\nPROMOTED EVIDENCE:\nBEGIN PROMOTED EVIDENCE incident_id=2 project=aurora\nOne-liner: Agent worked on or targeted the wrong branch instead of the one specified by the user's instructions.\nPreceding request:\nYou ignored the no-network constraint; stop changing the plan.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nYou are not following the branch instruction in /work/fake-aurora.\n\nFollowing exchange:\n\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=16 project=harbor\nOne-liner: Agent carried out work on an incorrect or outdated branch instead of the correct working branch.\nPreceding request:\nThat fix is not verified; the test command was never run.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nWhy are you doing this from the stale fake branch?\n\nFollowing exchange:\n\nEND PROMOTED EVIDENCE\n\nEXISTING SKILLS (name and description only):\n- [R1] skill:$HOME/.claude/skills/fake-verify-before-claim/SKILL.md | name=fake-verify-before-claim | description=Use when a completion claim requires verification.\n\nS2S-MANAGED CLAUDE.MD BLOCKS:\n- [R2] claude-md:$HOME/.claude/CLAUDE.md#1 | # Fake Release Discipline\n\nBefore reporting a fake release as complete, run its declared verification\ncommand and report the result plainly.\n\nPENDING OR INSTALLED S2S PROPOSALS:\n- [R3] proposal #1 | type=hook | status=pending | {\"confidence\":0.55,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) governs verifying completion claims before reporting them done; this incident is about unconfirmed destructive deletion, a different failure mode with no overlap.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline claude-md block) governs running verification commands before reporting a fake release complete; it does not address asking for confirmation before deleting/removing files, so t\n\n\nYour prior draft failed local validation. Correct the SKILL.md/frontmatter, dedup, and evidence partition exactly. Specific validation failure: claude-md requires text and global/project target",
+    "schema": {
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "dedup": {
+          "items": {
+            "properties": {
+              "existing": {
+                "pattern": "^R[0-9]+$",
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "clear",
+                  "overlap"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "existing",
+              "verdict",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "properties": {
+              "incident_id": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "quote": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "incident_id",
+              "quote"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "failure_statement": {
+          "type": "string"
+        },
+        "overlap_action": {
+          "properties": {
+            "revises": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "revises"
+          ],
+          "type": "object"
+        },
+        "remedy_content": {
+          "type": "object"
+        },
+        "remedy_type": {
+          "enum": [
+            "claude-md",
+            "hook",
+            "skill",
+            "benchmark-only"
+          ],
+          "type": "string"
+        },
+        "routing_rationale": {
+          "type": "string"
+        },
+        "split": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "remedy_type",
+        "routing_rationale",
+        "failure_statement",
+        "remedy_content",
+        "evidence",
+        "dedup",
+        "confidence"
+      ],
+      "type": "object"
+    },
+    "stage": "synthesize"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 31281,
+    "duration_ms": 31486,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 4871,
+        "cacheReadInputTokens": 28519,
+        "contextWindow": 1000000,
+        "costUSD": 0.10307369999999999,
+        "inputTokens": 6769,
+        "maxOutputTokens": 64000,
+        "outputTokens": 2999,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"remedy_type\":\"claude-md\",\"routing_rationale\":\"Both promoted incidents describe the same failure mode: the agent proceeded to work on the wrong or a stale branch instead of the one the user actually specified/expected (incident 2: \\\"not following the branch instruction\\\"; incident 16: \\\"doing this from the stale fake branch\\\"). This is a classic environment-mismanagement case (wrong branch), and the fix is a simple standing behavioral rule — check the current branch against what the user asked for before acting — not a multi-step procedure, so a skill would be overkill. A hook is not viable as the primary enforcement because determining \\\"the branch the user specified\\\" requires parsing natural-language instructions, which a mechanical PreToolUse/SessionStart hook cannot reliably do; a hook could at best surface the current branch, not verify correctness against intent. That leaves claude-md as the cheapest sufficient remedy: a short standing rule instructing the agent to confirm the active branch matches instructions before editing/running commands, and to stop and reconcile (switch or ask) if not. This is a natural, additive extension of the branch-workflow discipline already present in the user's global CLAUDE.md, so it targets global rather than a specific project (the two incidents span two different synthetic projects, confirming this is a general behavior gap, not project-specific).\",\"failure_statement\":\"The agent proceeds to edit code, run commands, or report progress on a git branch other than the one the user specified or expected (a wrong or stale branch), without first confirming the current branch matches the user's instructions.\",\"remedy_content\":{\"target\":\"global\",\"text\":\"## Branch Verification\\n\\nBefore making edits or running commands in a git repo, confirm the current branch matches what the user specified or would expect (`git branch --show-current` / `git status`). If it looks wrong, stale, or unspecified and ambiguous, stop and either switch to the correct branch or ask — never continue substantive work silently on the wrong branch.\"},\"evidence\":[{\"incident_id\":2,\"quote\":\"You are not following the branch instruction in /work/fake-aurora.\"},{\"incident_id\":16,\"quote\":\"Why are you doing this from the stale fake branch?\"}],\"dedup\":[{\"existing\":\"R1\",\"verdict\":\"clear\",\"reason\":\"R1 (fake-verify-before-claim) governs verifying completion claims before reporting work done; these incidents are about acting on the wrong/stale branch, an unrelated failure mode with no overlap.\"},{\"existing\":\"R2\",\"verdict\":\"clear\",\"reason\":\"R2 (Fake Release Discipline) governs running a declared verification command before reporting a release complete; it has nothing to do with confirming which git branch is active before working.\"},{\"existing\":\"R3\",\"verdict\":\"clear\",\"reason\":\"R3 is a pending hook proposal about confirming before destructive file deletion; these branch-mismatch incidents involve no deletion and a different mechanism (branch verification vs. destructive-action confirmation), so there is no overlap.\"}],\"confidence\":0.6}",
+    "session_id": "a7b1846f-387a-404f-a8c6-69275c6190db",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "confidence": 0.6,
+      "dedup": [
+        {
+          "existing": "R1",
+          "reason": "R1 (fake-verify-before-claim) governs verifying completion claims before reporting work done; these incidents are about acting on the wrong/stale branch, an unrelated failure mode with no overlap.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R2",
+          "reason": "R2 (Fake Release Discipline) governs running a declared verification command before reporting a release complete; it has nothing to do with confirming which git branch is active before working.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R3",
+          "reason": "R3 is a pending hook proposal about confirming before destructive file deletion; these branch-mismatch incidents involve no deletion and a different mechanism (branch verification vs. destructive-action confirmation), so there is no overlap.",
+          "verdict": "clear"
+        }
+      ],
+      "evidence": [
+        {
+          "incident_id": 2,
+          "quote": "You are not following the branch instruction in /work/fake-aurora."
+        },
+        {
+          "incident_id": 16,
+          "quote": "Why are you doing this from the stale fake branch?"
+        }
+      ],
+      "failure_statement": "The agent proceeds to edit code, run commands, or report progress on a git branch other than the one the user specified or expected (a wrong or stale branch), without first confirming the current branch matches the user's instructions.",
+      "remedy_content": {
+        "target": "global",
+        "text": "## Branch Verification\n\nBefore making edits or running commands in a git repo, confirm the current branch matches what the user specified or would expect (`git branch --show-current` / `git status`). If it looks wrong, stale, or unspecified and ambiguous, stop and either switch to the correct branch or ask — never continue substantive work silently on the wrong branch."
+      },
+      "remedy_type": "claude-md",
+      "routing_rationale": "Both promoted incidents describe the same failure mode: the agent proceeded to work on the wrong or a stale branch instead of the one the user actually specified/expected (incident 2: \"not following the branch instruction\"; incident 16: \"doing this from the stale fake branch\"). This is a classic environment-mismanagement case (wrong branch), and the fix is a simple standing behavioral rule — check the current branch against what the user asked for before acting — not a multi-step procedure, so a skill would be overkill. A hook is not viable as the primary enforcement because determining \"the branch the user specified\" requires parsing natural-language instructions, which a mechanical PreToolUse/SessionStart hook cannot reliably do; a hook could at best surface the current branch, not verify correctness against intent. That leaves claude-md as the cheapest sufficient remedy: a short standing rule instructing the agent to confirm the active branch matches instructions before editing/running commands, and to stop and reconcile (switch or ask) if not. This is a natural, additive extension of the branch-workflow discipline already present in the user's global CLAUDE.md, so it targets global rather than a specific project (the two incidents span two different synthetic projects, confirming this is a general behavior gap, not project-specific)."
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 138,
+    "total_cost_usd": 0.10307369999999999,
+    "ttft_ms": 21865,
+    "ttft_stream_ms": 1070,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 4871,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 4871,
+      "cache_read_input_tokens": 28519,
+      "inference_geo": "not_available",
+      "input_tokens": 6769,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 4871,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 4871,
+          "cache_read_input_tokens": 28519,
+          "input_tokens": 6769,
+          "output_tokens": 2999,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 2999,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "c7b0808e-acf5-4e8f-b5db-3b27296bb10a"
+  }
+}

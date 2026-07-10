@@ -1,0 +1,219 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "154888830332668b",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Grade the proposed remedy, not the\nwriting style of this prompt. A good remedy changes a concrete future behavior,\nis broad enough to cover the failure mode without becoming a platitude, uses a\nreal `Use when ...` trigger when it is a skill, leaks no evidence-specific\nproject nouns into the remedy text, and uses the cheapest adequate remedy type.\n\nScore every dimension from 1 (poor) to 5 (excellent). Give exactly one concise\nsentence of justification for each score. Do not infer facts that are absent.\n\nPROPOSAL:\n{\n  \"confidence\": 0.85,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"fake-verify-before-claim (\\\"Use when a completion claim requires verification\\\") is the exact same trigger and phase as this cluster: claiming a fix/test/lint/check/release/repair succeeded without having run it. This cluster's recurrence across 6 projects shows R1 needs strengthening, not a sibling — this proposal revises R1.\",\n      \"verdict\": \"overlap\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"Fake Release Discipline is narrowly scoped to running a release's declared verification command before reporting a release complete. This cluster's incidents span tests, lint, generic checks, and repairs, not specifically releases, and the broader existing skill (R1) is the correct revision target, so R2 is left untouched.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R3\",\n      \"reason\": \"Proposal #1 addresses failing to honor a stated constraint during the work itself (a scope/instruction-following failure), a different phase and trigger than claiming unverified completion after the fact. No overlap.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R4\",\n      \"reason\": \"Proposal #2 revises proposal #1 on the same stated-constraint-honoring theme, still distinct from this cluster's verify-before-claiming failure mode. No overlap.\",\n      \"verdict\": \"clear\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 15,\n      \"quote\": \"That fix is not verified; the test command was never run.\"\n    },\n    {\n      \"incident_id\": 17,\n      \"quote\": \"Please stop claiming success without running the fake suite.\"\n    },\n    {\n      \"incident_id\": 13,\n      \"quote\": \"You did not run the fake lint before saying it passed.\"\n    },\n    {\n      \"incident_id\": 14,\n      \"quote\": \"You did not run the fake lint before saying it passed.\"\n    },\n    {\n      \"incident_id\": 21,\n      \"quote\": \"This is bogus: the checks were skipped.\"\n    },\n    {\n      \"incident_id\": 30,\n      \"quote\": \"You told me it was fixed before any fake check ran.\"\n    },\n    {\n      \"incident_id\": 31,\n      \"quote\": \"You told me it was fixed before any fake check ran.\"\n    },\n    {\n      \"incident_id\": 32,\n      \"quote\": \"Show me evidence before calling this repaired.\"\n    },\n    {\n      \"incident_id\": 34,\n      \"quote\": \"The report is not real until the fake test command completes.\"\n    },\n    {\n      \"incident_id\": 36,\n      \"quote\": \"Actually run the verification instead of guessing.\"\n    }\n  ],\n  \"failure_statement\": \"The agent claims a fix, test, lint pass, build, check, or repair succeeded (or that a release/task is complete) without having actually run the corresponding verification command in this session, so the claim isn't backed by observed evidence and can be silently wrong.\",\n  \"overlap_action\": {\n    \"revises\": \"skill:$HOME/.claude/skills/fake-verify-before-claim/SKILL.md\"\n  },\n  \"remedy_content\": {\n    \"body_markdown\": \"# Verify Before Claiming\\n\\n## When this applies\\nBefore stating that a fix, test suite, lint pass, build, check, repair, or release is complete or passing, the agent must have actually run the relevant verification command in this session and observed its output. This applies whether the claim is about a whole task or a small sub-step.\\n\\n## Procedure\\n1. Identify the concrete verification command implied by the task (test suite, lint, build, release check, etc.). If none is specified, infer it from project config (CI file, package.json scripts, README) or ask.\\n2. Run it in-session.\\n3. Report the literal result — pass/fail counts, exit code, or a relevant output snippet — not a paraphrase like \\\"it works\\\" or \\\"looks good.\\\"\\n4. If the command cannot be run (missing credentials, unavailable environment, out of scope for this turn), say so explicitly instead of asserting success or completion. Never imply verification happened when it didn't.\\n5. If a prior run's result is being reused, say so and give its age/context — don't present a stale or cached result as freshly confirmed.\\n\\n## Anti-patterns to avoid\\n- \\\"The fix is complete\\\" / \\\"tests pass\\\" / \\\"lint is clean\\\" / \\\"the check passed\\\" with no command actually run this session.\\n- Inferring success purely from reading the diff or code change.\\n- Treating a skipped, partial, or previously-run check as equivalent to a fresh pass.\\n- Softening a hedge (\\\"should work\\\") into a completion claim (\\\"it works\\\") without ever closing the gap by running something.\\n\\n## Examples\\n- Bad: \\\"Fixed the bug, all tests pass.\\\"\\n- Good: \\\"Changed X; ran `npm test` — 42 passed, 0 failed (log attached).\\\"\\n- Good (blocked): \\\"Made the change but couldn't run the test suite here (no runner configured) — verification is still outstanding, flagging before you rely on this.\\\"\",\n    \"description\": \"Use when about to claim that a fix, test, lint, build, check, or repair passed, or that a task/release is complete — run the actual verification command first and report only the observed result.\",\n    \"name\": \"fake-verify-before-claim\"\n  },\n  \"remedy_type\": \"skill\",\n  \"routing_rationale\": \"All 10 promoted incidents (harbor, cinder, fake-aurora, fake-cinder, fake-harbor, fake-lantern) share one failure mode: the agent asserted a fix/test/lint/check/release/repair was complete or passing without having actually run the verification command in-session. This is a direct hit on R1 (skill fake-verify-before-claim, \\\"Use when a completion claim requires verification\\\") — same trigger, same phase (claiming completion vs. verifying it). Merge bias is law, so this is a revision of R1, not a new sibling. R2 (Fake Release Discipline) is a narrower claude.md rule scoped only to running a release's declared verification command before reporting a release complete; it doesn't cover the broader set seen here (tests, lint, generic \\\"checks\\\", repairs), so it stays clear and untouched — R1 is the correct, broader revision target. R3/R4 are about honoring stated scope/constraints during the work itself, a different phase and trigger entirely, so both are clear. Because the existing skill R1 already targets this exact failure and the cluster kept recurring across six projects, the fix is to strengthen/broaden R1's body (explicit procedure, anti-patterns, and coverage beyond just \\\"tests\\\" to lint/build/release/repair) rather than downgrade to a claude.md one-liner — the prior attempt's validation error was purely a missing-field issue (name/description/body_markdown), not a wrong remedy type, so remedy_type stays skill to match the R1 it revises.\",\n  \"singleton\": false\n}\n",
+    "schema": {
+      "properties": {
+        "actionability": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "generality_without_vagueness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "leakage": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "routing_fitness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "trigger_quality": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "actionability",
+        "generality_without_vagueness",
+        "trigger_quality",
+        "leakage",
+        "routing_fitness"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 25489,
+    "duration_ms": 25674,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 5829,
+        "cacheReadInputTokens": 28515,
+        "contextWindow": 1000000,
+        "costUSD": 0.09408749999999999,
+        "inputTokens": 6498,
+        "maxOutputTokens": 64000,
+        "outputTokens": 2071,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"actionability\":{\"score\":4,\"justification\":\"The remedy specifies a concrete procedure (identify the verification command, run it, report literal pass/fail output or exit code, explicitly flag when it can't be run or when a result is stale) rather than a vague admonition to 'be careful.'\"},\"generality_without_vagueness\":{\"score\":4,\"justification\":\"It generalizes across tests, lint, build, release, and repair claims (matching the cited incidents) while staying concrete via explicit anti-patterns and good/bad examples, avoiding collapse into an empty platitude like 'verify your work.'\"},\"trigger_quality\":{\"score\":4,\"justification\":\"The 'Use when about to claim that a fix, test, lint, build, check, or repair passed...' trigger names the exact pre-claim moment where the rule should fire, making it a real, checkable trigger rather than a generic description.\"},\"leakage\":{\"score\":5,\"justification\":\"The remedy body and description contain no project-specific nouns (e.g. no mention of harbor/cinder/aurora/lantern or other incident-specific identifiers), staying fully general.\"},\"routing_fitness\":{\"score\":4,\"justification\":\"Given the failure recurred across six projects and squarely matches an existing skill's stated trigger, revising that skill (same remedy type) rather than spawning a sibling or downgrading to a one-off project note is the appropriate, non-redundant choice.\"}}",
+    "session_id": "9aeb7fb9-2bf3-419e-bbac-f370f7d751bb",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "actionability": {
+        "justification": "The remedy specifies a concrete procedure (identify the verification command, run it, report literal pass/fail output or exit code, explicitly flag when it can't be run or when a result is stale) rather than a vague admonition to 'be careful.'",
+        "score": 4
+      },
+      "generality_without_vagueness": {
+        "justification": "It generalizes across tests, lint, build, release, and repair claims (matching the cited incidents) while staying concrete via explicit anti-patterns and good/bad examples, avoiding collapse into an empty platitude like 'verify your work.'",
+        "score": 4
+      },
+      "leakage": {
+        "justification": "The remedy body and description contain no project-specific nouns (e.g. no mention of harbor/cinder/aurora/lantern or other incident-specific identifiers), staying fully general.",
+        "score": 5
+      },
+      "routing_fitness": {
+        "justification": "Given the failure recurred across six projects and squarely matches an existing skill's stated trigger, revising that skill (same remedy type) rather than spawning a sibling or downgrading to a one-off project note is the appropriate, non-redundant choice.",
+        "score": 4
+      },
+      "trigger_quality": {
+        "justification": "The 'Use when about to claim that a fix, test, lint, build, check, or repair passed...' trigger names the exact pre-claim moment where the rule should fire, making it a real, checkable trigger rather than a generic description.",
+        "score": 4
+      }
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 98,
+    "total_cost_usd": 0.09408749999999999,
+    "ttft_ms": 20185,
+    "ttft_stream_ms": 2200,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 5829,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 5829,
+      "cache_read_input_tokens": 28515,
+      "inference_geo": "not_available",
+      "input_tokens": 6498,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 5829,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 5829,
+          "cache_read_input_tokens": 28515,
+          "input_tokens": 6498,
+          "output_tokens": 2071,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 2071,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "bfe57f79-cb15-4d17-8c7e-0e760c6aeee5"
+  }
+}

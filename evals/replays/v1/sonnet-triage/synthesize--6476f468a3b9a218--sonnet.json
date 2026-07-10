@@ -1,0 +1,217 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "6476f468a3b9a218",
+    "model": "sonnet",
+    "stage": "synthesize"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are the Stage 4 Synthesist. Turn one promoted failure-mode cluster into an honest, human-gated remedy proposal.\n\nMost frustrations do not deserve a skill. Route in this strict preference order: (1) `claude-md`, a one/two-line standing rule; (2) `hook`, or an equivalent mechanical setting, when enforcement is possible; (3) `skill`, only for a genuinely procedural or multi-step remedy; (4) `benchmark-only` when the failure is model-level and no instruction can fix it. Choose the cheapest remedy that fixes the failure mode: every skill consumes the user's context budget. `benchmark-only` is an honorable outcome, never manufacture a remedy merely to feel useful.\n\nIf the only sensible remedy target is Codex-side (`AGENTS.md` or `~/.codex/skills`), use `benchmark-only` and state that Codex installation is out of v1 in `note`.\n\nThe existing-remedy digests below are numbered [R1]…[RN]. There are 4 existing-remedy digests. Your `dedup` array MUST contain exactly 4 entries, one per number, with `existing` set to exactly that token (e.g. \"R1\"). Include entries even when the verdict is clear. State `clear` or `overlap` for each. Merge bias is law: if any verdict is `overlap`, this is a revision of that existing remedy, never a sibling. Set `overlap_action.revises` to that R token.\n\nFor a `skill`, write a kebab-case name and a concrete auto-invocation description beginning `Use when ...`; this description is the trigger. The body must be substantive Markdown. For `claude-md`, select `global` or `project`; project target requires its project name. For `hook`, give a Claude Code event and a command sketch. For `benchmark-only`, explain the measurement-only outcome in `note`.\n\nThe upstream classifier deliberately over-merges. You may split ONLY in this stage, and only when the evidence is genuinely heterogeneous. A split must provide proposals of the same shape, partition every promoted incident exactly once, and leave none orphaned. Otherwise return one proposal covering the group.\n\nTAXONOMY GIST:\nhouse-rules-violation: ignored CLAUDE.md / workflow conventions\n\nPROMOTED EVIDENCE:\nBEGIN PROMOTED EVIDENCE incident_id=31 project=fake-aurora\nOne-liner: Agent declared work complete without following a documented project policy it should have read and applied first.\nPreceding request:\nYou told me it was fixed before any fake check ran.\n\nAgent activity digest:\n\n\nFrustrated message:\nRead the prompt: fake repository policy requires a changelog.\n\nFollowing exchange:\n\nEND PROMOTED EVIDENCE\n\nEXISTING SKILLS (name and description only):\n- [R1] skill:$HOME/.claude/skills/fake-verify-before-claim/SKILL.md | name=fake-verify-before-claim | description=Use when a completion claim requires verification.\n\nS2S-MANAGED CLAUDE.MD BLOCKS:\n- [R2] claude-md:$HOME/.claude/CLAUDE.md#1 | # Fake Release Discipline\n\nBefore reporting a fake release as complete, run its declared verification\ncommand and report the result plainly.\n\nPENDING OR INSTALLED S2S PROPOSALS:\n- [R3] proposal #1 | type=hook | status=pending | {\"confidence\":0.55,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) governs verifying completion claims before reporting them done; this incident is about unconfirmed destructive deletion, a different failure mode with no overlap.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline claude-md block) governs running verification commands before reporting a fake release complete; it does not address asking for confirmation before deleting/removing files, so t\n- [R4] proposal #2 | type=claude-md | status=pending | {\"confidence\":0.6,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) governs verifying completion claims before reporting work done; these incidents are about acting on the wrong/stale branch, an unrelated failure mode with no overlap.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline) governs running a declared verification command before reporting a release complete; it has nothing to do with confirming which git branch is active before working.\",\"verdic\n",
+    "schema": {
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "dedup": {
+          "items": {
+            "properties": {
+              "existing": {
+                "pattern": "^R[0-9]+$",
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "clear",
+                  "overlap"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "existing",
+              "verdict",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "properties": {
+              "incident_id": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "quote": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "incident_id",
+              "quote"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "failure_statement": {
+          "type": "string"
+        },
+        "overlap_action": {
+          "properties": {
+            "revises": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "revises"
+          ],
+          "type": "object"
+        },
+        "remedy_content": {
+          "type": "object"
+        },
+        "remedy_type": {
+          "enum": [
+            "claude-md",
+            "hook",
+            "skill",
+            "benchmark-only"
+          ],
+          "type": "string"
+        },
+        "routing_rationale": {
+          "type": "string"
+        },
+        "split": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "remedy_type",
+        "routing_rationale",
+        "failure_statement",
+        "remedy_content",
+        "evidence",
+        "dedup",
+        "confidence"
+      ],
+      "type": "object"
+    },
+    "stage": "synthesize"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 48107,
+    "duration_ms": 48296,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 4819,
+        "cacheReadInputTokens": 28519,
+        "contextWindow": 1000000,
+        "costUSD": 0.1275837,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 4654,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"remedy_type\":\"skill\",\"routing_rationale\":\"Incident 31 is another instance of \\\"declared complete without verifying\\\" — here the missed check is a documented project policy (a changelog requirement) rather than a test/build command. R1 (fake-verify-before-claim) is described generically as \\\"Use when a completion claim requires verification,\\\" which already covers this failure shape. Merge bias makes this a revision of R1, not a new sibling — so remedy_type stays `skill` to match what's being revised, and the fix is to broaden R1's body to explicitly include reading/applying documented policy artifacts (changelog, CONTRIBUTING requirements, etc.), not just running a declared verification command. R2's claude-md block is narrower (specifically \\\"run the declared verification command\\\") and doesn't cover policy-document requirements, so it's left clear rather than folded in.\",\"failure_statement\":\"Agent declared a fix/task complete without first reading and satisfying a documented project policy (e.g., a changelog-entry requirement) that defines what \\\"done\\\" means for that repo.\",\"remedy_content\":{\"name\":\"fake-verify-before-claim\",\"description\":\"Use when a completion claim requires verification — including checking documented project policies (CONTRIBUTING.md, changelog/release requirements, etc.) before declaring work done, not just running a test or build command.\",\"body\":\"## Before claiming something is done\\n\\n1. Identify what \\\"verified\\\" means for this task: a test/build/declared verification command, AND any documented project policy that defines completion requirements (CONTRIBUTING.md, CHANGELOG policy, release checklist, docs/policies/*).\\n2. If a policy document specifies required artifacts (e.g., \\\"every fix needs a changelog entry\\\"), read it and confirm those artifacts actually exist on disk before reporting completion — do not infer compliance from memory of the instructions.\\n3. Run any declared verification command and report its actual output plainly. Never say \\\"fixed\\\" or \\\"done\\\" without having run and observed the result.\\n4. If no command exists but a policy requirement does, verify by inspecting the real artifact (e.g., open the changelog file and confirm the new entry is present) before claiming completion.\\n5. When unsure whether a policy applies, search the repo for policy docs first — don't assume none exists.\"},\"evidence\":[{\"incident_id\":31,\"quote\":\"Read the prompt: fake repository policy requires a changelog.\"}],\"dedup\":[{\"existing\":\"R1\",\"verdict\":\"overlap\",\"reason\":\"R1 (fake-verify-before-claim) is generically scoped to \\\"a completion claim requires verification\\\"; this incident is the same failure shape — claiming done without verifying — just with a documented policy (changelog requirement) as the unmet check instead of a test/build. Revise R1 to explicitly cover policy-document requirements.\"},{\"existing\":\"R2\",\"verdict\":\"clear\",\"reason\":\"R2's claude-md block is narrowly about running a fake release's declared verification command before reporting it complete; this incident is about reading and satisfying a documented policy (changelog requirement), not executing a verification command, so it doesn't fit R2's scope.\"},{\"existing\":\"R3\",\"verdict\":\"clear\",\"reason\":\"R3 (pending hook) addresses confirming before destructive file deletion — an unrelated failure mode with no connection to skipping a documented completion policy.\"},{\"existing\":\"R4\",\"verdict\":\"clear\",\"reason\":\"R4 (pending claude-md) addresses confirming the active git branch before working — unrelated to failing to read/apply a documented completion policy.\"}],\"overlap_action\":{\"revises\":\"R1\"},\"confidence\":0.6}",
+    "session_id": "064cfd23-262d-4663-8739-a6f5f74aed69",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "confidence": 0.6,
+      "dedup": [
+        {
+          "existing": "R1",
+          "reason": "R1 (fake-verify-before-claim) is generically scoped to \"a completion claim requires verification\"; this incident is the same failure shape — claiming done without verifying — just with a documented policy (changelog requirement) as the unmet check instead of a test/build. Revise R1 to explicitly cover policy-document requirements.",
+          "verdict": "overlap"
+        },
+        {
+          "existing": "R2",
+          "reason": "R2's claude-md block is narrowly about running a fake release's declared verification command before reporting it complete; this incident is about reading and satisfying a documented policy (changelog requirement), not executing a verification command, so it doesn't fit R2's scope.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R3",
+          "reason": "R3 (pending hook) addresses confirming before destructive file deletion — an unrelated failure mode with no connection to skipping a documented completion policy.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R4",
+          "reason": "R4 (pending claude-md) addresses confirming the active git branch before working — unrelated to failing to read/apply a documented completion policy.",
+          "verdict": "clear"
+        }
+      ],
+      "evidence": [
+        {
+          "incident_id": 31,
+          "quote": "Read the prompt: fake repository policy requires a changelog."
+        }
+      ],
+      "failure_statement": "Agent declared a fix/task complete without first reading and satisfying a documented project policy (e.g., a changelog-entry requirement) that defines what \"done\" means for that repo.",
+      "overlap_action": {
+        "revises": "R1"
+      },
+      "remedy_content": {
+        "body": "## Before claiming something is done\n\n1. Identify what \"verified\" means for this task: a test/build/declared verification command, AND any documented project policy that defines completion requirements (CONTRIBUTING.md, CHANGELOG policy, release checklist, docs/policies/*).\n2. If a policy document specifies required artifacts (e.g., \"every fix needs a changelog entry\"), read it and confirm those artifacts actually exist on disk before reporting completion — do not infer compliance from memory of the instructions.\n3. Run any declared verification command and report its actual output plainly. Never say \"fixed\" or \"done\" without having run and observed the result.\n4. If no command exists but a policy requirement does, verify by inspecting the real artifact (e.g., open the changelog file and confirm the new entry is present) before claiming completion.\n5. When unsure whether a policy applies, search the repo for policy docs first — don't assume none exists.",
+        "description": "Use when a completion claim requires verification — including checking documented project policies (CONTRIBUTING.md, changelog/release requirements, etc.) before declaring work done, not just running a test or build command.",
+        "name": "fake-verify-before-claim"
+      },
+      "remedy_type": "skill",
+      "routing_rationale": "Incident 31 is another instance of \"declared complete without verifying\" — here the missed check is a documented project policy (a changelog requirement) rather than a test/build command. R1 (fake-verify-before-claim) is described generically as \"Use when a completion claim requires verification,\" which already covers this failure shape. Merge bias makes this a revision of R1, not a new sibling — so remedy_type stays `skill` to match what's being revised, and the fix is to broaden R1's body to explicitly include reading/applying documented policy artifacts (changelog, CONTRIBUTING requirements, etc.), not just running a declared verification command. R2's claude-md block is narrower (specifically \"run the declared verification command\") and doesn't cover policy-document requirements, so it's left clear rather than folded in."
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 92,
+    "total_cost_usd": 0.1275837,
+    "ttft_ms": 36545,
+    "ttft_stream_ms": 1499,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 4819,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 4819,
+      "cache_read_input_tokens": 28519,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 4819,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 4819,
+          "cache_read_input_tokens": 28519,
+          "input_tokens": 6768,
+          "output_tokens": 4654,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 4654,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "8ff21fff-5475-453b-b2b4-6a33bae33287"
+  }
+}

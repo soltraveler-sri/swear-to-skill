@@ -1,0 +1,219 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "08d472196d301631",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Grade the proposed remedy, not the\nwriting style of this prompt. A good remedy changes a concrete future behavior,\nis broad enough to cover the failure mode without becoming a platitude, uses a\nreal `Use when ...` trigger when it is a skill, leaks no evidence-specific\nproject nouns into the remedy text, and uses the cheapest adequate remedy type.\n\nScore every dimension from 1 (poor) to 5 (excellent). Give exactly one concise\nsentence of justification for each score. Do not infer facts that are absent.\n\nPROPOSAL:\n{\n  \"confidence\": 0.6,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"R1 (fake-verify-before-claim) governs verifying completion claims before reporting work done; these incidents are about acting on the wrong/stale branch, an unrelated failure mode with no overlap.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"R2 (Fake Release Discipline) governs running a declared verification command before reporting a release complete; it has nothing to do with confirming which git branch is active before working.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R3\",\n      \"reason\": \"R3 is a pending hook proposal about confirming before destructive file deletion; these branch-mismatch incidents involve no deletion and a different mechanism (branch verification vs. destructive-action confirmation), so there is no overlap.\",\n      \"verdict\": \"clear\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 2,\n      \"quote\": \"You are not following the branch instruction in /work/fake-aurora.\"\n    },\n    {\n      \"incident_id\": 16,\n      \"quote\": \"Why are you doing this from the stale fake branch?\"\n    }\n  ],\n  \"failure_statement\": \"The agent proceeds to edit code, run commands, or report progress on a git branch other than the one the user specified or expected (a wrong or stale branch), without first confirming the current branch matches the user's instructions.\",\n  \"remedy_content\": {\n    \"target\": \"global\",\n    \"text\": \"## Branch Verification\\n\\nBefore making edits or running commands in a git repo, confirm the current branch matches what the user specified or would expect (`git branch --show-current` / `git status`). If it looks wrong, stale, or unspecified and ambiguous, stop and either switch to the correct branch or ask — never continue substantive work silently on the wrong branch.\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"Both promoted incidents describe the same failure mode: the agent proceeded to work on the wrong or a stale branch instead of the one the user actually specified/expected (incident 2: \\\"not following the branch instruction\\\"; incident 16: \\\"doing this from the stale fake branch\\\"). This is a classic environment-mismanagement case (wrong branch), and the fix is a simple standing behavioral rule — check the current branch against what the user asked for before acting — not a multi-step procedure, so a skill would be overkill. A hook is not viable as the primary enforcement because determining \\\"the branch the user specified\\\" requires parsing natural-language instructions, which a mechanical PreToolUse/SessionStart hook cannot reliably do; a hook could at best surface the current branch, not verify correctness against intent. That leaves claude-md as the cheapest sufficient remedy: a short standing rule instructing the agent to confirm the active branch matches instructions before editing/running commands, and to stop and reconcile (switch or ask) if not. This is a natural, additive extension of the branch-workflow discipline already present in the user's global CLAUDE.md, so it targets global rather than a specific project (the two incidents span two different synthetic projects, confirming this is a general behavior gap, not project-specific).\",\n  \"singleton\": false\n}\n",
+    "schema": {
+      "properties": {
+        "actionability": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "generality_without_vagueness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "leakage": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "routing_fitness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "trigger_quality": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "actionability",
+        "generality_without_vagueness",
+        "trigger_quality",
+        "leakage",
+        "routing_fitness"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 32120,
+    "duration_ms": 32317,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 4594,
+        "cacheReadInputTokens": 28513,
+        "contextWindow": 1000000,
+        "costUSD": 0.0987819,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 2824,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"actionability\":{\"score\":4,\"justification\":\"The remedy specifies a concrete check (`git branch --show-current`/`git status`) and a concrete stop condition (switch or ask, never continue silently), giving the agent an unambiguous behavior change rather than a vague aspiration.\"},\"generality_without_vagueness\":{\"score\":4,\"justification\":\"It generalizes cleanly to any git repo work ('before making edits or running commands'), covering both 'wrong branch' and 'stale/unspecified branch' cases without collapsing into a platitude like 'be careful with branches.'\"},\"trigger_quality\":{\"score\":4,\"justification\":\"Not a skill, so no formal 'Use when...' clause is required, but the claude-md text embeds an equivalent clear firing condition ('before making edits or running commands in a git repo') that is specific enough to act on.\"},\"leakage\":{\"score\":5,\"justification\":\"The remedy text contains no project-specific nouns or incident details (no 'fake-aurora', no 'fake branch') — it reads as a fully generic standing rule.\"},\"routing_fitness\":{\"score\":4,\"justification\":\"claude-md is well-justified over a hook (branch-vs-user-intent matching needs NL understanding a mechanical hook can't do) or a skill (this is a short standing check, not a multi-step procedure), though the rationale doesn't address potential overlap with the pre-existing 'always ask which branch' section already in the same file.\"}}",
+    "session_id": "2ddb0906-8450-45b1-976f-26c86542ff69",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "actionability": {
+        "justification": "The remedy specifies a concrete check (`git branch --show-current`/`git status`) and a concrete stop condition (switch or ask, never continue silently), giving the agent an unambiguous behavior change rather than a vague aspiration.",
+        "score": 4
+      },
+      "generality_without_vagueness": {
+        "justification": "It generalizes cleanly to any git repo work ('before making edits or running commands'), covering both 'wrong branch' and 'stale/unspecified branch' cases without collapsing into a platitude like 'be careful with branches.'",
+        "score": 4
+      },
+      "leakage": {
+        "justification": "The remedy text contains no project-specific nouns or incident details (no 'fake-aurora', no 'fake branch') — it reads as a fully generic standing rule.",
+        "score": 5
+      },
+      "routing_fitness": {
+        "justification": "claude-md is well-justified over a hook (branch-vs-user-intent matching needs NL understanding a mechanical hook can't do) or a skill (this is a short standing check, not a multi-step procedure), though the rationale doesn't address potential overlap with the pre-existing 'always ask which branch' section already in the same file.",
+        "score": 4
+      },
+      "trigger_quality": {
+        "justification": "Not a skill, so no formal 'Use when...' clause is required, but the claude-md text embeds an equivalent clear firing condition ('before making edits or running commands in a git repo') that is specific enough to act on.",
+        "score": 4
+      }
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 100,
+    "total_cost_usd": 0.0987819,
+    "ttft_ms": 27325,
+    "ttft_stream_ms": 4078,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 4594,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 4594,
+      "cache_read_input_tokens": 28513,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 4594,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 4594,
+          "cache_read_input_tokens": 28513,
+          "input_tokens": 6768,
+          "output_tokens": 2824,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 2824,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "dc0c8ad7-2e5e-4876-b04e-1a811f299f49"
+  }
+}
