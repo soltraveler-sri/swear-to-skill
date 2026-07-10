@@ -48,6 +48,10 @@ synthesize = "sonnet"
 # Subprocess calls are independent; bounded threads keep bulk work pleasant.
 parallelism = 2
 
+[prompts]
+# Stable R-ids make the default synthesis dedup contract round-trip reliably.
+synthesize = "v2"
+
 [costs]
 # Bulk work above this estimated amount requires --yes or an interactive confirmation.
 confirm_threshold_usd = 1.0

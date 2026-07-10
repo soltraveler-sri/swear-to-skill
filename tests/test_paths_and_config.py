@@ -40,6 +40,7 @@ def test_missing_config_returns_documented_defaults(monkeypatch, tmp_path) -> No
     assert config.models.curate == "sonnet"
     assert config.models.synthesize == "sonnet"
     assert config.models.parallelism == 2
+    assert config.prompts.synthesize == "v2"
     assert config.costs.confirm_threshold_usd == 1.0
     assert config.curator.qc_sample_size == 5
     assert config.curator.context_char_budget == 60_000

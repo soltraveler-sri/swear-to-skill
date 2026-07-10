@@ -68,65 +68,65 @@
   },
   "response": {
     "api_error_status": null,
-    "duration_api_ms": 10984,
-    "duration_ms": 11266,
+    "duration_api_ms": 14073,
+    "duration_ms": 14395,
     "fast_mode_state": "off",
     "is_error": false,
     "modelUsage": {
       "claude-haiku-4-5-20251001": {
-        "cacheCreationInputTokens": 8981,
+        "cacheCreationInputTokens": 9262,
         "cacheReadInputTokens": 50424,
         "contextWindow": 200000,
-        "costUSD": 0.027613400000000003,
+        "costUSD": 0.0298304,
         "inputTokens": 19,
         "maxOutputTokens": 32000,
-        "outputTokens": 918,
+        "outputTokens": 1249,
         "webSearchRequests": 0
       }
     },
     "num_turns": 3,
     "permission_denials": [],
-    "result": "{\"authentic\":true,\"confidence\":0.95,\"label\":\"ignored-instruction\",\"one_liner\":\"Did not respect explicit constraint about scope of changes\",\"reason\":\"User stated an explicit boundary ('this patch must not touch tests'), the agent appears to have violated it, and responded with a synthetic acknowledgement rather than correcting the error.\",\"severity\":2}",
-    "session_id": "cc567943-960c-4496-a490-fa0a6f90fa6a",
+    "result": "{\"authentic\":true,\"label\":\"ignored-instruction\",\"one_liner\":\"ignored an explicit constraint on code scope or modifications\",\"reason\":\"The frustrated message \\\"Follow the instructions: this patch must not touch tests\\\" indicates an explicit instruction was not followed. The user conveyed a clear directive (\\\"must not touch tests\\\") that the agent violated by modifying test files. This is a straightforward case of an explicit user instruction being disregarded.\",\"severity\":2,\"confidence\":0.9}",
+    "session_id": "755adfb4-d7d3-4d4c-a4d5-7e114c8a6675",
     "stop_reason": "tool_use",
     "structured_output": {
       "authentic": true,
-      "confidence": 0.95,
+      "confidence": 0.9,
       "label": "ignored-instruction",
-      "one_liner": "Did not respect explicit constraint about scope of changes",
-      "reason": "User stated an explicit boundary ('this patch must not touch tests'), the agent appears to have violated it, and responded with a synthetic acknowledgement rather than correcting the error.",
+      "one_liner": "ignored an explicit constraint on code scope or modifications",
+      "reason": "The frustrated message \"Follow the instructions: this patch must not touch tests\" indicates an explicit instruction was not followed. The user conveyed a clear directive (\"must not touch tests\") that the agent violated by modifying test files. This is a straightforward case of an explicit user instruction being disregarded.",
       "severity": 2
     },
     "subtype": "success",
     "terminal_reason": "completed",
-    "time_to_request_ms": 109,
-    "total_cost_usd": 0.027613400000000003,
-    "ttft_ms": 7173,
-    "ttft_stream_ms": 1494,
+    "time_to_request_ms": 101,
+    "total_cost_usd": 0.0298304,
+    "ttft_ms": 9785,
+    "ttft_stream_ms": 1156,
     "type": "result",
     "usage": {
       "cache_creation": {
-        "ephemeral_1h_input_tokens": 8981,
+        "ephemeral_1h_input_tokens": 9262,
         "ephemeral_5m_input_tokens": 0
       },
-      "cache_creation_input_tokens": 8981,
+      "cache_creation_input_tokens": 9262,
       "cache_read_input_tokens": 50424,
       "inference_geo": "not_available",
       "input_tokens": 19,
       "iterations": [
         {
           "cache_creation": {
-            "ephemeral_1h_input_tokens": 719,
+            "ephemeral_1h_input_tokens": 1000,
             "ephemeral_5m_input_tokens": 0
           },
-          "cache_creation_input_tokens": 719,
+          "cache_creation_input_tokens": 1000,
           "cache_read_input_tokens": 29343,
           "input_tokens": 10,
-          "output_tokens": 235,
+          "output_tokens": 285,
           "type": "message"
         }
       ],
-      "output_tokens": 918,
+      "output_tokens": 1249,
       "server_tool_use": {
         "web_fetch_requests": 0,
         "web_search_requests": 0
@@ -134,6 +134,6 @@
       "service_tier": "standard",
       "speed": "standard"
     },
-    "uuid": "7a6713f2-87b5-4187-ba50-1fa1577e1776"
+    "uuid": "9f680820-6310-4cb7-8538-443d19fdc592"
   }
 }

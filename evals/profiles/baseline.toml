@@ -11,7 +11,8 @@ prompt_version = "v1"
 
 [synthesize]
 model = "sonnet"
-prompt_version = "v1"
+# v1 remains available as an explicit A/B arm.
+prompt_version = "v2"
 
 [judge]
 model = "sonnet"

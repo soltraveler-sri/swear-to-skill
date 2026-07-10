@@ -68,65 +68,65 @@
   },
   "response": {
     "api_error_status": null,
-    "duration_api_ms": 13418,
-    "duration_ms": 13760,
+    "duration_api_ms": 10943,
+    "duration_ms": 11239,
     "fast_mode_state": "off",
     "is_error": false,
     "modelUsage": {
       "claude-haiku-4-5-20251001": {
-        "cacheCreationInputTokens": 9478,
+        "cacheCreationInputTokens": 9200,
         "cacheReadInputTokens": 50759,
         "contextWindow": 200000,
-        "costUSD": 0.0303959,
+        "costUSD": 0.027789900000000003,
         "inputTokens": 19,
         "maxOutputTokens": 32000,
-        "outputTokens": 1269,
+        "outputTokens": 859,
         "webSearchRequests": 0
       }
     },
     "num_turns": 3,
     "permission_denials": [],
-    "result": "{\"authentic\":false,\"reason\":\"The frustrated message is explicitly marked as playful/ironic language ('that is a joke'). While the preceding context suggests a real agent error (user stated 'That's not what I asked; the request was a one-file note'), the frustration itself is not genuine—it's self-directed humor about future memory, not a direct complaint about the agent's behavior.\",\"label\":\"scope-deviation\",\"one_liner\":\"Delivered more or broader work than the specified request scope\",\"severity\":2,\"confidence\":0.92}",
-    "session_id": "5b6d314c-fba9-43ca-9b9a-4094e955d0b4",
+    "result": "{\"authentic\":false,\"label\":\"misread-request\",\"one_liner\":\"User explicitly frames frustration as a joke, disqualifying it as authentic incident feedback\",\"reason\":\"The frustrated message includes the explicit qualifier \\\"that is a joke\\\", which per the instructions disqualifies it as authentic frustration at the agent's behavior. The underlying context (agent didn't deliver the one-file note that was requested) describes a real misread-request failure, but the stated frustration is playful language, not genuine complaint.\",\"severity\":1,\"confidence\":0.95}",
+    "session_id": "b6368047-f6d4-4ea0-af55-8561628bd1fc",
     "stop_reason": "tool_use",
     "structured_output": {
       "authentic": false,
-      "confidence": 0.92,
-      "label": "scope-deviation",
-      "one_liner": "Delivered more or broader work than the specified request scope",
-      "reason": "The frustrated message is explicitly marked as playful/ironic language ('that is a joke'). While the preceding context suggests a real agent error (user stated 'That's not what I asked; the request was a one-file note'), the frustration itself is not genuine—it's self-directed humor about future memory, not a direct complaint about the agent's behavior.",
-      "severity": 2
+      "confidence": 0.95,
+      "label": "misread-request",
+      "one_liner": "User explicitly frames frustration as a joke, disqualifying it as authentic incident feedback",
+      "reason": "The frustrated message includes the explicit qualifier \"that is a joke\", which per the instructions disqualifies it as authentic frustration at the agent's behavior. The underlying context (agent didn't deliver the one-file note that was requested) describes a real misread-request failure, but the stated frustration is playful language, not genuine complaint.",
+      "severity": 1
     },
     "subtype": "success",
     "terminal_reason": "completed",
-    "time_to_request_ms": 139,
-    "total_cost_usd": 0.0303959,
-    "ttft_ms": 8007,
-    "ttft_stream_ms": 1035,
+    "time_to_request_ms": 106,
+    "total_cost_usd": 0.027789900000000003,
+    "ttft_ms": 6174,
+    "ttft_stream_ms": 1475,
     "type": "result",
     "usage": {
       "cache_creation": {
-        "ephemeral_1h_input_tokens": 9478,
+        "ephemeral_1h_input_tokens": 9200,
         "ephemeral_5m_input_tokens": 0
       },
-      "cache_creation_input_tokens": 9478,
+      "cache_creation_input_tokens": 9200,
       "cache_read_input_tokens": 50759,
       "inference_geo": "not_available",
       "input_tokens": 19,
       "iterations": [
         {
           "cache_creation": {
-            "ephemeral_1h_input_tokens": 881,
+            "ephemeral_1h_input_tokens": 603,
             "ephemeral_5m_input_tokens": 0
           },
-          "cache_creation_input_tokens": 881,
+          "cache_creation_input_tokens": 603,
           "cache_read_input_tokens": 29678,
           "input_tokens": 10,
-          "output_tokens": 424,
+          "output_tokens": 292,
           "type": "message"
         }
       ],
-      "output_tokens": 1269,
+      "output_tokens": 859,
       "server_tool_use": {
         "web_fetch_requests": 0,
         "web_search_requests": 0
@@ -134,6 +134,6 @@
       "service_tier": "standard",
       "speed": "standard"
     },
-    "uuid": "ab21999c-9913-4731-a773-56e95ea4af73"
+    "uuid": "3be8081e-4a86-4db0-a724-7a71e02b3e04"
   }
 }
