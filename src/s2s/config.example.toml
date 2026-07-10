@@ -17,6 +17,16 @@ qc_sample_size = 5
 # Full context is chunked by label cluster above this per-call character budget.
 context_char_budget = 60000
 
+[auditor]
+# A remedy needs either this many post-install active sessions or this many days
+# before a non-silent outcome can be judged.
+min_post_install_sessions = 20
+min_post_install_days = 30
+# Zero incidents in the remedy's own cluster for this long is a retirement candidate.
+silent_days = 90
+# Post-install rate must drop at least this fraction to be called effective.
+meaningful_drop_fraction = 0.20
+
 [autonomy]
 # Human review is the default gate policy. "autonomous" is opt-in.
 mode = "review"

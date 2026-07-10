@@ -53,6 +53,18 @@ class CostTotal:
 
 
 @dataclass(frozen=True)
+class RemedyOutcome:
+    """The latest compact, per-remedy audit reading for status/dashboard surfaces."""
+
+    remedy_id: int
+    label: str
+    installed_at: str
+    pre_rate: float | None
+    post_rate: float | None
+    verdict: str | None
+
+
+@dataclass(frozen=True)
 class DashboardData:
     """All durable facts needed by the static dashboard and status command."""
 
@@ -73,6 +85,8 @@ class DashboardData:
     date_end: date | None
     last_scan: str | None
     cost_totals: tuple[CostTotal, ...]
+    remedy_outcomes: tuple[RemedyOutcome, ...]
+    revision_proposal_count: int
 
     @property
     def rate(self) -> float:
@@ -106,6 +120,20 @@ def collect_dashboard_data(ledger: Ledger) -> DashboardData:
     stats = ledger.session_stats()
     incident_counts, categories, state_counts = _incident_aggregates(ledger)
     cost_totals = _cost_totals(ledger)
+    remedy_outcomes = tuple(
+        RemedyOutcome(
+            remedy_id=remedy.id,
+            label=", ".join(ledger.remedy_labels(remedy.id)) or "unlabelled",
+            installed_at=remedy.installed_at,
+            pre_rate=remedy.outcome_pre_rate,
+            post_rate=remedy.outcome_post_rate,
+            verdict=remedy.outcome_verdict,
+        )
+        for remedy in ledger.installed_remedies()
+    )
+    revision_proposal_count = sum(
+        proposal.proposal_kind == "revision" for proposal in ledger.pending_proposals()
+    )
     weekly: dict[date, list[int]] = defaultdict(lambda: [0, 0])
     models: dict[str, list[int]] = defaultdict(lambda: [0, 0])
     sources: dict[str, list[int]] = defaultdict(lambda: [0, 0])
@@ -175,6 +203,8 @@ def collect_dashboard_data(ledger: Ledger) -> DashboardData:
         date_end=max(dates) if dates else None,
         last_scan=max(scan_times)[1] if scan_times else None,
         cost_totals=cost_totals,
+        remedy_outcomes=remedy_outcomes,
+        revision_proposal_count=revision_proposal_count,
     )
 
 
@@ -261,6 +291,23 @@ def render_status(data: DashboardData, *, archived_sessions: int) -> str:
     ]
     if not data.cost_totals:
         cost_lines.append("  no LLM runs recorded")
+    outcome_counts = Counter(
+        outcome.verdict for outcome in data.remedy_outcomes if outcome.verdict is not None
+    )
+    summary_parts = [
+        f"{count} {verdict}"
+        for verdict, count in sorted(outcome_counts.items())
+        if verdict != "persisting" or data.revision_proposal_count == 0
+    ]
+    if data.revision_proposal_count:
+        summary_parts.append(f"{data.revision_proposal_count} revision proposed")
+    remedy_summary = ", ".join(summary_parts) or "not yet audited"
+    remedy_lines = tuple(
+        "remedy "
+        f"#{outcome.remedy_id} [{outcome.label}]: {outcome.verdict or 'not audited'} "
+        f"(pre {_audit_rate(outcome.pre_rate)}, post {_audit_rate(outcome.post_rate)})"
+        for outcome in data.remedy_outcomes
+    )
     return "\n".join(
         (
             "s2s status",
@@ -279,6 +326,8 @@ def render_status(data: DashboardData, *, archived_sessions: int) -> str:
             f"singleton ratio: {_percentage(data.singleton_ratio * 100)}",
             f"other share: {_percentage(data.other_share * 100)}",
             f"last scan: {data.last_scan or 'none'}",
+            f"remedies installed: {len(data.remedy_outcomes)} ({remedy_summary})",
+            *remedy_lines,
             *cost_lines,
         )
     )
@@ -528,8 +577,28 @@ def _render_health(data: DashboardData) -> str:
   {_render_cost_log(data.cost_totals)}
   <div id="proposals-digest" class="placeholder"><strong>Proposals digest</strong><br>TODO — issue #13 will add review-ready remedies here.</div>
 </div>
-<div id="remedy-outcomes" class="placeholder" style="margin-top:12px"><strong>Remedy outcomes</strong><br>TODO — issue #16 will add post-install outcome measurement here.</div>
+{_render_remedy_outcomes(data.remedy_outcomes)}
 """
+
+
+def _render_remedy_outcomes(outcomes: tuple[RemedyOutcome, ...]) -> str:
+    rows = "".join(
+        "<tr>"
+        f"<td>#{outcome.remedy_id} · {escape(outcome.label)}</td>"
+        f"<td>{escape(outcome.installed_at[:10])}</td>"
+        f"<td>{_audit_rate(outcome.pre_rate)}</td>"
+        f"<td>{_audit_rate(outcome.post_rate)}</td>"
+        f"<td>{escape(outcome.verdict or 'not audited')}</td>"
+        "</tr>"
+        for outcome in outcomes
+    ) or '<tr><td colspan="5" class="muted">No installed remedies yet.</td></tr>'
+    return f"""<div id="remedy-outcomes" class="table-card" style="margin-top:12px">
+<h3>Remedy outcomes</h3><table><thead><tr><th>Remedy</th><th>Installed</th><th>Pre rate</th><th>Post rate</th><th>Verdict</th></tr></thead>
+<tbody>{rows}</tbody></table></div>"""
+
+
+def _audit_rate(value: float | None) -> str:
+    return "n/a" if value is None else f"{value:.3f}/session"
 
 
 def _render_cost_log(cost_totals: tuple[CostTotal, ...]) -> str:

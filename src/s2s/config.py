@@ -72,6 +72,16 @@ class Sources:
 
 
 @dataclass(frozen=True)
+class Auditor:
+    """Evidence thresholds for deterministic remedy outcome measurement."""
+
+    min_post_install_sessions: int = 20
+    min_post_install_days: int = 30
+    silent_days: int = 90
+    meaningful_drop_fraction: float = 0.20
+
+
+@dataclass(frozen=True)
 class Config:
     """Complete configuration available before any optional features exist."""
 
@@ -82,6 +92,7 @@ class Config:
     costs: Costs = Costs()
     curator: Curator = Curator()
     sources: Sources = Sources()
+    auditor: Auditor = Auditor()
 
 
 def _section(document: dict[str, object], name: str) -> dict[str, object]:
@@ -133,6 +144,7 @@ def load_config(config_path: Path | None = None) -> Config:
     costs = _section(document, "costs")
     curator = _section(document, "curator")
     sources = _section(document, "sources")
+    auditor = _section(document, "auditor")
     defaults = Config()
     # Codex is opt-out when its normal rollout root exists; otherwise preserve a
     # quiet default for machines that have never used Codex.
@@ -221,4 +233,22 @@ def load_config(config_path: Path | None = None) -> Config:
             ),
         ),
         sources=Sources(codex=_bool(sources, "codex", codex_default)),
+        auditor=Auditor(
+            min_post_install_sessions=_int(
+                auditor,
+                "min_post_install_sessions",
+                defaults.auditor.min_post_install_sessions,
+            ),
+            min_post_install_days=_int(
+                auditor,
+                "min_post_install_days",
+                defaults.auditor.min_post_install_days,
+            ),
+            silent_days=_int(auditor, "silent_days", defaults.auditor.silent_days),
+            meaningful_drop_fraction=_float(
+                auditor,
+                "meaningful_drop_fraction",
+                defaults.auditor.meaningful_drop_fraction,
+            ),
+        ),
     )

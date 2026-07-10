@@ -161,6 +161,8 @@ def _proposal_view(proposal: object) -> dict[str, object]:
         "confidence": payload.get("confidence"),
         "revises": proposal.revises,
         "singleton": proposal.singleton,
+        "proposal_kind": proposal.proposal_kind,
+        "target_remedy_id": proposal.target_remedy_id,
     }
 
 
@@ -190,7 +192,7 @@ def _run_proposals(args: argparse.Namespace) -> int:
 
 
 def _run_approve(args: argparse.Namespace) -> int:
-    from .gate import GateError, edit_proposal_content, install
+    from .gate import GateError, edit_proposal_content, install, rollback
     from .ledger import Ledger, LedgerError
 
     try:
@@ -213,6 +215,17 @@ def _run_approve(args: argparse.Namespace) -> int:
                 raise LedgerError(
                     f"proposal {proposal.id} is {proposal.gate_status!r}, not pending"
                 )
+        if proposal.proposal_kind == "retirement":
+            if proposal.target_remedy_id is None:
+                raise LedgerError(f"retirement proposal {proposal.id} has no target remedy")
+            result = rollback(proposal.target_remedy_id)
+            with Ledger() as ledger:
+                ledger.mark_retirement_proposal_completed(
+                    proposal.id,
+                    rollback_record_ref=f"rollbacks/remedy-{result.remedy_id}.json",
+                )
+            print(f"retired remedy {result.remedy_id} from proposal {proposal.id}")
+            return 0
         result = install(proposal)
     except (GateError, LedgerError, OSError) as error:
         print(f"approve failed: {error}", file=sys.stderr)
