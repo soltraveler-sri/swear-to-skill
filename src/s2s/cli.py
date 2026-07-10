@@ -87,6 +87,7 @@ def build_parser() -> argparse.ArgumentParser:
     eval_parser.add_argument("--thresholds", type=Path)
     eval_parser.add_argument("--repeat", type=int, default=1)
     eval_parser.add_argument("--cycles", type=int, default=1)
+    eval_parser.add_argument("--matrix", help="Comma-separated, baseline-first profile names from evals/profiles.")
 
     hook_parser = subparsers.add_parser("hook")
     hook_subparsers = hook_parser.add_subparsers(dest="hook_event")
@@ -436,7 +437,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1 if result.failed else 0
 
     if args.command == "eval":
-        from .evalrun import DEFAULT_CORPUS, EvalRunConfig, EvalRunError, parse_stages, run_eval
+        from .evalrun import DEFAULT_CORPUS, EvalRunConfig, EvalRunError, load_profile, parse_matrix_profiles, parse_stages, run_eval, run_matrix
         from .evalreport import EvalReportError, exit_code_for_verdict, write_report
         from .evalscore import EvalScoreError, score_files
 
@@ -453,6 +454,14 @@ def main(argv: Sequence[str] | None = None) -> int:
                 repeat=args.repeat,
                 cycles=args.cycles,
             )
+            if args.matrix:
+                profiles = tuple(load_profile(name) for name in parse_matrix_profiles(args.matrix))
+                matrix = run_matrix(config, profiles, thresholds_path=args.thresholds)
+                print(f"matrix: {matrix.root}")
+                print(f"comparative report: {matrix.report_html_path.resolve().as_uri()}")
+                for profile, result in zip(profiles, matrix.arms, strict=True):
+                    print(f"arm {profile.name}: record={result.record_path}")
+                return 0
             result = run_eval(config)
             scores = score_files(
                 result.record_path,

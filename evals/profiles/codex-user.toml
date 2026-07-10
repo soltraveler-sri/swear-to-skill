@@ -1,0 +1,18 @@
+[profile]
+description = "Placeholder only: model strings must be supplied by the user's own Claude gateway/router configuration; this arm will fail without that provider setup."
+
+[triage]
+model = "codex-user-triage"
+prompt_version = "v1"
+
+[curate]
+model = "codex-user-curate"
+prompt_version = "v1"
+
+[synthesize]
+model = "codex-user-synthesize"
+prompt_version = "v1"
+
+[judge]
+model = "codex-user-judge"
+prompt_version = "v1"

@@ -68,10 +68,11 @@ def synthesize_pending(
     if not groups:
         return []
 
-    model = load_config().models.synthesize
+    config = load_config()
+    model = config.models.synthesize
     if not estimate_and_confirm(len(groups), model, assume_yes=assume_yes):
         return []
-    template, schema = load_prompt(PROMPT_NAME, PROMPT_VERSION)
+    template, schema = load_prompt(PROMPT_NAME, config.prompts.synthesize)
     default_project_paths = project_claude_md_paths
     if default_project_paths is None:
         default_project_paths = _incident_project_claude_md_paths(groups.values())
@@ -90,6 +91,7 @@ def synthesize_pending(
             render_synthesis_prompt(template, label, incidents, surface),
             schema=schema,
             model=model,
+            effort=config.models.synthesize_effort,
             incident_ids={incident.id for incident in incidents},
             surface_references=set(surface.references),
         )
@@ -128,7 +130,8 @@ def synthesize_audit_revision(
     if original is None:
         raise SynthesisValidationError(f"remedy {remedy.id} has no source proposal")
     surface = collect_remedy_surface(ledger)
-    template, schema = load_prompt(PROMPT_NAME, PROMPT_VERSION)
+    config = load_config()
+    template, schema = load_prompt(PROMPT_NAME, config.prompts.synthesize)
     prompt = render_synthesis_prompt(template, label, incidents, surface)
     prompt += (
         "\n\nAUDIT REVISION BRIEF\n"
@@ -142,7 +145,8 @@ def synthesize_audit_revision(
     response = _call_validated(
         prompt,
         schema=schema,
-        model=load_config().models.synthesize,
+        model=config.models.synthesize,
+        effort=config.models.synthesize_effort,
         incident_ids={incident.id for incident in incidents},
         surface_references=set(surface.references),
     )
@@ -275,6 +279,7 @@ def _call_validated(
     *,
     schema: dict[str, object],
     model: str,
+    effort: str | None = None,
     incident_ids: set[int],
     surface_references: set[str],
 ) -> dict[str, object]:
@@ -288,6 +293,7 @@ def _call_validated(
             schema=schema,
             model=model,
             stage="synthesize",
+            effort=effort,
         )
         try:
             _validate_response(response, incident_ids=incident_ids, surface_references=surface_references)

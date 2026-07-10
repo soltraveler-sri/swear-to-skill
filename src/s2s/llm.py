@@ -6,6 +6,7 @@ from collections.abc import Callable, Iterable, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from dataclasses import dataclass
+from functools import lru_cache
 from hashlib import sha256
 import json
 import os
@@ -113,11 +114,26 @@ class _Attempt:
     result: dict[str, object]
 
 
-def build_argv(schema: Mapping[str, object] | str, model: str) -> list[str]:
+@lru_cache(maxsize=1)
+def claude_supports_effort() -> bool:
+    """Ask the installed CLI, rather than guessing, whether effort is supported."""
+
+    try:
+        completed = subprocess.run(
+            ["claude", "-p", "--help"], capture_output=True, text=True, timeout=5, check=False
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return False
+    return "--effort" in (completed.stdout + completed.stderr)
+
+
+def build_argv(
+    schema: Mapping[str, object] | str, model: str, *, effort: str | None = None
+) -> list[str]:
     """Construct the sole supported Claude CLI command without shell interpolation."""
 
     schema_text, _ = _schema_text_and_data(schema)
-    return [
+    argv = [
         *CLAUDE_BASE_ARGS,
         "--json-schema",
         schema_text,
@@ -125,6 +141,11 @@ def build_argv(schema: Mapping[str, object] | str, model: str) -> list[str]:
         model,
         *CLAUDE_REQUIRED_FLAGS,
     ]
+    # Older CLIs have no equivalent flag. Keep profile data valid there, but do
+    # not pretend a setting was applied when their help output says otherwise.
+    if effort is not None and claude_supports_effort():
+        argv.extend(("--effort", effort))
+    return argv
 
 
 def call(
@@ -133,6 +154,7 @@ def call(
     schema: Mapping[str, object] | str,
     model: str,
     stage: str,
+    effort: str | None = None,
     timeout_s: float = 120,
 ) -> dict[str, object]:
     """Run one structured Claude request, retrying malformed output exactly once.
@@ -142,7 +164,7 @@ def call(
     """
 
     schema_text, schema_data = _schema_text_and_data(schema)
-    argv = build_argv(schema_text, model)
+    argv = build_argv(schema_text, model, effort=effort)
 
     with Ledger() as ledger:
         for attempt_index in range(2):

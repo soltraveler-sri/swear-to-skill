@@ -47,11 +47,12 @@ def triage_pending(ledger: Ledger, *, limit: int | None = None, assume_yes: bool
     if not incidents:
         return []
 
-    model = load_config().models.triage
+    config = load_config()
+    model = config.models.triage
     if not estimate_and_confirm(len(incidents), model, assume_yes=assume_yes):
         return []
 
-    template, base_schema = load_prompt(PROMPT_NAME, PROMPT_VERSION)
+    template, base_schema = load_prompt(PROMPT_NAME, config.prompts.triage)
     schema = triage_schema(base_schema)
     outcomes: list[TriageResult] = []
     for incident in incidents:
@@ -61,6 +62,7 @@ def triage_pending(ledger: Ledger, *, limit: int | None = None, assume_yes: bool
             schema=schema,
             model=model,
             stage="triage",
+            effort=config.models.triage_effort,
         )
         authentic = response["authentic"]
         reason = response["reason"]
@@ -90,7 +92,7 @@ def triage_schema(base_schema: dict[str, object] | None = None) -> dict[str, obj
     """Inject the current taxonomy into the label enum at call time."""
 
     if base_schema is None:
-        _, base_schema = load_prompt(PROMPT_NAME, PROMPT_VERSION)
+        _, base_schema = load_prompt(PROMPT_NAME, load_config().prompts.triage)
     schema = deepcopy(base_schema)
     properties = schema.get("properties")
     if not isinstance(properties, dict) or not isinstance(properties.get("label"), dict):
