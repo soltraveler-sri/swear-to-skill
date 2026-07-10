@@ -7,6 +7,27 @@ swear-to-skill keeps those local signals, turns genuine recurring failures into
 reviewable remedies, and measures whether the remedy helped. It is both a private
 frustration meter and a careful improvement pipeline for Claude Code.
 
+## Not just skills — the right remedy, in the right shape
+
+Despite the name, a skill is the *least* common thing this pipeline produces.
+For every recurring failure it judges which remedy shape actually fixes it, in
+strict preference order, and installs it:
+
+1. **A one-or-two-line `CLAUDE.md` rule** — the most common outcome, applied
+   hands-free (in autonomy mode) inside clearly marked, one-command-reversible
+   blocks. Most behavioral failures need a standing sentence, not a skill.
+2. **A Claude Code hook** — mechanical enforcement (for example, actually
+   running the tests after edits so "claimed it works, didn't check" cannot
+   recur). Hooks touch `settings.json`, so they **always require your explicit
+   approval**, even in autonomy mode.
+3. **A skill** — only for genuinely procedural, multi-step remedies; prefixed
+   `s2s-` so you can spot pipeline skills at a glance.
+4. **Benchmark-only** — model-level failures no instruction can fix are kept
+   as meter data instead of manufacturing a remedy.
+
+Every installed remedy, whatever its shape, is provenance-tagged, tracked for
+real-world effectiveness, and reversible with `s2s rollback`.
+
 <!-- Screenshot placeholder: local meter dashboard -->
 
 ## Quickstart
@@ -96,7 +117,9 @@ before that happens.
 ### Why did nothing become a skill yet?
 
 That is often the correct outcome. Most fixes should be a small CLAUDE.md rule, a hook,
-or benchmark-only data; a skill is for a genuinely procedural remedy. Check `s2s
+or benchmark-only data; a skill is for a genuinely procedural remedy — and the
+pipeline installs those other shapes too (see "Not just skills" above), so "no new
+skill" usually means the remedy simply took a cheaper form. Check `s2s
 status`: a high singleton ratio means incidents are not yet converging, while a high
 `other` share signals a taxonomy gap that the curator should garden.
 
