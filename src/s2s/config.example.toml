@@ -30,6 +30,7 @@ max_active_auto_skills = 15
 session_start_digest = true
 desktop = false
 webhook_url = ""
+events = ["proposal_pending", "autonomous_action"]
 
 [models]
 triage = "haiku"

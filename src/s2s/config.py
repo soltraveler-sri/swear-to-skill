@@ -36,6 +36,7 @@ class Notifications:
     session_start_digest: bool = True
     desktop: bool = False
     webhook_url: str = ""
+    events: tuple[str, ...] = ("proposal_pending", "autonomous_action")
 
 
 @dataclass(frozen=True)
@@ -98,6 +99,13 @@ def _bool(section: dict[str, object], name: str, default: bool) -> bool:
 def _float(section: dict[str, object], name: str, default: float) -> float:
     value = section.get(name, default)
     return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else default
+
+
+def _strings(section: dict[str, object], name: str, default: tuple[str, ...]) -> tuple[str, ...]:
+    value = section.get(name, default)
+    if not isinstance(value, list):
+        return default
+    return tuple(item for item in value if isinstance(item, str))
 
 
 def load_config(config_path: Path | None = None) -> Config:
@@ -170,6 +178,11 @@ def load_config(config_path: Path | None = None) -> Config:
                 notifications,
                 "webhook_url",
                 defaults.notifications.webhook_url,
+            ),
+            events=_strings(
+                notifications,
+                "events",
+                defaults.notifications.events,
             ),
         ),
         models=Models(

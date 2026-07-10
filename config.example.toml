@@ -22,6 +22,8 @@ max_active_auto_skills = 15
 session_start_digest = true
 desktop = false
 webhook_url = ""
+# Only these event names are eligible when either Layer 2 notifier is enabled.
+events = ["proposal_pending", "autonomous_action"]
 
 [models]
 # Model aliases resolved by the user's Claude Code CLI. Keep policy here, not at call sites.

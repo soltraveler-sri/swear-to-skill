@@ -26,6 +26,8 @@ SESSION_END_COMMAND = "s2s hook session-end"
 SESSION_END_ENTRY = {"type": "command", "command": SESSION_END_COMMAND}
 SKILL_NAME = "s2s"
 SKILL_VERSION_RE = re.compile(r"^<!-- s2s-skill-version: (\d+) -->$", re.MULTILINE)
+SESSION_START_COMMAND = "s2s hook session-start"
+SESSION_START_ENTRY = {"type": "command", "command": SESSION_START_COMMAND}
 
 
 class SettingsError(RuntimeError):
@@ -105,71 +107,36 @@ def remove_companion_skill(skill_path: Path | None = None) -> bool:
 
 def merge_session_end_hook(settings_path: Path | None = None) -> bool:
     """Add the s2s SessionEnd command while preserving every other setting."""
+    return merge_managed_hook(
+        settings_path or default_settings_path(),
+        event="SessionEnd",
+        command=SESSION_END_COMMAND,
+        marker=HOOK_MARKER,
+    )
 
-    path = Path(settings_path) if settings_path is not None else default_settings_path()
-    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    with _settings_update_lock(path):
-        document, original = _read_settings(path)
-        hooks, session_end = _validated_session_end(document)
 
-        if any(_is_s2s_hook(entry) for group in session_end for entry in group["hooks"]):
-            return False
-
-        session_end.append({"hooks": [dict(SESSION_END_ENTRY)]})
-        hooks["SessionEnd"] = session_end
-        document["hooks"] = hooks
-        _atomic_write_settings(path, document, original)
-        return True
+def merge_session_start_hook(settings_path: Path | None = None) -> bool:
+    """Add the s2s SessionStart digest command through the managed-hook path."""
+    return merge_managed_hook(
+        settings_path or default_settings_path(),
+        event="SessionStart",
+        command=SESSION_START_COMMAND,
+        marker=HOOK_MARKER,
+    )
 
 
 def remove_session_end_hook(settings_path: Path | None = None) -> bool:
     """Remove only commands carrying the s2s hook marker."""
+    return remove_managed_hook(
+        settings_path or default_settings_path(), event="SessionEnd", marker=HOOK_MARKER
+    )
 
-    path = Path(settings_path) if settings_path is not None else default_settings_path()
-    if not path.exists():
-        return False
 
-    with _settings_update_lock(path):
-        if not path.exists():
-            return False
-        document, original = _read_settings(path)
-        hooks, session_end = _validated_session_end(document)
-        if not session_end:
-            return False
-
-        changed = False
-        retained_groups: list[dict[str, object]] = []
-        for group in session_end:
-            entries = group["hooks"]
-            retained_entries = [entry for entry in entries if not _is_s2s_hook(entry)]
-            if len(retained_entries) == len(entries):
-                retained_groups.append(group)
-                continue
-
-            changed = True
-            if retained_entries:
-                retained_group = dict(group)
-                retained_group["hooks"] = retained_entries
-                retained_groups.append(retained_group)
-            elif not set(group).issubset({"hooks", "matcher"}):
-                retained_group = dict(group)
-                retained_group["hooks"] = []
-                retained_groups.append(retained_group)
-
-        if not changed:
-            return False
-
-        if retained_groups:
-            hooks["SessionEnd"] = retained_groups
-        else:
-            hooks.pop("SessionEnd", None)
-        if hooks:
-            document["hooks"] = hooks
-        else:
-            document.pop("hooks", None)
-
-        _atomic_write_settings(path, document, original)
-        return True
+def remove_session_start_hook(settings_path: Path | None = None) -> bool:
+    """Remove only the s2s SessionStart hook."""
+    return remove_managed_hook(
+        settings_path or default_settings_path(), event="SessionStart", marker=HOOK_MARKER
+    )
 
 
 def merge_managed_hook(
@@ -315,7 +282,9 @@ def initialize(
         directory.mkdir(mode=0o700, parents=True, exist_ok=True)
 
     config_created = _install_default_config(paths.config_path, config_template_path)
-    settings_changed = merge_session_end_hook(settings_path)
+    end_changed = merge_session_end_hook(settings_path)
+    start_changed = merge_session_start_hook(settings_path)
+    settings_changed = end_changed or start_changed
     resolved_skill_path = (
         Path(skill_path) if skill_path is not None else default_skill_path(settings_path)
     )
@@ -334,8 +303,9 @@ def uninstall(settings_path: Path | None = None, *, skill_path: Path | None = No
         Path(skill_path) if skill_path is not None else default_skill_path(settings_path)
     )
     skill_removed = remove_companion_skill(resolved_skill_path)
-    hook_removed = remove_session_end_hook(settings_path)
-    return hook_removed or skill_removed
+    end_removed = remove_session_end_hook(settings_path)
+    start_removed = remove_session_start_hook(settings_path)
+    return end_removed or start_removed or skill_removed
 
 
 def run_init(
@@ -353,13 +323,15 @@ def run_init(
         if uninstall_mode:
             changed = uninstall(settings_path)
             print(
-                "Removed s2s SessionEnd hook." if changed else "s2s SessionEnd hook not installed.",
+                "Removed s2s SessionStart and SessionEnd hooks."
+                if changed
+                else "s2s SessionStart and SessionEnd hooks not installed.",
                 file=output,
             )
         else:
             result = initialize(settings_path)
             print(
-                "s2s initialized."
+                "s2s initialized (hooks + /s2s skill)."
                 if result.settings_changed or result.config_created or result.skill_changed
                 else "s2s already initialized; no changes made.",
                 file=output,

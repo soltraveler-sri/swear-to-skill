@@ -60,6 +60,7 @@ def build_parser() -> argparse.ArgumentParser:
     hook_parser = subparsers.add_parser("hook")
     hook_subparsers = hook_parser.add_subparsers(dest="hook_event")
     hook_subparsers.add_parser("session-end")
+    hook_subparsers.add_parser("session-start", help=argparse.SUPPRESS)
 
     return parser
 
@@ -322,6 +323,16 @@ def main(argv: Sequence[str] | None = None) -> int:
             from .archiver import handle_session_end
 
             return handle_session_end()
+        if args.hook_event == "session-start":
+            from .notify import sessionstart_digest
+
+            try:
+                digest = sessionstart_digest()
+                if digest:
+                    print(digest)
+            except BaseException:
+                pass
+            return 0
         parser.error("hook requires an event")
 
     issue = COMMAND_ISSUES[args.command]
