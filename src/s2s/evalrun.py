@@ -421,7 +421,7 @@ class MockProvider:
     def _curate(self, prompt: str) -> dict[str, object]:
         verdicts: list[dict[str, object]] = []
         pack_pattern = re.compile(
-            r"BEGIN FULL CONTEXT PACK incident_id=(\d+) label=([^ ]+) origin=([^\n]+)\n"
+            r"BEGIN FULL CONTEXT PACK incident_id=(\d+) label=([^ ]+)[^\n]*? origin=([^\n]+)\n"
             r"(.*?)END FULL CONTEXT PACK incident_id=\1",
             re.DOTALL,
         )
@@ -1159,8 +1159,21 @@ def _drive_pipeline(
             passes: list[dict[str, object]] = []
             with Ledger() as ledger:
                 while ledger.curator_unreviewed_incidents() or ledger.curator_qc_candidates():
+                    pending_before = len(ledger.curator_unreviewed_incidents()) + len(
+                        ledger.curator_qc_candidates()
+                    )
                     digest = render_ledger_digest(ledger)
                     result = run_pass(ledger, assume_yes=True)
+                    pending_after = len(ledger.curator_unreviewed_incidents()) + len(
+                        ledger.curator_qc_candidates()
+                    )
+                    if pending_after >= pending_before and not (
+                        result.applied_incident_verdicts or result.applied_cluster_verdicts
+                    ):
+                        raise EvalRunError(
+                            "curator pass made no progress; aborting instead of looping "
+                            f"(pending {pending_before} -> {pending_after})"
+                        )
                     passes.append(
                         {
                             "ledger_digest": digest,
