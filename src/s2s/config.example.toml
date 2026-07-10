@@ -78,6 +78,11 @@ judge_counterfactual = "v1"
 [costs]
 confirm_threshold_usd = 1.0
 
+[visibility]
+# Keep a browsable, documentation-only copy of generated skills in
+# S2S_HOME/library. Claude Code discovery reads only its real skills directory.
+library = true
+
 [eval]
 # "auto" selects replay when this corpus/profile has recordings, otherwise mock.
 # Live mode is intentionally CLI-only so it can never become an implicit spend.
