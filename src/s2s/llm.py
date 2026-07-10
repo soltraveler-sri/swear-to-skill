@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 from time import perf_counter
 from typing import TypeAlias, TypeVar
 
@@ -22,8 +23,13 @@ from .ledger import Ledger
 
 CLAUDE_BASE_ARGS = ("claude", "-p", "--output-format", "json")
 # These flags are load-bearing: omitting session suppression makes the scanner ingest
-# transcripts from its own calls, while --bare keeps user configuration out of runs.
-CLAUDE_REQUIRED_FLAGS = ("--bare", "--no-session-persistence")
+# transcripts from its own calls, and slash-command/skill resolution would let user
+# skills leak into pipeline prompts. NOTE: `--bare` is deliberately absent — it skips
+# OAuth/credential resolution in current CLIs (built for API-key CI), which breaks
+# subscription-authenticated users. Context isolation comes instead from running the
+# subprocess in a neutral empty working directory (see NEUTRAL_CWD below), which
+# prevents project CLAUDE.md/skill pickup.
+CLAUDE_REQUIRED_FLAGS = ("--no-session-persistence", "--disable-slash-commands")
 CORRECTIVE_SUFFIX = (
     "\n\nYour previous response was not valid for the required JSON schema. "
     "Return only a corrected JSON result that exactly satisfies the schema."
@@ -265,6 +271,20 @@ def _call_once(
         )
 
 
+def _neutral_cwd() -> str:
+    """An empty directory for claude subprocesses.
+
+    Running from a neutral cwd prevents `claude -p` from loading whatever
+    project CLAUDE.md/skills surround the caller's working directory —
+    the context-isolation role `--bare` used to play before it proved to
+    also skip subscription credentials.
+    """
+
+    path = Path(tempfile.gettempdir()) / "s2s-neutral-cwd"
+    path.mkdir(parents=True, exist_ok=True)
+    return str(path)
+
+
 def default_response_provider(request: LLMRequest) -> dict[str, object]:
     """Execute the real Claude transport and return its parsed JSON envelope."""
 
@@ -276,6 +296,7 @@ def default_response_provider(request: LLMRequest) -> dict[str, object]:
         timeout=request.timeout_s,
         check=False,
         env=dict(request.env),
+        cwd=_neutral_cwd(),
     )
     if completed.returncode != 0:
         stderr = completed.stderr.strip()
