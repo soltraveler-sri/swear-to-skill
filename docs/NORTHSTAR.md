@@ -354,7 +354,7 @@ Rules that make this fragmentation-proof by construction:
 | Stage | Model | Cost shape | Trigger |
 |---|---|---|---|
 | Archive/Scan | none | ~0 | SessionEnd hook / backfill |
-| Triage | Haiku | ¢-level per incident, O(hits) | batched (default daily or on-demand) |
+| Triage | Sonnet (Haiku frugal option) | ¢-level per incident, O(hits) | batched (default daily or on-demand) |
 | Curate | Sonnet | one batched pass, O(new incidents + touched clusters) | ≥10 unreviewed or 7 days |
 | Synthesize | Sonnet/Opus | per promoted cluster (rare) | promotion |
 | Audit | none + Curator | ~0 | continuous / piggybacks on Curate |

@@ -54,7 +54,8 @@ events = ["proposal_pending", "autonomous_action"]
 # OpenAI Codex CLI for that stage, for example: triage = "codex:gpt-5.6-luna".
 # Codex calls are ephemeral; usage and cost are logged as unknown, while the bulk
 # confirmation gate uses a rough $0.01-per-call estimate.
-triage = "haiku"
+# Measured on the golden corpus: Sonnet is safer for remedy evidence; Haiku remains the frugal option.
+triage = "sonnet"
 curate = "sonnet"
 synthesize = "sonnet"
 parallelism = 2
