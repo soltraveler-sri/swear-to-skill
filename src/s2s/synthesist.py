@@ -73,14 +73,16 @@ def synthesize_pending(
     default_project_paths = project_claude_md_paths
     if default_project_paths is None:
         default_project_paths = _incident_project_claude_md_paths(groups.values())
-    surface = collect_remedy_surface(
-        ledger,
-        skills_dir=skills_dir,
-        global_claude_md_path=global_claude_md_path,
-        project_claude_md_paths=default_project_paths,
-    )
     results: list[SynthesisResult] = []
     for label, incidents in sorted(groups.items()):
+        # Earlier groups in this same resumable run are pending remedies too, so
+        # refresh the ledger portion before each independent synthesis call.
+        surface = collect_remedy_surface(
+            ledger,
+            skills_dir=skills_dir,
+            global_claude_md_path=global_claude_md_path,
+            project_claude_md_paths=default_project_paths,
+        )
         response = _call_validated(
             render_synthesis_prompt(template, label, incidents, surface),
             schema=schema,
@@ -232,7 +234,8 @@ def _validate_response(
 ) -> None:
     proposals = response.get("split")
     if proposals is None:
-        _validate_proposal(response, incident_ids, surface_references)
+        if _validate_proposal(response, incident_ids, surface_references) != incident_ids:
+            raise SynthesisValidationError("proposal evidence must cover every promoted incident")
         return
     if not isinstance(proposals, list) or len(proposals) < 2:
         raise SynthesisValidationError("split must contain at least two proposals")
@@ -415,4 +418,8 @@ def _incident_project_claude_md_paths(groups: Iterable[Sequence[Incident]]) -> l
 
 
 def _singleton_group(ledger: Ledger, incidents: Sequence[Incident]) -> bool:
-    return len(incidents) == 1 and any(decision.singleton for decision in ledger.curator_decisions(incidents[0].id))
+    return any(
+        decision.singleton
+        for incident in incidents
+        for decision in ledger.curator_decisions(incident.id)
+    )
