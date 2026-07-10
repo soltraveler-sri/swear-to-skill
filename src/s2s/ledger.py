@@ -18,7 +18,7 @@ import sqlite3
 from .paths import resolve_paths
 
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 BUSY_TIMEOUT_MS = 5_000
 PROPOSAL_STATES = ("pending", "approved", "installed", "rejected")
 
@@ -185,6 +185,8 @@ class Proposal:
     approved_at: str | None
     decided_at: str | None
     created_at: str
+    proposal_kind: str
+    target_remedy_id: int | None
 
 
 @dataclass(frozen=True)
@@ -202,6 +204,10 @@ class Remedy:
     managed_remedy_id: int
     revises_remedy_id: int | None
     state_record_ref: str | None
+    outcome_verdict: str | None
+    outcome_pre_rate: float | None
+    outcome_post_rate: float | None
+    outcome_assessed_at: str | None
 
 
 def _utc_now() -> str:
@@ -451,12 +457,35 @@ def _migration_5(connection: sqlite3.Connection) -> None:
     connection.execute("CREATE INDEX remedy_state_idx ON remedy(state, id)")
 
 
+def _migration_6(connection: sqlite3.Connection) -> None:
+    """Add audit proposal identity and the latest deterministic remedy outcome."""
+
+    connection.execute(
+        "ALTER TABLE proposal ADD COLUMN proposal_kind TEXT NOT NULL DEFAULT 'remedy' "
+        "CHECK (proposal_kind IN ('remedy', 'revision', 'retirement'))"
+    )
+    connection.execute(
+        "ALTER TABLE proposal ADD COLUMN target_remedy_id INTEGER REFERENCES remedy(id)"
+    )
+    connection.execute(
+        "ALTER TABLE remedy ADD COLUMN outcome_verdict TEXT "
+        "CHECK (outcome_verdict IN ('effective', 'persisting', 'silent', 'insufficient-data'))"
+    )
+    connection.execute("ALTER TABLE remedy ADD COLUMN outcome_pre_rate REAL")
+    connection.execute("ALTER TABLE remedy ADD COLUMN outcome_post_rate REAL")
+    connection.execute("ALTER TABLE remedy ADD COLUMN outcome_assessed_at TEXT")
+    connection.execute(
+        "CREATE INDEX proposal_audit_target_idx ON proposal(target_remedy_id, proposal_kind, gate_status)"
+    )
+
+
 MIGRATIONS: dict[int, Callable[[sqlite3.Connection], None]] = {
     1: _migration_1,
     2: _migration_2,
     3: _migration_3,
     4: _migration_4,
     5: _migration_5,
+    6: _migration_6,
 }
 
 
@@ -1367,6 +1396,8 @@ class Ledger:
         install_record_ref: str | None = None,
         revises: str | None = None,
         singleton: bool = False,
+        proposal_kind: str = "remedy",
+        target_remedy_id: int | None = None,
         created_at: str | datetime | None = None,
     ) -> int:
         """Append a proposal and immutable normalized links to its evidence incidents."""
@@ -1376,13 +1407,18 @@ class Ledger:
             raise LedgerError("a proposal requires at least one evidence incident")
         if gate_status not in PROPOSAL_STATES:
             raise LedgerError(f"unknown proposal gate status {gate_status!r}")
+        if proposal_kind not in {"remedy", "revision", "retirement"}:
+            raise LedgerError(f"unknown proposal kind {proposal_kind!r}")
+        if proposal_kind in {"revision", "retirement"} and target_remedy_id is None:
+            raise LedgerError(f"{proposal_kind} proposals require a target remedy")
         with self._write_transaction():
             cursor = self.connection.execute(
                 """
                 INSERT INTO proposal (
                     remedy_type, drafted_content, evidence_incident_ids, dedup_verdict,
-                    gate_status, install_record_ref, revises, singleton, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    gate_status, install_record_ref, revises, singleton, created_at,
+                    proposal_kind, target_remedy_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     remedy_type,
@@ -1394,6 +1430,8 @@ class Ledger:
                     revises,
                     int(singleton),
                     _timestamp(created_at),
+                    proposal_kind,
+                    target_remedy_id,
                 ),
             )
             proposal_id = int(cursor.lastrowid)
@@ -1519,6 +1557,87 @@ class Ledger:
         ).fetchone()
         return self._remedy_from_row(row) if row is not None else None
 
+    def installed_remedies(self) -> list[Remedy]:
+        """Return remedies still installed and therefore eligible for audit."""
+
+        rows = self.connection.execute(
+            "SELECT * FROM remedy WHERE state = 'installed' ORDER BY id"
+        ).fetchall()
+        return [self._remedy_from_row(row) for row in rows]
+
+    def remedy_labels(self, remedy_id: int) -> tuple[str, ...]:
+        """Return the original evidence clusters for one remedy, without global mixing."""
+
+        rows = self.connection.execute(
+            """
+            SELECT DISTINCT incident.label
+            FROM remedy
+            JOIN proposal_evidence ON proposal_evidence.proposal_id = remedy.proposal_id
+            JOIN incident ON incident.id = proposal_evidence.incident_id
+            WHERE remedy.id = ? AND incident.label IS NOT NULL
+            ORDER BY incident.label
+            """,
+            (remedy_id,),
+        ).fetchall()
+        return tuple(str(row["label"]) for row in rows)
+
+    def audit_incidents(self, label: str, *, after: str | None = None, before: str | None = None) -> list[Incident]:
+        """Read one cluster's incidents in a half-open time window for outcome math."""
+
+        clauses = ["label = ?"]
+        values: list[object] = [label]
+        if after is not None:
+            clauses.append("occurred_at >= ?")
+            values.append(after)
+        if before is not None:
+            clauses.append("occurred_at < ?")
+            values.append(before)
+        rows = self.connection.execute(
+            f"SELECT * FROM incident WHERE {' AND '.join(clauses)} ORDER BY occurred_at, id",
+            values,
+        ).fetchall()
+        return [self._incident_from_row(row) for row in rows]
+
+    def record_remedy_outcome(
+        self,
+        remedy_id: int,
+        *,
+        verdict: str,
+        pre_rate: float | None,
+        post_rate: float | None,
+        assessed_at: str | datetime | None = None,
+    ) -> None:
+        """Store the latest audit summary; raw evidence remains queryable in the ledger."""
+
+        if verdict not in {"effective", "persisting", "silent", "insufficient-data"}:
+            raise LedgerError(f"unknown remedy outcome verdict {verdict!r}")
+        with self._write_transaction():
+            result = self.connection.execute(
+                """
+                UPDATE remedy
+                SET outcome_verdict = ?, outcome_pre_rate = ?, outcome_post_rate = ?,
+                    outcome_assessed_at = ?
+                WHERE id = ?
+                """,
+                (verdict, pre_rate, post_rate, _timestamp(assessed_at), remedy_id),
+            )
+            if result.rowcount != 1:
+                raise LedgerError(f"remedy {remedy_id} does not exist")
+
+    def audit_proposal_exists(self, remedy_id: int, proposal_kind: str) -> bool:
+        """Avoid re-queueing the same outstanding audit action on every pass."""
+
+        row = self.connection.execute(
+            """
+            SELECT 1 FROM proposal
+            WHERE target_remedy_id = ? AND proposal_kind = ?
+              AND gate_status IN ('pending', 'approved')
+            LIMIT 1
+            """,
+            (remedy_id, proposal_kind),
+        ).fetchone()
+        return row is not None
+
     def remedy_for_proposal(self, proposal_id: int) -> Remedy | None:
         """Return the newest remedy reserved for a proposal, if any."""
 
@@ -1610,6 +1729,23 @@ class Ledger:
                 if row is None:
                     raise LedgerError(f"remedy {remedy_id} does not exist")
                 raise LedgerError(f"remedy {remedy_id} is {row['state']!r}, not installed")
+
+    def mark_retirement_proposal_completed(
+        self, proposal_id: int, *, rollback_record_ref: str
+    ) -> None:
+        """Finalize a Gate-approved retirement after its rollback succeeds."""
+
+        with self._write_transaction():
+            result = self.connection.execute(
+                """
+                UPDATE proposal
+                SET gate_status = 'installed', install_record_ref = ?
+                WHERE id = ? AND proposal_kind = 'retirement' AND gate_status = 'approved'
+                """,
+                (rollback_record_ref, proposal_id),
+            )
+            if result.rowcount != 1:
+                raise LedgerError(f"retirement proposal {proposal_id} is not approved")
 
     def cluster_stats(self) -> list[ClusterStats]:
         """Derive cluster counts, project spread, time range, and linked remedies by label."""
@@ -1719,6 +1855,12 @@ class Ledger:
             approved_at=row["approved_at"],
             decided_at=row["decided_at"],
             created_at=str(row["created_at"]),
+            proposal_kind=str(row["proposal_kind"]),
+            target_remedy_id=(
+                int(row["target_remedy_id"])
+                if row["target_remedy_id"] is not None
+                else None
+            ),
         )
 
     @staticmethod
@@ -1740,6 +1882,18 @@ class Ledger:
                 else None
             ),
             state_record_ref=row["state_record_ref"],
+            outcome_verdict=row["outcome_verdict"],
+            outcome_pre_rate=(
+                float(row["outcome_pre_rate"])
+                if row["outcome_pre_rate"] is not None
+                else None
+            ),
+            outcome_post_rate=(
+                float(row["outcome_post_rate"])
+                if row["outcome_post_rate"] is not None
+                else None
+            ),
+            outcome_assessed_at=row["outcome_assessed_at"],
         )
 
     @staticmethod

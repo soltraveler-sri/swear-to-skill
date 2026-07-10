@@ -10,7 +10,7 @@ from pathlib import Path
 import re
 
 from .config import load_config
-from .ledger import Incident, Ledger
+from .ledger import Incident, Ledger, Remedy
 from .notify import emit
 from .llm import call, estimate_and_confirm, load_prompt
 from .taxonomy import list_labels
@@ -104,6 +104,64 @@ def synthesize_pending(
             # claims work that was rolled back.
             emit("proposal_pending", proposal_count=len(proposal_ids))
     return results
+
+
+def synthesize_audit_revision(
+    ledger: Ledger,
+    *,
+    remedy: Remedy,
+    label: str,
+    incidents: Sequence[Incident],
+) -> int | None:
+    """Draft one Gate-queued revision from incidents that survived a remedy.
+
+    This deliberately reuses the normal Synthesist schema and remedy-surface
+    machinery.  It does not install anything and it does not alter incident
+    state: these are counter-evidence records, not a second Curator promotion.
+    """
+
+    if not incidents or ledger.audit_proposal_exists(remedy.id, "revision"):
+        return None
+    original = ledger.get_proposal(remedy.proposal_id)
+    if original is None:
+        raise SynthesisValidationError(f"remedy {remedy.id} has no source proposal")
+    surface = collect_remedy_surface(ledger)
+    template, schema = load_prompt(PROMPT_NAME, PROMPT_VERSION)
+    prompt = render_synthesis_prompt(template, label, incidents, surface)
+    prompt += (
+        "\n\nAUDIT REVISION BRIEF\n"
+        f"The installed remedy is proposal #{original.id}, remedy #{remedy.id}.\n"
+        f"Original drafted remedy:\n{original.drafted_content}\n\n"
+        "These incidents occurred DESPITE that remedy. Diagnose why the remedy text "
+        "failed to prevent them: wrong trigger description, too vague, wrong remedy "
+        "type, or another concrete mismatch. Draft a replacement on the same remedy "
+        "surface/type, and mark the original proposal as an overlap/revision.\n"
+    )
+    response = _call_validated(
+        prompt,
+        schema=schema,
+        model=load_config().models.synthesize,
+        incident_ids={incident.id for incident in incidents},
+        surface_references=set(surface.references),
+    )
+    if response.get("split") is not None:
+        raise SynthesisValidationError("audit revision must produce one replacement proposal")
+    normalized = _normalize_response(response, singleton=False)
+    proposal = normalized[0]
+    if proposal["remedy_type"] != remedy.artifact_type:
+        raise SynthesisValidationError("audit revision must keep the installed remedy type")
+    proposal["revises"] = f"proposal #{original.id}"
+    return ledger.create_proposal(
+        remedy_type=str(proposal["remedy_type"]),
+        drafted_content=str(proposal["drafted_content"]),
+        evidence_incident_ids=[int(item) for item in proposal["evidence_incident_ids"]],
+        dedup_verdict=str(proposal["dedup_verdict"]),
+        gate_status="pending",
+        revises=str(proposal["revises"]),
+        singleton=False,
+        proposal_kind="revision",
+        target_remedy_id=remedy.id,
+    )
 
 
 def collect_remedy_surface(
