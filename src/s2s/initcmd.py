@@ -10,8 +10,11 @@ import fcntl
 import json
 import os
 from pathlib import Path
+import re
+import shutil
 import stat
 import sys
+import sysconfig
 import tempfile
 from typing import TextIO
 
@@ -21,6 +24,8 @@ from .paths import resolve_paths
 HOOK_MARKER = "s2s hook"
 SESSION_END_COMMAND = "s2s hook session-end"
 SESSION_END_ENTRY = {"type": "command", "command": SESSION_END_COMMAND}
+SKILL_NAME = "s2s"
+SKILL_VERSION_RE = re.compile(r"^<!-- s2s-skill-version: (\d+) -->$", re.MULTILINE)
 
 
 class SettingsError(RuntimeError):
@@ -33,12 +38,69 @@ class InitResult:
 
     settings_changed: bool
     config_created: bool
+    skill_changed: bool
 
 
 def default_settings_path() -> Path:
     """Return Claude Code's user settings path without touching it."""
 
     return Path.home() / ".claude" / "settings.json"
+
+
+def default_skill_path(settings_path: Path | None = None) -> Path:
+    """Return the companion skill target, keeping injected settings homes isolated."""
+
+    settings = Path(settings_path) if settings_path is not None else default_settings_path()
+    return settings.parent / "skills" / SKILL_NAME
+
+
+def vendored_skill_dir() -> Path:
+    """Locate the repository-owned companion skill source."""
+
+    source_tree = Path(__file__).resolve().parents[2] / "skill" / SKILL_NAME
+    if source_tree.is_dir():
+        return source_tree
+    return Path(sysconfig.get_path("data")) / "skill" / SKILL_NAME
+
+
+def install_companion_skill(
+    skill_path: Path | None = None,
+    *,
+    source_dir: Path | None = None,
+) -> bool:
+    """Install or upgrade the marker-owned skill without overwriting user content."""
+
+    target = Path(skill_path) if skill_path is not None else default_skill_path()
+    if target.name != SKILL_NAME:
+        raise SettingsError(f"companion skill target must be named {SKILL_NAME!r}")
+    source = Path(source_dir) if source_dir is not None else vendored_skill_dir()
+    source_version = _skill_version(source / "SKILL.md", label="vendored")
+
+    if target.exists():
+        if not target.is_dir():
+            raise SettingsError(f"companion skill target {target} is not a directory")
+        installed_version = _skill_version(target / "SKILL.md", label="installed")
+        if installed_version >= source_version:
+            return False
+
+    _atomic_replace_skill_directory(source, target)
+    return True
+
+
+def remove_companion_skill(skill_path: Path | None = None) -> bool:
+    """Remove only an installed skill carrying this project's version marker."""
+
+    target = Path(skill_path) if skill_path is not None else default_skill_path()
+    if target.name != SKILL_NAME:
+        raise SettingsError(f"companion skill target must be named {SKILL_NAME!r}")
+    if not target.exists():
+        return False
+    if not target.is_dir():
+        raise SettingsError(f"companion skill target {target} is not a directory")
+    _skill_version(target / "SKILL.md", label="installed")
+    shutil.rmtree(target)
+    _fsync_directory(target.parent)
+    return True
 
 
 def merge_session_end_hook(settings_path: Path | None = None) -> bool:
@@ -238,6 +300,8 @@ def initialize(
     settings_path: Path | None = None,
     *,
     config_template_path: Path | None = None,
+    skill_path: Path | None = None,
+    skill_source_dir: Path | None = None,
 ) -> InitResult:
     """Create private s2s state, install defaults, and register SessionEnd."""
 
@@ -252,13 +316,26 @@ def initialize(
 
     config_created = _install_default_config(paths.config_path, config_template_path)
     settings_changed = merge_session_end_hook(settings_path)
-    return InitResult(settings_changed=settings_changed, config_created=config_created)
+    resolved_skill_path = (
+        Path(skill_path) if skill_path is not None else default_skill_path(settings_path)
+    )
+    skill_changed = install_companion_skill(resolved_skill_path, source_dir=skill_source_dir)
+    return InitResult(
+        settings_changed=settings_changed,
+        config_created=config_created,
+        skill_changed=skill_changed,
+    )
 
 
-def uninstall(settings_path: Path | None = None) -> bool:
+def uninstall(settings_path: Path | None = None, *, skill_path: Path | None = None) -> bool:
     """Unregister s2s without deleting archives, the ledger, or user config."""
 
-    return remove_session_end_hook(settings_path)
+    resolved_skill_path = (
+        Path(skill_path) if skill_path is not None else default_skill_path(settings_path)
+    )
+    skill_removed = remove_companion_skill(resolved_skill_path)
+    hook_removed = remove_session_end_hook(settings_path)
+    return hook_removed or skill_removed
 
 
 def run_init(
@@ -283,7 +360,7 @@ def run_init(
             result = initialize(settings_path)
             print(
                 "s2s initialized."
-                if result.settings_changed or result.config_created
+                if result.settings_changed or result.config_created or result.skill_changed
                 else "s2s already initialized; no changes made.",
                 file=output,
             )
@@ -312,6 +389,56 @@ def _read_settings(path: Path) -> tuple[dict[str, object], bytes | None]:
     if not isinstance(document, dict):
         raise SettingsError(f"{path} must contain a JSON object; file left unchanged")
     return document, original
+
+
+def _skill_version(path: Path, *, label: str) -> int:
+    """Return the one required ownership marker from a skill file."""
+
+    try:
+        content = path.read_text(encoding="utf-8")
+    except OSError as error:
+        raise SettingsError(f"cannot read {label} companion skill {path}: {error}") from error
+    matches = SKILL_VERSION_RE.findall(content)
+    if len(matches) != 1:
+        raise SettingsError(
+            f"{label} companion skill {path} lacks exactly one s2s version marker"
+        )
+    return int(matches[0])
+
+
+def _atomic_replace_skill_directory(source: Path, target: Path) -> None:
+    """Stage a complete skill copy, then swap it while retaining a recovery path."""
+
+    if not source.is_dir():
+        raise SettingsError(f"vendored companion skill directory {source} is missing")
+    target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    backup: Path | None = None
+    with tempfile.TemporaryDirectory(prefix=f".{SKILL_NAME}.stage-", dir=target.parent) as raw_stage:
+        staged = Path(raw_stage) / SKILL_NAME
+        try:
+            shutil.copytree(source, staged)
+        except OSError as error:
+            raise SettingsError(f"cannot stage companion skill from {source}: {error}") from error
+        _skill_version(staged / "SKILL.md", label="staged")
+
+        if target.exists():
+            descriptor, raw_backup = tempfile.mkstemp(
+                prefix=f".{SKILL_NAME}.backup-", dir=target.parent
+            )
+            os.close(descriptor)
+            backup = Path(raw_backup)
+            backup.unlink()
+            os.replace(target, backup)
+        try:
+            os.replace(staged, target)
+        except OSError as error:
+            if backup is not None:
+                os.replace(backup, target)
+            raise SettingsError(f"cannot install companion skill at {target}: {error}") from error
+        else:
+            if backup is not None:
+                shutil.rmtree(backup)
+            _fsync_directory(target.parent)
 
 
 def _validated_session_end(

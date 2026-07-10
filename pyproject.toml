@@ -27,6 +27,9 @@ where = ["src"]
 [tool.setuptools.package-data]
 s2s = ["lexicons/*.json", "prompts/*.md", "prompts/*.json", "config.example.toml"]
 
+[tool.setuptools.data-files]
+"skill/s2s" = ["skill/s2s/SKILL.md"]
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]

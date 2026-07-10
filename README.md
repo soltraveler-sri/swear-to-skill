@@ -21,6 +21,14 @@ Two products in one pipeline:
 Local-first: nothing leaves your machine except through your own `claude` CLI calls
 (your existing subscription — no API key needed).
 
+## The /s2s companion skill
+
+`s2s init` installs the local `/s2s` Claude Code skill. It summarizes status and the
+swear meter, walks pending remedy proposals one at a time, and only acts after your
+explicit approval or rejection. It can also link the local dashboard; publishing it
+as a private artifact is always optional and user-initiated.
+<!-- Screenshot placeholder: /s2s proposal review -->
+
 ## Status
 
 🚧 **Pre-implementation.** The complete architecture lives in

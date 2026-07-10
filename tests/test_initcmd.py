@@ -7,6 +7,7 @@ import pytest
 from s2s import initcmd
 from s2s.initcmd import (
     SESSION_END_COMMAND,
+    SKILL_VERSION_RE,
     initialize,
     merge_session_end_hook,
     run_init,
@@ -68,6 +69,44 @@ def test_init_is_byte_idempotent_and_installs_default_config(
     assert (s2s_home / "archive").is_dir()
     assert (s2s_home / "state").is_dir()
     assert (s2s_home / "logs").is_dir()
+    assert (settings.parent / "skills" / "s2s" / "SKILL.md").is_file()
+
+
+def test_companion_skill_install_upgrade_and_uninstall_round_trip(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    monkeypatch.setenv("S2S_HOME", str(tmp_path / "s2s-home"))
+    settings = tmp_path / ".claude" / "settings.json"
+    skill = settings.parent / "skills" / "s2s"
+
+    first = initialize(settings)
+    installed = skill / "SKILL.md"
+    assert first.skill_changed is True
+    assert int(SKILL_VERSION_RE.search(installed.read_text()).group(1)) == 1
+
+    installed.write_text(installed.read_text().replace("<!-- s2s-skill-version: 1 -->", "<!-- s2s-skill-version: 0 -->"))
+    upgraded = initialize(settings)
+    assert upgraded.skill_changed is True
+    assert int(SKILL_VERSION_RE.search(installed.read_text()).group(1)) == 1
+
+    assert uninstall(settings) is True
+    assert not skill.exists()
+    assert uninstall(settings) is False
+
+
+def test_companion_skill_refuses_to_replace_or_remove_unmarked_directory(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    monkeypatch.setenv("S2S_HOME", str(tmp_path / "s2s-home"))
+    settings = tmp_path / ".claude" / "settings.json"
+    skill = settings.parent / "skills" / "s2s"
+    skill.mkdir(parents=True)
+    (skill / "SKILL.md").write_text("---\nname: s2s\n---\nuser-owned\n")
+
+    with pytest.raises(initcmd.SettingsError, match="version marker"):
+        initialize(settings)
+    with pytest.raises(initcmd.SettingsError, match="version marker"):
+        uninstall(settings)
 
 
 def test_uninstall_removes_only_s2s_entries(tmp_path) -> None:
