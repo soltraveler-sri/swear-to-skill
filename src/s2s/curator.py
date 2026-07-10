@@ -157,7 +157,7 @@ def run_pass(ledger: Ledger, *, assume_yes: bool = False) -> CuratorPassResult:
             skipped=True,
         )
 
-    template, base_schema = load_prompt(PROMPT_NAME, PROMPT_VERSION) if chunks else ("", {})
+    template, base_schema = load_prompt(PROMPT_NAME, config.prompts.curate) if chunks else ("", {})
     schema = curator_schema(base_schema) if chunks else {}
     records: list[_ReportVerdict] = []
     applied_incident = 0
@@ -166,7 +166,7 @@ def run_pass(ledger: Ledger, *, assume_yes: bool = False) -> CuratorPassResult:
 
     for chunk in chunks:
         prompt = render_curator_prompt(template, digest, chunk)
-        response = call(prompt, schema=schema, model=model, stage="curate")
+        response = call(prompt, schema=schema, model=model, stage="curate", effort=config.models.curate_effort)
 
         # Wake only after a successful structured response. A failed call leaves
         # parked evidence parked and eligible for the next arrival event.
@@ -186,7 +186,7 @@ def run_pass(ledger: Ledger, *, assume_yes: bool = False) -> CuratorPassResult:
         applied_cluster += cluster_count
         rejected += rejection_count
 
-    garden_records, garden_calls = _run_gardening(ledger, model=model)
+    garden_records, garden_calls = _run_gardening(ledger, model=model, effort=config.models.curate_effort, prompt_version=config.prompts.garden)
     records.extend(garden_records)
 
     audit_outcomes = audit_remedies(ledger)
@@ -209,7 +209,7 @@ def curator_schema(base_schema: dict[str, object] | None = None) -> dict[str, ob
     """Inject the immutable taxonomy into both reassign and cluster label enums."""
 
     if base_schema is None:
-        _, base_schema = load_prompt(PROMPT_NAME, PROMPT_VERSION)
+        _, base_schema = load_prompt(PROMPT_NAME, load_config().prompts.curate)
     schema = deepcopy(base_schema)
     properties = schema.get("properties")
     if not isinstance(properties, dict):
@@ -230,7 +230,7 @@ def garden_schema(base_schema: dict[str, object] | None = None) -> dict[str, obj
     """Inject current mergeable labels into the gardening schema at call time."""
 
     if base_schema is None:
-        _, base_schema = load_prompt(GARDEN_PROMPT_NAME, GARDEN_PROMPT_VERSION)
+        _, base_schema = load_prompt(GARDEN_PROMPT_NAME, load_config().prompts.garden)
     schema = deepcopy(base_schema)
     properties = schema.get("properties")
     if not isinstance(properties, dict):
@@ -351,17 +351,18 @@ def render_ledger_digest(ledger: Ledger) -> str:
     return "\n".join(lines)
 
 
-def _run_gardening(ledger: Ledger, *, model: str) -> tuple[list[_ReportVerdict], int]:
+def _run_gardening(ledger: Ledger, *, model: str, effort: str | None = None, prompt_version: str | int | None = None) -> tuple[list[_ReportVerdict], int]:
     """Apply the capable-model's strictly limited taxonomy maintenance authority."""
 
     if not gardening_needed(ledger):
         return [], 0
-    template, base_schema = load_prompt(GARDEN_PROMPT_NAME, GARDEN_PROMPT_VERSION)
+    template, base_schema = load_prompt(GARDEN_PROMPT_NAME, prompt_version or load_config().prompts.garden)
     response = call(
         render_garden_prompt(template, ledger),
         schema=garden_schema(base_schema),
         model=model,
         stage="curate",
+        effort=effort,
     )
     records: list[_ReportVerdict] = []
     other_ids = {incident.id for incident in ledger.other_nonterminal_incidents()}

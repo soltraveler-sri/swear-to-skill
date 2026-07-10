@@ -16,6 +16,7 @@ from pathlib import Path
 from statistics import fmean
 
 from . import llm
+from .config import load_config
 
 
 REMEDY_PROMPT_NAME = "judge_remedy"
@@ -41,6 +42,8 @@ class JudgeConfig:
     model: str = "sonnet"
     effort: str | None = None
     prompt_version: int = PROMPT_VERSION
+    remedy_prompt_version: int | str | None = None
+    counterfactual_prompt_version: int | str | None = None
     repeat: int = 1
     parallelism: int | None = None
 
@@ -64,9 +67,18 @@ def run_judge(
     record: Mapping[str, object],
     output_path: Path,
     *,
-    config: JudgeConfig = JudgeConfig(),
+    config: JudgeConfig | None = None,
 ) -> dict[str, object]:
     """Judge a completed live/replay record and atomically write its results."""
+
+    if config is None:
+        configured = load_config()
+        config = JudgeConfig(
+            model=configured.eval.judge.model,
+            effort=configured.eval.judge.effort,
+            prompt_version=configured.prompts.judge_remedy,
+            counterfactual_prompt_version=configured.prompts.judge_counterfactual,
+        )
 
     if record.get("mode") == "mock":
         result = _skipped_result(record, config)
@@ -75,8 +87,10 @@ def run_judge(
     if record.get("status") != "complete":
         raise JudgeError("only a completed eval record can be judged")
 
-    remedy_template, remedy_schema = llm.load_prompt(REMEDY_PROMPT_NAME, config.prompt_version)
-    counter_template, counter_schema = llm.load_prompt(COUNTERFACTUAL_PROMPT_NAME, config.prompt_version)
+    remedy_version = config.remedy_prompt_version or config.prompt_version
+    counter_version = config.counterfactual_prompt_version or config.prompt_version
+    remedy_template, remedy_schema = llm.load_prompt(REMEDY_PROMPT_NAME, remedy_version)
+    counter_template, counter_schema = llm.load_prompt(COUNTERFACTUAL_PROMPT_NAME, counter_version)
     proposals = _proposals(record)
     contexts = _contexts(record)
     calibration = _run_calibration(remedy_template, remedy_schema, config)
@@ -117,8 +131,8 @@ def run_judge(
         "record": "record.json",
         "judge_config": asdict(config),
         "prompts": {
-            "remedy": f"{REMEDY_PROMPT_NAME}.v{config.prompt_version}",
-            "counterfactual": f"{COUNTERFACTUAL_PROMPT_NAME}.v{config.prompt_version}",
+            "remedy": f"{REMEDY_PROMPT_NAME}.v{str(remedy_version).removeprefix('v')}",
+            "counterfactual": f"{COUNTERFACTUAL_PROMPT_NAME}.v{str(counter_version).removeprefix('v')}",
         },
         "self_grading_bias_warning": self_grading,
         "calibration": calibration,
@@ -194,7 +208,10 @@ def _run_calibration(template: str, schema: Mapping[str, object], config: JudgeC
 
 
 def _judge_remedy(template: str, schema: Mapping[str, object], proposal: str, config: JudgeConfig) -> dict[str, object]:
-    return llm.call(_render(template, PROPOSAL=proposal), schema=schema, model=config.model, stage="judge")
+    return llm.call(
+        _render(template, PROPOSAL=proposal), schema=schema, model=config.model,
+        stage="judge", effort=config.effort,
+    )
 
 
 def _judge_counterfactual(template: str, schema: Mapping[str, object], proposal: str, context: str, config: JudgeConfig) -> dict[str, object]:
@@ -203,6 +220,7 @@ def _judge_counterfactual(template: str, schema: Mapping[str, object], proposal:
         schema=schema,
         model=config.model,
         stage="judge",
+        effort=config.effort,
     )
 
 

@@ -1,0 +1,18 @@
+[profile]
+description = "A cheaper arm that deliberately uses Haiku for more pipeline judgment."
+
+[triage]
+model = "haiku"
+prompt_version = "v1"
+
+[curate]
+model = "haiku"
+prompt_version = "v1"
+
+[synthesize]
+model = "haiku"
+prompt_version = "v1"
+
+[judge]
+model = "haiku"
+prompt_version = "v1"

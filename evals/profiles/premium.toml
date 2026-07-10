@@ -1,0 +1,18 @@
+[profile]
+description = "Tests whether an Opus Synthesist changes remedy quality enough to justify cost."
+
+[triage]
+model = "haiku"
+prompt_version = "v1"
+
+[curate]
+model = "sonnet"
+prompt_version = "v1"
+
+[synthesize]
+model = "opus"
+prompt_version = "v1"
+
+[judge]
+model = "sonnet"
+prompt_version = "v1"

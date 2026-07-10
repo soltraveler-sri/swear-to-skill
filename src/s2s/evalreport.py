@@ -36,6 +36,14 @@ class ReportResult:
 
 
 @dataclass(frozen=True)
+class MatrixReportResult:
+    """Self-contained comparative artifacts written at a matrix-run root."""
+
+    markdown_path: Path
+    html_path: Path
+
+
+@dataclass(frozen=True)
 class Excerpt:
     """One evidence-backed incident chain included in the report."""
 
@@ -66,6 +74,111 @@ def write_report(record_path: Path, *, thresholds_path: Path | None = None) -> R
     markdown_path.write_text(markdown, encoding="utf-8")
     html_path.write_text(html, encoding="utf-8")
     return ReportResult(markdown_path, html_path, verdict)
+
+
+def write_matrix_report(
+    root: Path,
+    arms: Sequence[tuple[object, Path]],
+    *,
+    default_corpus: Path,
+) -> MatrixReportResult:
+    """Compare same-corpus arm records without hiding cost or judge differences."""
+
+    if len(arms) < 2:
+        raise EvalReportError("comparative report needs at least two arms")
+    loaded = []
+    for profile, record_path in arms:
+        record = _load_object(record_path)
+        scores = _load_object(record_path.with_name("scores.json"))
+        judge_path = record_path.with_name("judge-results.json")
+        judge = _load_object(judge_path) if judge_path.exists() else {}
+        name = str(getattr(profile, "name", record.get("profile", "unknown")))
+        loaded.append((name, profile, record, scores, judge))
+    corpus_versions = {str(record.get("corpus_version")) for _, _, record, _, _ in loaded}
+    if len(corpus_versions) != 1:
+        raise EvalReportError("matrix arms did not use the same corpus version")
+    markdown = _matrix_markdown(loaded, default_corpus=default_corpus)
+    html = _matrix_html(markdown)
+    markdown_path = root / "matrix-report.md"
+    html_path = root / "matrix-report.html"
+    markdown_path.write_text(markdown, encoding="utf-8")
+    html_path.write_text(html, encoding="utf-8")
+    return MatrixReportResult(markdown_path, html_path)
+
+
+def _matrix_markdown(arms: Sequence[tuple[str, object, Mapping[str, object], Mapping[str, object], Mapping[str, object]]], *, default_corpus: Path) -> str:
+    names = [name for name, *_ in arms]
+    baseline = names[0]
+    lines = ["# swear-to-skill A/B experiment matrix", "", f"Baseline arm: **{baseline}**", "", "## What changed", ""]
+    for name, profile, _, _, _ in arms:
+        lines.append(f"- **{name}** — {_profile_diff(profile, arms[0][1])}")
+    lines.extend(["", "## Metrics", "", "| Metric | " + " | ".join(names) + " |", "| --- | " + " | ".join("---:" for _ in names) + " |"])
+    metric_names = sorted({str(row.get("metric")) for _, _, _, scores, _ in arms for row in _rows(scores, "metrics")})
+    for metric in metric_names:
+        values = [_metric_value(scores, metric) for _, _, _, scores, _ in arms]
+        lines.append("| " + metric + " | " + " | ".join(_with_delta(value, values[0]) for value in values) + " |")
+    lines.extend(["", "## Cost, duration, and stability", "", "| Measure | " + " | ".join(names) + " |", "| --- | " + " | ".join("---:" for _ in names) + " |"])
+    costs = [_run_cost(record) for _, _, record, _, _ in arms]
+    durations = [_run_duration(record) for _, _, record, _, _ in arms]
+    stability = [_stability(judge) for _, _, _, _, judge in arms]
+    for label, values, suffix in (("Cost", costs, " USD"), ("Duration", durations, " ms"), ("Judge quality variance (lower is stabler)", stability, "")):
+        lines.append("| " + label + " | " + " | ".join(_with_delta(value, values[0], suffix=suffix) for value in values) + " |")
+    lines.extend(["", "## Judge disclosure", ""])
+    for name, _, record, _, judge in arms:
+        config = judge.get("judge_config", {}) if isinstance(judge, Mapping) else {}
+        model = config.get("model", record.get("stage_config", {}).get("judge", {}).get("model", "unknown")) if isinstance(config, Mapping) else "unknown"
+        prompt = config.get("prompt_version", "unknown") if isinstance(config, Mapping) else "unknown"
+        lines.append(f"- **{name}**: judge model `{model}`, prompt `{prompt}`.")
+    if all(_is_default_corpus(record, default_corpus) for _, _, record, _, _ in arms):
+        lines.extend(["", "## Overfitting hazard", "", "All arms used the default public synthetic corpus. Treat prompt wins as provisional; rerun this matrix with `--corpus <held-out-version>` before drawing a product conclusion."])
+    lines.extend(["", "## Honest limits", "", HONEST_LIMITS, ""])
+    return "\n".join(lines)
+
+
+def _profile_diff(profile: object, baseline: object) -> str:
+    stages = ("triage", "curate", "synthesize", "judge")
+    changes = []
+    for stage in stages:
+        current = getattr(profile, stage, None)
+        first = getattr(baseline, stage, None)
+        if current != first:
+            changes.append(f"{stage}={getattr(current, 'model', '?')}/{getattr(current, 'prompt_version', '?')}/{getattr(current, 'effort', None) or 'default effort'}")
+    return "; ".join(changes) if changes else "identical declared LLM settings"
+
+
+def _metric_value(scores: Mapping[str, object], name: str) -> float:
+    row = next((row for row in _rows(scores, "metrics") if row.get("metric") == name), None)
+    return float(row.get("value", 0.0)) if row is not None else 0.0
+
+
+def _run_cost(record: Mapping[str, object]) -> float:
+    return sum(float(row.get("cost_usd", 0.0)) for row in _rows(record, "llm_run_log"))
+
+
+def _run_duration(record: Mapping[str, object]) -> float:
+    return sum(float(row.get("duration_ms", 0.0)) for row in _rows(record, "llm_run_log"))
+
+
+def _stability(judge: Mapping[str, object]) -> float:
+    metrics = judge.get("metrics", {})
+    return float(metrics.get("quality_variance_mean", 0.0)) if isinstance(metrics, Mapping) else 0.0
+
+
+def _with_delta(value: float, baseline: float, *, suffix: str = "") -> str:
+    delta = value - baseline
+    return f"{value:.3f}{suffix} ({delta:+.3f}{suffix})"
+
+
+def _is_default_corpus(record: Mapping[str, object], default_corpus: Path) -> bool:
+    # The v1 version is the public default; the resolved path remains available
+    # to callers that use an alternate corpus with a coincidentally different ID.
+    return str(record.get("corpus_version")) == default_corpus.name
+
+
+def _matrix_html(markdown: str) -> str:
+    """Keep the comparative HTML offline and readable without a renderer dependency."""
+
+    return f"""<!doctype html><html><head><meta charset=\"utf-8\"><title>swear-to-skill A/B matrix</title><style>body{{max-width:980px;margin:40px auto;padding:0 20px;background:#181715;color:#eee8dc;font:15px/1.55 system-ui}}pre{{white-space:pre-wrap;background:#24221f;padding:24px;border-radius:10px}} </style></head><body><pre>{escape(markdown)}</pre></body></html>"""
 
 
 def greenlight_verdict(

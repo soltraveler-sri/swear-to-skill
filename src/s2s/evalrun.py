@@ -17,6 +17,7 @@ import re
 import shutil
 import sys
 import tempfile
+import tomllib
 from time import perf_counter
 from typing import Literal
 from unittest.mock import patch
@@ -41,6 +42,7 @@ STAGE_ORDER = ("scan", "triage", "curate", "synthesize")
 CURATOR_ESTIMATE_CHUNK = 10
 PROFILE_PLACEHOLDER = "default"
 REPLAY_COMMAND = "s2s eval --mode live --record"
+PROFILE_ROOT = PROJECT_ROOT / "evals" / "profiles"
 
 
 class EvalRunError(RuntimeError):
@@ -50,10 +52,10 @@ class EvalRunError(RuntimeError):
 class ReplayCacheMissError(EvalRunError):
     """A replay key was absent; live fallback is intentionally forbidden."""
 
-    def __init__(self, key: ReplayKey) -> None:
+    def __init__(self, key: ReplayKey, *, fill_command: str = REPLAY_COMMAND) -> None:
         self.key = key
         super().__init__(
-            f"replay cache miss for key {key}; run `{REPLAY_COMMAND}` to fill it"
+            f"replay cache miss for key {key}; run `{fill_command}` to fill it"
         )
 
 
@@ -71,7 +73,29 @@ class EvalStageConfig:
 
     model: str
     effort: str | None = None
-    prompt_version: int = 1
+    prompt_version: int | str = 1
+
+
+@dataclass(frozen=True)
+class EvalProfile:
+    """A strict, named arm whose only mutable surfaces are LLM settings."""
+
+    name: str
+    triage: EvalStageConfig
+    curate: EvalStageConfig
+    synthesize: EvalStageConfig
+    judge: EvalStageConfig
+    source: Path
+
+
+@dataclass(frozen=True)
+class MatrixRunResult:
+    """Artifacts produced by one sequential, same-corpus experiment."""
+
+    root: Path
+    arms: tuple[EvalRunResult, ...]
+    report_markdown_path: Path
+    report_html_path: Path
 
 
 @dataclass(frozen=True)
@@ -97,6 +121,8 @@ class EvalRunConfig:
     judge_repeat: int = 1
     replay_root: Path = DEFAULT_REPLAY_ROOT
     output_root: Path = DEFAULT_OUTPUT_ROOT
+    sandbox_root: Path | None = None
+    live_estimate_handled: bool = False
 
     @classmethod
     def production_defaults(cls, **overrides: object) -> EvalRunConfig:
@@ -105,10 +131,10 @@ class EvalRunConfig:
         loaded = load_config()
         models = loaded.models
         values: dict[str, object] = {
-            "triage": EvalStageConfig(models.triage),
-            "curate": EvalStageConfig(models.curate),
-            "synthesize": EvalStageConfig(models.synthesize),
-            "judge": EvalStageConfig(loaded.eval.judge.model, effort=loaded.eval.judge.effort),
+            "triage": EvalStageConfig(models.triage, models.triage_effort, loaded.prompts.triage),
+            "curate": EvalStageConfig(models.curate, models.curate_effort, loaded.prompts.curate),
+            "synthesize": EvalStageConfig(models.synthesize, models.synthesize_effort, loaded.prompts.synthesize),
+            "judge": EvalStageConfig(loaded.eval.judge.model, effort=loaded.eval.judge.effort, prompt_version=loaded.prompts.judge_remedy),
         }
         values.update(overrides)
         return cls(**values)  # type: ignore[arg-type]
@@ -156,6 +182,73 @@ class EvalRunResult:
     proposals: int
 
 
+def load_profile(name: str, *, root: Path = PROFILE_ROOT) -> EvalProfile:
+    """Load one named profile and reject every non-comparison control surface."""
+
+    if not re.fullmatch(r"[a-z][a-z0-9-]*", name):
+        raise EvalRunError(f"invalid profile name {name!r}")
+    path = root / f"{name}.toml"
+    try:
+        with path.open("rb") as file:
+            document = tomllib.load(file)
+    except FileNotFoundError as error:
+        raise EvalRunError(f"unknown eval profile {name!r}: {path}") from error
+    except tomllib.TOMLDecodeError as error:
+        raise EvalRunError(f"invalid eval profile {path}: {error}") from error
+    if not isinstance(document, dict):
+        raise EvalRunError(f"eval profile {path} must be a TOML table")
+    allowed = {"profile", "triage", "curate", "synthesize", "judge"}
+    unknown = sorted(set(document) - allowed)
+    if unknown:
+        raise EvalRunError(
+            f"eval profile {path} has forbidden key(s): {', '.join(unknown)}; "
+            "profiles may only vary declared LLM stages"
+        )
+    profile_meta = document.get("profile", {})
+    if not isinstance(profile_meta, dict) or set(profile_meta) - {"description"}:
+        raise EvalRunError(f"eval profile {path} [profile] accepts only description")
+    stages = {stage: _profile_stage(path, stage, document.get(stage)) for stage in ("triage", "curate", "synthesize", "judge")}
+    return EvalProfile(name, stages["triage"], stages["curate"], stages["synthesize"], stages["judge"], path)
+
+
+def _profile_stage(path: Path, stage: str, value: object) -> EvalStageConfig:
+    if not isinstance(value, dict):
+        raise EvalRunError(f"eval profile {path} must define [{stage}]")
+    unknown = sorted(set(value) - {"model", "effort", "prompt_version"})
+    if unknown:
+        raise EvalRunError(f"eval profile {path} [{stage}] has unknown key(s): {', '.join(unknown)}")
+    model = value.get("model")
+    effort = value.get("effort")
+    prompt_version = value.get("prompt_version")
+    if not isinstance(model, str) or not model.strip():
+        raise EvalRunError(f"eval profile {path} [{stage}].model must be a non-empty string")
+    if effort is not None and (not isinstance(effort, str) or not effort.strip()):
+        raise EvalRunError(f"eval profile {path} [{stage}].effort must be a non-empty string or absent")
+    if not isinstance(prompt_version, (str, int)) or isinstance(prompt_version, bool):
+        raise EvalRunError(f"eval profile {path} [{stage}].prompt_version must be a version string or positive integer")
+    try:
+        # Validate the spelling now. Assets are loaded again at the stage boundary.
+        version = str(prompt_version)
+        if version.startswith("v"):
+            version = version[1:]
+        if not version.isdigit() or int(version) < 1:
+            raise ValueError
+    except ValueError as error:
+        raise EvalRunError(f"eval profile {path} [{stage}].prompt_version is invalid") from error
+    return EvalStageConfig(model.strip(), effort, prompt_version)
+
+
+def parse_matrix_profiles(value: str) -> tuple[str, ...]:
+    """Parse the CLI's ordered, baseline-first matrix arm list."""
+
+    names = tuple(item.strip() for item in value.split(",") if item.strip())
+    if len(names) < 2:
+        raise ValueError("--matrix requires at least two comma-separated profiles")
+    if len(set(names)) != len(names):
+        raise ValueError("--matrix profile names must be unique")
+    return names
+
+
 @dataclass(frozen=True)
 class _Sandbox:
     root: Path
@@ -182,8 +275,9 @@ class ReplayProvider:
 
     deterministic = True
 
-    def __init__(self, directory: Path) -> None:
+    def __init__(self, directory: Path, *, fill_command: str = REPLAY_COMMAND) -> None:
         self.directory = directory
+        self.fill_command = fill_command
 
     def __call__(self, request: llm.LLMRequest) -> Mapping[str, object]:
         key = ReplayKey.from_request(request)
@@ -191,7 +285,7 @@ class ReplayProvider:
         try:
             document = json.loads(path.read_text(encoding="utf-8"))
         except FileNotFoundError as error:
-            raise ReplayCacheMissError(key) from error
+            raise ReplayCacheMissError(key, fill_command=self.fill_command) from error
         except (OSError, json.JSONDecodeError) as error:
             raise EvalRunError(f"cannot read replay {path}: {error}") from error
         if not isinstance(document, dict) or document.get("key") != asdict(key):
@@ -539,6 +633,76 @@ def run_eval(
     return primary
 
 
+def run_matrix(
+    config: EvalRunConfig,
+    profiles: Sequence[EvalProfile],
+    *,
+    live_provider: llm.ResponseProvider | None = None,
+    thresholds_path: Path | None = None,
+) -> MatrixRunResult:
+    """Run named arms sequentially over one forced corpus and compare the artifacts."""
+
+    if len(profiles) < 2:
+        raise EvalRunError("a matrix requires at least two profiles")
+    names = [profile.name for profile in profiles]
+    if len(set(names)) != len(names):
+        raise EvalRunError("matrix profiles must be unique")
+    corpus = Path(config.corpus).resolve()
+    _load_manifest(corpus)  # fail before creating any arm directory
+    matrix_root = Path(config.output_root) / f"matrix-{_run_id()}"
+    matrix_root.mkdir(parents=True, exist_ok=False)
+
+    if config.mode == "live":
+        estimate = _matrix_live_estimate(config, profiles)
+        print(f"Estimated matrix LLM cost: ${estimate:.2f} across {len(profiles)} arms")
+        if not config.assume_yes and not _confirm_live_run():
+            raise EvalConfirmationDeclined("live matrix was not confirmed; no sandbox pipeline was run")
+
+    results: list[EvalRunResult] = []
+    for profile in profiles:
+        arm_root = matrix_root / "arms" / profile.name
+        arm = replace(
+            config,
+            corpus=corpus,
+            profile=profile.name,
+            triage=profile.triage,
+            curate=profile.curate,
+            synthesize=profile.synthesize,
+            judge=profile.judge,
+            output_root=arm_root,
+            sandbox_root=arm_root / "sandbox",
+            keep=True,
+            live_estimate_handled=config.mode == "live",
+        )
+        results.append(run_eval(arm, live_provider=live_provider))
+
+    from .evalreport import write_matrix_report
+    from .evalscore import score_files
+
+    for result in results:
+        score_files(result.record_path, corpus / "manifest.json", thresholds_path=thresholds_path)
+
+    report = write_matrix_report(
+        matrix_root,
+        [(profile, result.record_path) for profile, result in zip(profiles, results, strict=True)],
+        default_corpus=DEFAULT_CORPUS,
+    )
+    return MatrixRunResult(matrix_root, tuple(results), report.markdown_path, report.html_path)
+
+
+def _matrix_live_estimate(config: EvalRunConfig, profiles: Sequence[EvalProfile]) -> float:
+    manifest = _load_manifest(Path(config.corpus).resolve())
+    selected = quick_subset(manifest) if config.quick else None
+    counts = estimate_call_counts(manifest, selected, judge_repeat=config.judge_repeat)
+    stage_counts = {"triage": counts.triage, "curate": counts.curate, "synthesize": counts.synthesize, "judge": counts.judge}
+    return sum(
+        stage_counts[stage] * llm.ESTIMATED_CALL_COST_USD.get(profile_stage.model, llm.ESTIMATED_CALL_COST_USD["sonnet"])
+        for profile in profiles
+        for stage, profile_stage in (("triage", profile.triage), ("curate", profile.curate), ("synthesize", profile.synthesize), ("judge", profile.judge))
+        if stage in config.stages or stage == "judge"
+    )
+
+
 def _run_eval_once(
     config: EvalRunConfig,
     *,
@@ -557,7 +721,7 @@ def _run_eval_once(
         raise EvalRunError("--record is valid only with --mode live")
     selected_ids = quick_subset(manifest) if config.quick else None
     cycle_tranches = _tranches(manifest, selected_ids, config.cycles)
-    if mode == "live":
+    if mode == "live" and not config.live_estimate_handled:
         estimate = estimate_call_counts(manifest, selected_ids, judge_repeat=config.judge_repeat)
         has_calls = False
         for stage_name, calls in (
@@ -622,7 +786,8 @@ def _run_eval_once(
             if mode == "mock":
                 provider = MockProvider(annotations)
             elif mode == "replay":
-                provider = ReplayProvider(replay_dir)
+                fill = f"{REPLAY_COMMAND} --corpus {corpus} --matrix {config.profile}"
+                provider = ReplayProvider(replay_dir, fill_command=fill)
             elif config.record:
                 provider = RecordingProvider(
                     replay_dir, live_provider or llm.default_response_provider
@@ -1034,7 +1199,11 @@ def _sandbox(
     *,
     keep: bool,
 ) -> Iterator[_Sandbox]:
-    root = Path(tempfile.mkdtemp(prefix="s2s-eval-"))
+    if config.sandbox_root is None:
+        root = Path(tempfile.mkdtemp(prefix="s2s-eval-"))
+    else:
+        root = Path(config.sandbox_root)
+        root.mkdir(parents=True, exist_ok=False)
     home = root / "home"
     s2s_home = root / "s2s-home"
     projects = home / ".claude" / "projects"
@@ -1130,12 +1299,28 @@ def _fabricate_sandbox(
                 f'triage = "{config.triage.model}"',
                 f'curate = "{config.curate.model}"',
                 f'synthesize = "{config.synthesize.model}"',
+                _toml_optional_line("triage_effort", config.triage.effort),
+                _toml_optional_line("curate_effort", config.curate.effort),
+                _toml_optional_line("synthesize_effort", config.synthesize.effort),
                 "parallelism = 1",
+                "[prompts]",
+                f'triage = {json.dumps(str(config.triage.prompt_version))}',
+                f'curate = {json.dumps(str(config.curate.prompt_version))}',
+                f'garden = {json.dumps(str(config.curate.prompt_version))}',
+                f'synthesize = {json.dumps(str(config.synthesize.prompt_version))}',
+                f'judge_remedy = {json.dumps(str(config.judge.prompt_version))}',
+                f'judge_counterfactual = {json.dumps(str(config.judge.prompt_version))}',
                 "",
             )
         ),
         encoding="utf-8",
     )
+
+
+def _toml_optional_line(name: str, value: str | None) -> str:
+    """Emit a TOML comment rather than an invalid null when an option is absent."""
+
+    return f"{name} = {json.dumps(value)}" if value is not None else f"# {name} is unset"
 
 
 def _copy_filtered_claude(
