@@ -244,6 +244,8 @@ def test_quick_run_copies_only_the_documented_subset(tmp_path: Path) -> None:
         "c03-u2",
         "c05-u2",
     }
+    assert record["fed_annotations"] == list(evalrun.quick_subset(evalrun._load_manifest(CORPUS)))
+    assert record["fed_annotation_projects"]["c02-u1"] == "aurora"
 
 
 def test_eval_stage_models_are_honored_and_record_is_scorer_ready(tmp_path: Path) -> None:

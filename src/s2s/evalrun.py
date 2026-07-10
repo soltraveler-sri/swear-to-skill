@@ -264,6 +264,7 @@ class _Sandbox:
 class _Annotation:
     data: Mapping[str, object]
     message: str
+    project: str
 
     @property
     def corpus_id(self) -> str:
@@ -744,6 +745,9 @@ def _run_eval_once(
             )
 
     annotations = _load_annotations(corpus, manifest)
+    fed_annotations = tuple(
+        item for item in annotations if selected_ids is None or item.corpus_id in selected_ids
+    )
     output_dir = Path(config.output_root) / _run_id()
     output_dir.mkdir(parents=True, exist_ok=False)
     record_path = output_dir / "record.json"
@@ -755,6 +759,13 @@ def _run_eval_once(
         "profile": config.profile,
         "git_describe": _git_describe(),
         "quick": config.quick,
+        # Scoring must use the same annotation universe that the sandbox was
+        # given.  Keep ids in the durable artifact rather than inferring them
+        # later from detections (which deliberately omit lexicon misses).
+        "fed_annotations": [item.corpus_id for item in fed_annotations],
+        "fed_annotation_projects": {
+            item.corpus_id: _annotation_project(item) for item in fed_annotations
+        },
         "stages_requested": list(stages),
         "stage_config": {
             name: asdict(config.stage(name)) for name in ("triage", "curate", "synthesize", "judge")
@@ -784,7 +795,7 @@ def _run_eval_once(
             sandbox_path = sandbox.root if config.keep else None
             provider: llm.ResponseProvider | None
             if mode == "mock":
-                provider = MockProvider(annotations)
+                provider = MockProvider(fed_annotations)
             elif mode == "replay":
                 fill = f"{REPLAY_COMMAND} --corpus {corpus} --matrix {config.profile}"
                 provider = ReplayProvider(replay_dir, fill_command=fill)
@@ -804,7 +815,7 @@ def _run_eval_once(
                         _drive_pipeline(
                             sandbox,
                             stages,
-                            annotations,
+                            fed_annotations,
                             record,
                             deterministic=mode in {"mock", "replay"},
                         )
@@ -816,7 +827,7 @@ def _run_eval_once(
                             cycle_tranches,
                             config,
                             stages,
-                            annotations,
+                            fed_annotations,
                             record,
                             deterministic=mode in {"mock", "replay"},
                         )
@@ -1369,7 +1380,7 @@ def _load_manifest(corpus: Path) -> dict[str, object]:
 def _load_annotations(
     corpus: Path, manifest: Mapping[str, object]
 ) -> tuple[_Annotation, ...]:
-    messages: dict[tuple[str, str], str] = {}
+    messages: dict[tuple[str, str], tuple[str, str]] = {}
     sessions = {str(item["session"]) for item in manifest["incidents"] if isinstance(item, dict)}  # type: ignore[index]
     for session in sessions:
         path = corpus / session
@@ -1381,7 +1392,7 @@ def _load_annotations(
         )
         for item in extracted:
             if item.uuid:
-                messages[(source, item.uuid)] = item.message
+                messages[(source, item.uuid)] = (item.message, item.project)
     annotations: list[_Annotation] = []
     for item in manifest["incidents"]:  # type: ignore[index]
         if not isinstance(item, dict):
@@ -1389,8 +1400,17 @@ def _load_annotations(
         key = (str(item["source"]), str(item["uuid"]))
         if key not in messages:
             raise EvalRunError(f"manifest incident does not resolve through its adapter: {key}")
-        annotations.append(_Annotation(item, messages[key]))
+        message, project = messages[key]
+        annotations.append(_Annotation(item, message, project))
     return tuple(annotations)
+
+
+def _annotation_project(annotation: _Annotation) -> str:
+    """Match the project identity the sandbox archive assigns to an annotation."""
+
+    if annotation.data.get("source") == "claude-code":
+        return Path(str(annotation.data["session"])).stem.split("-", 1)[0]
+    return annotation.project
 
 
 @contextmanager
