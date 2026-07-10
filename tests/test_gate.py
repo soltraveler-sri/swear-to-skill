@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 import stat
 import subprocess
@@ -254,6 +255,99 @@ def test_skill_description_gets_one_provenance_suffix(
 
     content = (targets.skills_dir / "s2s-instruction-check" / "SKILL.md").read_text()
     assert content.count(suffix) == 1
+
+
+def test_skill_attribution_is_idempotent_and_uses_prefixed_revision_name(
+    gate_env: tuple[Ledger, GateTargets]
+) -> None:
+    ledger, targets = gate_env
+    first_proposal = _approve(ledger, _pending(ledger, "skill", text="OLD RULE"))
+    first = install(first_proposal, targets=targets)
+    stale_attribution = gate.ATTRIBUTION_LINE.format(name="instruction-check")
+
+    install(
+        _approve(
+            ledger,
+            _pending(
+                ledger,
+                "skill",
+                text=f"NEW RULE\n\n{stale_attribution}",
+                revises=f"proposal #{first_proposal.id}",
+            ),
+        ),
+        targets=targets,
+    )
+
+    content = (targets.skills_dir / "s2s-instruction-check" / "SKILL.md").read_text()
+    attribution = gate.ATTRIBUTION_LINE.format(name="s2s-instruction-check")
+    assert content.count("When this skill shaped your work") == 1
+    assert content.endswith(f"{attribution}\n")
+    assert f"remedy={first.remedy_id}" in content
+
+
+def test_skill_library_mirror_syncs_install_revision_and_rollback(
+    gate_env: tuple[Ledger, GateTargets]
+) -> None:
+    ledger, targets = gate_env
+    first_proposal = _approve(ledger, _pending(ledger, "skill", text="OLD RULE"))
+    first = install(first_proposal, targets=targets)
+    skill = targets.skills_dir / "s2s-instruction-check" / "SKILL.md"
+    mirror = targets.state_dir.parent / "library" / "s2s-instruction-check" / "SKILL.md"
+    assert mirror.read_bytes() == skill.read_bytes()
+
+    revised = install(
+        _approve(
+            ledger,
+            _pending(
+                ledger,
+                "skill",
+                text="NEW RULE",
+                revises=f"proposal #{first_proposal.id}",
+            ),
+        ),
+        targets=targets,
+    )
+    assert mirror.read_bytes() == skill.read_bytes()
+    assert b"NEW RULE" in mirror.read_bytes()
+
+    rollback(revised.remedy_id, targets=targets)
+    assert not mirror.parent.exists()
+    assert first.remedy_id != revised.remedy_id
+
+
+def test_skill_library_mirror_can_be_disabled(
+    gate_env: tuple[Ledger, GateTargets]
+) -> None:
+    ledger, targets = gate_env
+    (targets.state_dir.parent / "config.toml").write_text(
+        "[visibility]\nlibrary = false\n", encoding="utf-8"
+    )
+
+    install(_approve(ledger, _pending(ledger, "skill")), targets=targets)
+
+    assert not (targets.state_dir.parent / "library").exists()
+
+
+def test_skill_library_mirror_failure_is_logged_without_blocking_install(
+    gate_env: tuple[Ledger, GateTargets], monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    ledger, targets = gate_env
+
+    def unavailable(*_args: object) -> None:
+        raise OSError("catalog unavailable")
+
+    monkeypatch.setattr(gate, "_write_library_mirror", unavailable)
+    with caplog.at_level(logging.WARNING, logger="s2s.gate"):
+        install(_approve(ledger, _pending(ledger, "skill")), targets=targets)
+
+    assert (targets.skills_dir / "s2s-instruction-check" / "SKILL.md").exists()
+    assert "Unable to sync skill library mirror" in caplog.text
+
+
+def test_library_mirror_is_not_a_discovery_or_deduplication_input() -> None:
+    root = Path(__file__).parents[1] / "src" / "s2s"
+    for module in ("scanner.py", "ledger.py", "auditor.py", "cli.py"):
+        assert "library" not in (root / module).read_text(encoding="utf-8")
 
 
 def test_benchmark_only_never_touches_claude_surfaces(

@@ -123,6 +123,13 @@ class Auditor:
 
 
 @dataclass(frozen=True)
+class Visibility:
+    """Human-facing catalog controls from North Star §15.7."""
+
+    library: bool = True
+
+
+@dataclass(frozen=True)
 class EvalSettings:
     """Eval transport default; ``auto`` prefers replay only when cache exists."""
 
@@ -151,6 +158,7 @@ class Config:
     curator: Curator = Curator()
     sources: Sources = Sources()
     auditor: Auditor = Auditor()
+    visibility: Visibility = Visibility()
     eval: EvalSettings = EvalSettings()
 
 
@@ -210,6 +218,7 @@ def load_config(config_path: Path | None = None) -> Config:
     curator = _section(document, "curator")
     sources = _section(document, "sources")
     auditor = _section(document, "auditor")
+    visibility = _section(document, "visibility")
     eval_section = _section(document, "eval")
     eval_judge = _section(eval_section, "judge")
     defaults = Config()
@@ -338,6 +347,9 @@ def load_config(config_path: Path | None = None) -> Config:
                 "meaningful_drop_fraction",
                 defaults.auditor.meaningful_drop_fraction,
             ),
+        ),
+        visibility=Visibility(
+            library=_bool(visibility, "library", defaults.visibility.library),
         ),
         eval=EvalSettings(
             mode=(
