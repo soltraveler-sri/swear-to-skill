@@ -1,0 +1,1 @@
+{"status":"fail","metrics":[{"metric":"label_agreement","value":0.4,"threshold":0.8,"op":">=","pass":false,"evidence":["record:/triage_verdicts/4"]}]}
