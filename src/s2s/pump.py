@@ -256,9 +256,7 @@ def _write_status(notes: list[str]) -> None:
                 "queue_depth": len(ledger.pending_queue_items()),
                 "untriaged": len(ledger.untriaged_incidents()),
                 "unreviewed": len(ledger.curator_unreviewed_incidents()),
-                "proposals_pending": int(
-                    ledger.connection.execute("SELECT COUNT(*) FROM proposal").fetchone()[0]
-                ),
+                "proposals_pending": ledger.pending_proposal_count(),
                 "last_scan": ledger.get_meta(LAST_SCAN_META_KEY),
                 "last_triage": ledger.get_meta(LAST_TRIAGE_META_KEY),
                 "last_curator_pass": ledger.get_meta(LAST_PASS_META_KEY),

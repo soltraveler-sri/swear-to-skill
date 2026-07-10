@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from s2s.cli import COMMAND_ISSUES, main
+from s2s.cli import COMMAND_ISSUES, build_parser, main
 
 
 @pytest.mark.parametrize(
@@ -12,7 +12,10 @@ from s2s.cli import COMMAND_ISSUES, main
     [
         (c, i)
         for c, i in COMMAND_ISSUES.items()
-        if c not in {"scan", "meter", "status", "triage", "run", "pump", "schedule"}
+        if c not in {
+            "scan", "meter", "status", "triage", "run", "pump", "schedule",
+            "proposals", "approve", "reject", "rollback",
+        }
     ],
 )
 def test_each_stub_exits_successfully(command: str, issue: int, capsys: pytest.CaptureFixture[str]) -> None:
@@ -24,8 +27,27 @@ def test_remaining_stub_commands_accept_their_documented_scaffold_options(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     assert main(["autonomy", "on"]) == 0
-    assert main(["approve", "proposal-1"]) == 0
     assert "not implemented yet" in capsys.readouterr().out
+
+
+def test_proposals_parser_accepts_json_output() -> None:
+    args = build_parser().parse_args(["proposals", "--json"])
+    assert args.command == "proposals" and args.json is True
+
+
+def test_approve_parser_accepts_edit() -> None:
+    args = build_parser().parse_args(["approve", "12", "--edit"])
+    assert args.proposal_id == 12 and args.edit is True
+
+
+def test_reject_parser_accepts_reason() -> None:
+    args = build_parser().parse_args(["reject", "13", "--reason", "too broad"])
+    assert args.proposal_id == 13 and args.reason == "too broad"
+
+
+def test_rollback_parser_accepts_force() -> None:
+    args = build_parser().parse_args(["rollback", "14", "--force"])
+    assert args.remedy_id == 14 and args.force is True
 
 
 def test_init_dispatch_uses_isolated_s2s_and_claude_homes(monkeypatch, tmp_path) -> None:

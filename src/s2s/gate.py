@@ -1,0 +1,1152 @@
+"""Policy-agnostic Stage 5 installation and rollback substrate.
+
+This module is the only remedy writer for Claude Code surfaces.  Every target
+path is injectable, every target mutation follows a committed write-ahead
+intent, and rollback operates only on provenance-tagged content.
+"""
+
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
+import base64
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import shlex
+import shutil
+import subprocess
+import tempfile
+from typing import Any, Mapping
+
+from . import initcmd
+from .ledger import Ledger, LedgerError, Proposal, Remedy
+from .paths import resolve_paths
+from .synthesist import SKILL_NAME_RE, SynthesisValidationError, parse_skill_markdown
+
+
+SKILL_MARKER = "# s2s:managed remedy={remedy_id}"
+HOOK_MARKER = "s2s:managed remedy={remedy_id}"
+CLAUDE_BEGIN = "<!-- s2s:begin remedy={remedy_id} -->"
+CLAUDE_END = "<!-- s2s:end remedy={remedy_id} -->"
+PROPOSAL_REFERENCE_RE = re.compile(r"^proposal\s+#(\d+)$")
+
+
+class GateError(RuntimeError):
+    """Raised when a Gate action cannot safely preserve user content."""
+
+
+class HandEditedError(GateError):
+    """Raised when managed content changed and requires an explicit force rollback."""
+
+
+@dataclass(frozen=True)
+class GateTargets:
+    """All filesystem surfaces touched by Gate actions."""
+
+    skills_dir: Path
+    global_claude_md: Path
+    settings_path: Path
+    state_dir: Path
+    project_claude_md: Path | None = None
+    project_claude_md_paths: Mapping[str, Path] | None = None
+
+
+@dataclass(frozen=True)
+class InstallResult:
+    remedy_id: int
+    proposal_id: int
+    artifact_type: str
+    artifact_path: str
+    revision_of: int | None
+
+
+@dataclass(frozen=True)
+class RollbackResult:
+    remedy_id: int
+    artifact_type: str
+    artifact_path: str
+    forced: bool
+
+
+def default_targets() -> GateTargets:
+    """Resolve real user defaults without creating or modifying them."""
+
+    claude_home = Path.home() / ".claude"
+    return GateTargets(
+        skills_dir=claude_home / "skills",
+        global_claude_md=claude_home / "CLAUDE.md",
+        settings_path=claude_home / "settings.json",
+        state_dir=resolve_paths().state_dir,
+    )
+
+
+def _coerce_targets(
+    targets: GateTargets | Mapping[str, Path] | None,
+) -> GateTargets:
+    if targets is None:
+        return default_targets()
+    if isinstance(targets, GateTargets):
+        return targets
+    defaults = default_targets()
+    values = dict(targets)
+    aliases = {
+        "global_claude_md_path": "global_claude_md",
+        "settings_json": "settings_path",
+        "project_claude_md_path": "project_claude_md",
+    }
+    for old, new in aliases.items():
+        if old in values and new not in values:
+            values[new] = values.pop(old)
+    return GateTargets(
+        skills_dir=Path(values.get("skills_dir", defaults.skills_dir)),
+        global_claude_md=Path(values.get("global_claude_md", defaults.global_claude_md)),
+        settings_path=Path(values.get("settings_path", defaults.settings_path)),
+        state_dir=Path(values.get("state_dir", defaults.state_dir)),
+        project_claude_md=(
+            Path(values["project_claude_md"])
+            if values.get("project_claude_md") is not None
+            else defaults.project_claude_md
+        ),
+        project_claude_md_paths=values.get(
+            "project_claude_md_paths", defaults.project_claude_md_paths
+        ),
+    )
+
+
+def install(
+    proposal: Proposal,
+    *,
+    targets: GateTargets | Mapping[str, Path] | None = None,
+) -> InstallResult:
+    """Install an approved proposal through the shared review/autonomy path."""
+
+    resolved_targets = _coerce_targets(targets)
+    if proposal.gate_status != "approved":
+        raise GateError(f"proposal {proposal.id} is {proposal.gate_status!r}, not approved")
+    payload = _proposal_payload(proposal)
+    with Ledger() as ledger:
+        revision = _resolve_revision(ledger, proposal)
+        artifact_path = _artifact_path(payload, resolved_targets, revision)
+        reserved = ledger.remedy_for_proposal(proposal.id)
+        if reserved is None:
+            remedy_id = ledger.create_remedy(
+                artifact_type=proposal.remedy_type,
+                artifact_path=str(artifact_path),
+                proposal_id=proposal.id,
+                state="approved",
+                managed_remedy_id=revision.managed_remedy_id if revision else None,
+                revises_remedy_id=revision.id if revision else None,
+            )
+            reserved = ledger.get_remedy(remedy_id)
+            assert reserved is not None
+        elif reserved.state != "approved":
+            raise GateError(
+                f"proposal {proposal.id} already owns remedy {reserved.id} in state {reserved.state!r}"
+            )
+        committed_record = resolved_targets.state_dir / "installs" / f"remedy-{reserved.id}.json"
+        if committed_record.is_file():
+            record = _load_install_record(resolved_targets.state_dir, reserved.id)
+            if not _installed_record_matches_target(record):
+                raise GateError(
+                    f"committed install for remedy {reserved.id} no longer matches its target"
+                )
+            ledger.mark_remedy_installed(
+                reserved.id,
+                artifact_digest=str(record["intent"]["rendered_digest"]),
+                state_record_ref=str(Path("installs") / f"remedy-{reserved.id}.json"),
+            )
+            return InstallResult(
+                remedy_id=reserved.id,
+                proposal_id=proposal.id,
+                artifact_type=proposal.remedy_type,
+                artifact_path=str(artifact_path),
+                revision_of=revision.id if revision else None,
+            )
+        managed_id = reserved.managed_remedy_id
+        try:
+            rendered = _render_artifact(payload, managed_id)
+        except (KeyError, SynthesisValidationError) as error:
+            raise GateError(f"proposal {proposal.id} remedy content is invalid: {error}") from error
+        intent = _build_intent(
+            proposal,
+            reserved,
+            payload,
+            artifact_path,
+            rendered,
+            revision,
+            resolved_targets,
+        )
+        intent_ref = write_install_intent(
+            proposal,
+            reserved.id,
+            targets=resolved_targets,
+            intent=intent,
+        )
+        try:
+            _apply_install(intent, resolved_targets)
+        except initcmd.SettingsError as error:
+            raise GateError(str(error)) from error
+        after_digest = _target_digest(intent)
+        install_ref = _record_install(
+            resolved_targets.state_dir,
+            intent,
+            intent_ref=intent_ref,
+            after_digest=after_digest,
+        )
+        ledger.mark_remedy_installed(
+            reserved.id,
+            artifact_digest=_digest(rendered),
+            state_record_ref=install_ref,
+        )
+        return InstallResult(
+            remedy_id=reserved.id,
+            proposal_id=proposal.id,
+            artifact_type=proposal.remedy_type,
+            artifact_path=str(artifact_path),
+            revision_of=revision.id if revision else None,
+        )
+
+
+def write_install_intent(
+    proposal: Proposal,
+    remedy_id: int,
+    *,
+    targets: GateTargets | Mapping[str, Path] | None = None,
+    intent: dict[str, Any] | None = None,
+) -> str:
+    """Atomically persist and commit an install intent without touching its target.
+
+    ``intent`` is accepted for the installer's fully rendered record.  Tests and
+    recovery tools may omit it to create a deliberate simulated-crash intent.
+    """
+
+    resolved = _coerce_targets(targets)
+    record = intent or {
+        "action": "install",
+        "remedy_id": remedy_id,
+        "proposal": _proposal_as_json(proposal),
+        "artifact_type": proposal.remedy_type,
+        "artifact_path": None,
+        "rendered_b64": None,
+        "created_at": _utc_now(),
+        "simulated": True,
+    }
+    state = _StateRepo(resolved.state_dir)
+    relative = Path("intents") / f"remedy-{remedy_id}.json"
+    state.write_json(relative, record)
+    rendered_b64 = record.get("rendered_b64")
+    if isinstance(rendered_b64, str):
+        state.write_bytes(
+            Path("artifacts") / f"remedy-{remedy_id}.rendered",
+            _decode(rendered_b64),
+        )
+    state.commit(f"intent: install remedy {remedy_id}")
+    return str(relative)
+
+
+def recover_pending_intents(
+    *, targets: GateTargets | Mapping[str, Path] | None = None
+) -> list[dict[str, Any]]:
+    """List committed install intents that have no matching install record."""
+
+    state_dir = _coerce_targets(targets).state_dir
+    intents_dir = state_dir / "intents"
+    if not intents_dir.is_dir():
+        return []
+    pending: list[dict[str, Any]] = []
+    for path in sorted(intents_dir.glob("remedy-*.json")):
+        try:
+            record = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        remedy_id = record.get("remedy_id")
+        if not isinstance(remedy_id, int):
+            continue
+        if not (state_dir / "installs" / f"remedy-{remedy_id}.json").is_file():
+            pending.append(record)
+    return pending
+
+
+def rollback(
+    remedy_id: int,
+    *,
+    force: bool = False,
+    targets: GateTargets | Mapping[str, Path] | None = None,
+) -> RollbackResult:
+    """Reverse exactly one installed remedy, refusing hand-edited content by default."""
+
+    resolved = _coerce_targets(targets)
+    with Ledger() as ledger:
+        remedy = ledger.get_remedy(remedy_id)
+        if remedy is None:
+            raise GateError(f"remedy {remedy_id} does not exist")
+        if remedy.state != "installed":
+            raise GateError(f"remedy {remedy_id} is {remedy.state!r}, not installed")
+        active_revision = ledger.connection.execute(
+            """
+            SELECT id FROM remedy
+            WHERE revises_remedy_id = ? AND state = 'installed'
+            ORDER BY id DESC LIMIT 1
+            """,
+            (remedy_id,),
+        ).fetchone()
+        if active_revision is not None:
+            raise GateError(
+                f"remedy {remedy_id} has active revision {int(active_revision['id'])}; "
+                "roll back the revision first"
+            )
+        record = _load_install_record(resolved.state_dir, remedy_id)
+        rollback_path = resolved.state_dir / "rollbacks" / f"remedy-{remedy_id}.json"
+        existing_rollback = _read_json_object(rollback_path)
+        if existing_rollback is not None and _rollback_record_matches_target(record):
+            ledger.mark_remedy_rolled_back(
+                remedy_id,
+                rollback_metadata=json.dumps(
+                    existing_rollback, sort_keys=True, separators=(",", ":")
+                ),
+            )
+            return RollbackResult(
+                remedy_id=remedy_id,
+                artifact_type=remedy.artifact_type,
+                artifact_path=remedy.artifact_path,
+                forced=bool(existing_rollback.get("force")),
+            )
+        _validate_rollback(record, force=force)
+        rollback_record = {
+            "action": "rollback",
+            "remedy_id": remedy_id,
+            "artifact_type": remedy.artifact_type,
+            "artifact_path": remedy.artifact_path,
+            "force": force,
+            "created_at": _utc_now(),
+            "restores_revision": remedy.revises_remedy_id,
+        }
+        state = _StateRepo(resolved.state_dir)
+        relative = Path("rollbacks") / f"remedy-{remedy_id}.json"
+        if existing_rollback is None or bool(existing_rollback.get("force")) != force:
+            state.write_json(relative, rollback_record)
+            # The rollback action itself is durable before the target is touched.
+            state.commit(f"rollback remedy {remedy_id}")
+        else:
+            rollback_record = existing_rollback
+        try:
+            _apply_rollback(record, force=force)
+        except initcmd.SettingsError as error:
+            raise GateError(str(error)) from error
+        ledger.mark_remedy_rolled_back(
+            remedy_id,
+            rollback_metadata=json.dumps(rollback_record, sort_keys=True, separators=(",", ":")),
+        )
+        return RollbackResult(
+            remedy_id=remedy_id,
+            artifact_type=remedy.artifact_type,
+            artifact_path=remedy.artifact_path,
+            forced=force,
+        )
+
+
+def edit_proposal_content(proposal: Proposal, editor: str) -> str:
+    """Open only the drafted remedy content and return an updated proposal JSON blob."""
+
+    payload = _proposal_payload(proposal)
+    editable = _editable_content(payload)
+    descriptor, raw_path = tempfile.mkstemp(prefix=f"s2s-proposal-{proposal.id}-", suffix=".md")
+    path = Path(raw_path)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as output:
+            output.write(editable)
+            output.flush()
+            os.fsync(output.fileno())
+        command = [*shlex.split(editor), str(path)]
+        result = subprocess.run(command, check=False)
+        if result.returncode != 0:
+            raise GateError(f"editor exited with status {result.returncode}")
+        edited = path.read_text(encoding="utf-8")
+        try:
+            _apply_edited_content(payload, edited)
+        except SynthesisValidationError as error:
+            raise GateError(f"edited remedy is invalid: {error}") from error
+        return json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    finally:
+        path.unlink(missing_ok=True)
+
+
+def _proposal_payload(proposal: Proposal) -> dict[str, Any]:
+    try:
+        payload = json.loads(proposal.drafted_content)
+    except json.JSONDecodeError as error:
+        raise GateError(f"proposal {proposal.id} drafted content is not valid JSON") from error
+    if not isinstance(payload, dict) or not isinstance(payload.get("remedy_content"), dict):
+        raise GateError(f"proposal {proposal.id} has no structured remedy_content")
+    if payload.get("remedy_type") != proposal.remedy_type:
+        raise GateError(f"proposal {proposal.id} remedy type does not match its payload")
+    return payload
+
+
+def _resolve_revision(ledger: Ledger, proposal: Proposal) -> Remedy | None:
+    if not proposal.revises:
+        return None
+    match = PROPOSAL_REFERENCE_RE.fullmatch(proposal.revises.strip())
+    if match is None:
+        raise GateError(f"revision reference {proposal.revises!r} is not an installed proposal")
+    revision = ledger.remedy_for_proposal(int(match.group(1)))
+    if revision is None or revision.state != "installed":
+        raise GateError(f"revision target {proposal.revises!r} is not installed")
+    if revision.artifact_type != proposal.remedy_type:
+        raise GateError("a revision must keep the existing remedy type and surface")
+    return revision
+
+
+def _artifact_path(
+    payload: Mapping[str, Any], targets: GateTargets, revision: Remedy | None
+) -> Path | str:
+    if revision is not None:
+        return Path(revision.artifact_path) if revision.artifact_type != "benchmark-only" else "benchmark-only"
+    remedy_type = str(payload["remedy_type"])
+    content = payload["remedy_content"]
+    assert isinstance(content, Mapping)
+    if remedy_type == "skill":
+        name = content.get("name")
+        if not isinstance(name, str) or SKILL_NAME_RE.fullmatch(name) is None:
+            raise GateError("skill proposal name must be safe kebab-case")
+        return targets.skills_dir / name / "SKILL.md"
+    if remedy_type == "claude-md":
+        if content.get("target") == "global":
+            return targets.global_claude_md
+        project = content.get("project")
+        if targets.project_claude_md is not None:
+            return targets.project_claude_md
+        if isinstance(project, str) and targets.project_claude_md_paths:
+            mapped = targets.project_claude_md_paths.get(project)
+            if mapped is not None:
+                return Path(mapped)
+        if not isinstance(project, str) or not project.strip():
+            raise GateError("project CLAUDE.md proposal has no project path")
+        return Path(project).expanduser() / "CLAUDE.md"
+    if remedy_type == "hook":
+        return targets.settings_path
+    if remedy_type == "benchmark-only":
+        return "benchmark-only"
+    raise GateError(f"unsupported remedy type {remedy_type!r}")
+
+
+def _render_artifact(payload: Mapping[str, Any], managed_id: int) -> bytes:
+    remedy_type = str(payload["remedy_type"])
+    content = payload["remedy_content"]
+    assert isinstance(content, Mapping)
+    if remedy_type == "skill":
+        name = str(content["name"])
+        description = str(content["description"])
+        body = str(content["body_markdown"]).strip()
+        rendered = (
+            "---\n"
+            f"{SKILL_MARKER.format(remedy_id=managed_id)}\n"
+            f"name: {name}\n"
+            f"description: {description}\n"
+            "---\n"
+            f"{body}\n"
+        )
+        parse_skill_markdown(rendered)
+        return rendered.encode("utf-8")
+    if remedy_type == "claude-md":
+        text = str(content["text"]).strip()
+        return (
+            f"{CLAUDE_BEGIN.format(remedy_id=managed_id)}\n"
+            f"{text}\n"
+            f"{CLAUDE_END.format(remedy_id=managed_id)}\n"
+        ).encode("utf-8")
+    if remedy_type == "hook":
+        command = str(content["command_sketch"]).strip()
+        marker = HOOK_MARKER.format(remedy_id=managed_id)
+        return f"{command} # {marker}".encode("utf-8")
+    if remedy_type == "benchmark-only":
+        return str(content["note"]).strip().encode("utf-8")
+    raise GateError(f"unsupported remedy type {remedy_type!r}")
+
+
+def _build_intent(
+    proposal: Proposal,
+    remedy: Remedy,
+    payload: Mapping[str, Any],
+    artifact_path: Path | str,
+    rendered: bytes,
+    revision: Remedy | None,
+    targets: GateTargets,
+) -> dict[str, Any]:
+    path = Path(artifact_path) if artifact_path != "benchmark-only" else None
+    preimage = _read_optional(path) if path is not None else None
+    previous_artifact = None
+    previous_hook_event = None
+    if revision is not None:
+        previous_record = _load_install_record(targets.state_dir, revision.id)
+        previous_artifact = previous_record["intent"].get("rendered_b64")
+        previous_hook_event = previous_record["intent"].get("hook_event")
+    content = payload["remedy_content"]
+    assert isinstance(content, Mapping)
+    return {
+        "action": "install",
+        "remedy_id": remedy.id,
+        "managed_remedy_id": remedy.managed_remedy_id,
+        "revision_of": revision.id if revision else None,
+        "proposal": _proposal_as_json(proposal),
+        "artifact_type": proposal.remedy_type,
+        "artifact_path": str(artifact_path),
+        "rendered_b64": _encode(rendered),
+        "rendered_digest": _digest(rendered),
+        "preimage_b64": _encode(preimage) if preimage is not None else None,
+        "preimage_missing": preimage is None,
+        "previous_artifact_b64": previous_artifact,
+        "hook_event": content.get("event") if proposal.remedy_type == "hook" else None,
+        "previous_hook_event": previous_hook_event,
+        "resolved_targets": {
+            "skills_dir": str(targets.skills_dir),
+            "global_claude_md": str(targets.global_claude_md),
+            "project_claude_md": (
+                str(targets.project_claude_md)
+                if targets.project_claude_md is not None
+                else None
+            ),
+            "settings_path": str(targets.settings_path),
+            "state_dir": str(targets.state_dir),
+        },
+        "created_at": _utc_now(),
+    }
+
+
+def _apply_install(intent: Mapping[str, Any], targets: GateTargets) -> None:
+    artifact_type = intent["artifact_type"]
+    if artifact_type == "benchmark-only":
+        return
+    path = Path(str(intent["artifact_path"]))
+    rendered = _decode(str(intent["rendered_b64"]))
+    preimage = _decode_optional(intent.get("preimage_b64"))
+    managed_id = int(intent["managed_remedy_id"])
+    if artifact_type == "skill":
+        _install_skill(
+            path,
+            rendered,
+            preimage,
+            revision=bool(intent.get("revision_of")),
+            managed_id=managed_id,
+            previous_artifact=_decode_optional(intent.get("previous_artifact_b64")),
+        )
+    elif artifact_type == "claude-md":
+        updated = _claude_install_bytes(
+            preimage or b"",
+            rendered,
+            managed_id,
+            revision=bool(intent.get("revision_of")),
+            previous_artifact=_decode_optional(intent.get("previous_artifact_b64")),
+        )
+        initcmd.atomic_write_bytes(path, updated, preimage)
+    elif artifact_type == "hook":
+        event = intent.get("hook_event")
+        if not isinstance(event, str) or not event.strip():
+            raise GateError("hook proposal has no event")
+        marker = HOOK_MARKER.format(remedy_id=managed_id)
+        if intent.get("revision_of"):
+            old_event = intent.get("previous_hook_event")
+            if not isinstance(old_event, str):
+                raise GateError("hook revision provenance has no prior event")
+            previous_artifact = _decode_optional(intent.get("previous_artifact_b64"))
+            current_command = _find_hook_command(path, marker)
+            if previous_artifact is None or current_command is None:
+                raise GateError("hook revision target is missing its prior managed entry")
+            if current_command.encode("utf-8") != previous_artifact:
+                raise HandEditedError("existing managed hook was hand-edited")
+            initcmd.replace_managed_hook(
+                path,
+                old_event=old_event,
+                new_event=event,
+                command=rendered.decode("utf-8"),
+                marker=marker,
+            )
+        else:
+            changed = initcmd.merge_managed_hook(
+                path,
+                event=event,
+                command=rendered.decode("utf-8"),
+                marker=marker,
+            )
+            if not changed:
+                raise GateError(f"managed hook {managed_id} already exists")
+    else:
+        raise GateError(f"unsupported remedy type {artifact_type!r}")
+
+
+def _install_skill(
+    path: Path,
+    rendered: bytes,
+    preimage: bytes | None,
+    *,
+    revision: bool,
+    managed_id: int,
+    previous_artifact: bytes | None,
+) -> None:
+    skill_dir = path.parent
+    if skill_dir.is_symlink() or path.is_symlink():
+        raise GateError("managed skill paths cannot be symbolic links")
+    marker_present = preimage is not None and b"# s2s:managed remedy=" in preimage
+    if revision:
+        if not marker_present or not skill_dir.is_dir():
+            raise GateError("revision target is no longer an s2s-managed skill")
+        marker = SKILL_MARKER.format(remedy_id=managed_id).encode("utf-8")
+        if marker not in preimage or previous_artifact is None or preimage != previous_artifact:
+            raise HandEditedError("existing managed skill was hand-edited")
+        extras = {item.name for item in skill_dir.iterdir()} - {"SKILL.md"}
+        if extras:
+            raise GateError("revision target skill directory contains user-managed files")
+        _atomic_replace_bytes(path, rendered, preimage)
+        return
+    if skill_dir.exists():
+        raise GateError(f"skill target {skill_dir} already exists")
+    skill_dir.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    temp_dir = Path(tempfile.mkdtemp(prefix=f".{skill_dir.name}.", dir=skill_dir.parent))
+    try:
+        temp_path = temp_dir / "SKILL.md"
+        with temp_path.open("wb") as output:
+            output.write(rendered)
+            output.flush()
+            os.fsync(output.fileno())
+        os.replace(temp_dir, skill_dir)
+        _fsync_directory(skill_dir.parent)
+    finally:
+        if temp_dir.exists():
+            shutil.rmtree(temp_dir)
+
+
+def _claude_install_bytes(
+    original: bytes,
+    rendered: bytes,
+    managed_id: int,
+    *,
+    revision: bool,
+    previous_artifact: bytes | None,
+) -> bytes:
+    if revision:
+        if previous_artifact is None:
+            raise GateError("revision provenance is missing its prior artifact")
+        start, end = _managed_block_span(original, managed_id)
+        current = original[start:end]
+        if current != previous_artifact:
+            raise HandEditedError("existing managed CLAUDE.md block was hand-edited")
+        return original[:start] + rendered + original[end:]
+    try:
+        _managed_block_span(original, managed_id)
+    except GateError:
+        pass
+    else:
+        raise GateError(f"CLAUDE.md already contains remedy {managed_id}")
+    separator = b"" if not original or original.endswith(b"\n") else b"\n"
+    return original + separator + rendered
+
+
+def _record_install(
+    state_dir: Path,
+    intent: Mapping[str, Any],
+    *,
+    intent_ref: str,
+    after_digest: str | None,
+) -> str:
+    remedy_id = int(intent["remedy_id"])
+    record = {
+        "action": "installed",
+        "remedy_id": remedy_id,
+        "intent_ref": intent_ref,
+        "intent": dict(intent),
+        "target_digest": after_digest,
+        "completed_at": _utc_now(),
+    }
+    state = _StateRepo(state_dir)
+    relative = Path("installs") / f"remedy-{remedy_id}.json"
+    state.write_json(relative, record)
+    title = _title_from_proposal(intent["proposal"])
+    state.commit(f"install remedy {remedy_id}: {title}")
+    return str(relative)
+
+
+def _load_install_record(state_dir: Path, remedy_id: int) -> dict[str, Any]:
+    path = state_dir / "installs" / f"remedy-{remedy_id}.json"
+    try:
+        record = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise GateError(f"cannot read install provenance for remedy {remedy_id}: {error}") from error
+    if not isinstance(record, dict) or not isinstance(record.get("intent"), dict):
+        raise GateError(f"install provenance for remedy {remedy_id} is malformed")
+    return record
+
+
+def _validate_rollback(record: Mapping[str, Any], *, force: bool) -> None:
+    intent = record["intent"]
+    assert isinstance(intent, Mapping)
+    artifact_type = intent["artifact_type"]
+    if artifact_type == "benchmark-only":
+        return
+    path = Path(str(intent["artifact_path"]))
+    rendered = _decode(str(intent["rendered_b64"]))
+    managed_id = int(intent["managed_remedy_id"])
+    if artifact_type == "skill":
+        if path.parent.is_symlink() or path.is_symlink():
+            raise GateError("managed skill paths cannot be symbolic links")
+        if not path.parent.is_dir():
+            raise GateError("managed skill directory no longer exists")
+        current = _read_optional(path)
+        marker_present = (
+            current is not None
+            and SKILL_MARKER.format(remedy_id=managed_id).encode() in current
+        )
+        if not marker_present and not force:
+            raise HandEditedError("managed skill marker is missing; retry with force=True")
+        extras = {item.name for item in path.parent.iterdir()} - {"SKILL.md"}
+        if (current != rendered or extras) and not force:
+            raise HandEditedError("managed skill was hand-edited; retry with force=True")
+    elif artifact_type == "claude-md":
+        current = _read_optional(path)
+        if current is None:
+            raise GateError("managed CLAUDE.md target no longer exists")
+        start, end = _managed_block_span(current, managed_id)
+        if current[start:end] != rendered and not force:
+            raise HandEditedError("managed CLAUDE.md block was hand-edited; retry with force=True")
+    elif artifact_type == "hook":
+        command = _find_hook_command(path, HOOK_MARKER.format(remedy_id=managed_id))
+        if command is None:
+            raise GateError("managed hook no longer exists")
+        if command.encode("utf-8") != rendered and not force:
+            raise HandEditedError("managed hook was hand-edited; retry with force=True")
+
+
+def _apply_rollback(record: Mapping[str, Any], *, force: bool) -> None:
+    intent = record["intent"]
+    assert isinstance(intent, Mapping)
+    artifact_type = intent["artifact_type"]
+    if artifact_type == "benchmark-only":
+        return
+    path = Path(str(intent["artifact_path"]))
+    preimage = _decode_optional(intent.get("preimage_b64"))
+    rendered = _decode(str(intent["rendered_b64"]))
+    managed_id = int(intent["managed_remedy_id"])
+    if artifact_type == "skill":
+        if intent.get("revision_of"):
+            assert preimage is not None
+            current = _read_optional(path)
+            if current is None:
+                _atomic_create_bytes(path, preimage)
+            else:
+                _atomic_replace_bytes(path, preimage, current)
+        else:
+            tombstone = path.parent.with_name(f".{path.parent.name}.s2s-remove-{os.getpid()}")
+            if tombstone.exists():
+                raise GateError(f"rollback staging path already exists: {tombstone}")
+            os.replace(path.parent, tombstone)
+            if not force:
+                tombstone_file = tombstone / "SKILL.md"
+                safe = (
+                    {item.name for item in tombstone.iterdir()} == {"SKILL.md"}
+                    and tombstone_file.read_bytes() == rendered
+                )
+                if not safe:
+                    os.replace(tombstone, path.parent)
+                    raise HandEditedError(
+                        "managed skill changed during rollback; directory restored"
+                    )
+            shutil.rmtree(tombstone)
+            _fsync_directory(path.parent.parent)
+        return
+    if artifact_type == "claude-md":
+        current = path.read_bytes()
+        start, end = _managed_block_span(current, managed_id)
+        prior_artifact = _decode_optional(intent.get("previous_artifact_b64"))
+        if intent.get("revision_of"):
+            if prior_artifact is None:
+                raise GateError("revision rollback is missing its prior artifact")
+            updated = current[:start] + prior_artifact + current[end:]
+        else:
+            removal_start = start
+            if start > 0 and current[start - 1 : start] == b"\n":
+                original = preimage or b""
+                if not original.endswith(b"\n"):
+                    removal_start -= 1
+            updated = current[:removal_start] + current[end:]
+        if preimage is not None and _digest(current) == record.get("target_digest"):
+            updated = preimage
+        if preimage is None and not updated:
+            _atomic_remove_file(path, current)
+        else:
+            initcmd.atomic_write_bytes(path, updated, current)
+        return
+    if artifact_type == "hook":
+        current = path.read_bytes()
+        if preimage is not None and _digest(current) == record.get("target_digest"):
+            initcmd.atomic_write_bytes(path, preimage, current)
+            return
+        event = intent.get("hook_event")
+        if not isinstance(event, str):
+            raise GateError("hook provenance has no event")
+        marker = HOOK_MARKER.format(remedy_id=managed_id)
+        if intent.get("revision_of") and preimage is not None:
+            prior = _find_hook_command_bytes(preimage, marker)
+            if prior is not None:
+                previous_event = intent.get("previous_hook_event")
+                if not isinstance(previous_event, str):
+                    raise GateError("hook revision provenance has no prior event")
+                initcmd.replace_managed_hook(
+                    path,
+                    old_event=event,
+                    new_event=previous_event,
+                    command=prior,
+                    marker=marker,
+                )
+        else:
+            initcmd.remove_managed_hook(path, event=event, marker=marker)
+        if not intent.get("revision_of") and preimage is None:
+            remaining = path.read_bytes()
+            try:
+                empty = json.loads(remaining) == {}
+            except (json.JSONDecodeError, UnicodeError):
+                empty = False
+            if empty:
+                _atomic_remove_file(path, remaining)
+        return
+    raise GateError(f"unsupported remedy type {artifact_type!r}")
+
+
+def _managed_block_span(content: bytes, remedy_id: int) -> tuple[int, int]:
+    begin = CLAUDE_BEGIN.format(remedy_id=remedy_id).encode("utf-8")
+    end_marker = CLAUDE_END.format(remedy_id=remedy_id).encode("utf-8")
+    start = content.find(begin)
+    if start < 0:
+        raise GateError(f"managed CLAUDE.md block for remedy {remedy_id} is missing")
+    if content.find(begin, start + 1) >= 0:
+        raise GateError(f"managed CLAUDE.md block for remedy {remedy_id} is duplicated")
+    end_start = content.find(end_marker, start + len(begin))
+    if end_start < 0:
+        raise GateError(f"managed CLAUDE.md end marker for remedy {remedy_id} is missing")
+    end = end_start + len(end_marker)
+    if content[end : end + 1] == b"\n":
+        end += 1
+    return start, end
+
+
+def _target_digest(intent: Mapping[str, Any]) -> str | None:
+    if intent["artifact_type"] == "benchmark-only":
+        return None
+    content = _read_optional(Path(str(intent["artifact_path"])))
+    return _digest(content) if content is not None else None
+
+
+def _installed_record_matches_target(record: Mapping[str, Any]) -> bool:
+    intent = record.get("intent")
+    if not isinstance(intent, Mapping):
+        return False
+    if intent.get("artifact_type") == "benchmark-only":
+        return record.get("target_digest") is None
+    path = Path(str(intent.get("artifact_path")))
+    content = _read_optional(path)
+    return content is not None and _digest(content) == record.get("target_digest")
+
+
+def _rollback_record_matches_target(record: Mapping[str, Any]) -> bool:
+    intent = record.get("intent")
+    if not isinstance(intent, Mapping):
+        return False
+    artifact_type = intent.get("artifact_type")
+    if artifact_type == "benchmark-only":
+        return True
+    path = Path(str(intent.get("artifact_path")))
+    preimage = _decode_optional(intent.get("preimage_b64"))
+    revision = bool(intent.get("revision_of"))
+    if artifact_type == "skill":
+        if revision:
+            return preimage is not None and _read_optional(path) == preimage
+        return not path.parent.exists()
+    if artifact_type == "claude-md":
+        current = _read_optional(path)
+        if current is None:
+            return preimage is None and not revision
+        managed_id = int(intent["managed_remedy_id"])
+        if revision:
+            prior = _decode_optional(intent.get("previous_artifact_b64"))
+            try:
+                start, end = _managed_block_span(current, managed_id)
+            except GateError:
+                return False
+            return prior is not None and current[start:end] == prior
+        try:
+            _managed_block_span(current, managed_id)
+        except GateError:
+            begin = CLAUDE_BEGIN.format(remedy_id=managed_id).encode("utf-8")
+            return begin not in current
+        return False
+    if artifact_type == "hook":
+        marker = HOOK_MARKER.format(remedy_id=int(intent["managed_remedy_id"]))
+        raw = _read_optional(path)
+        if raw is None:
+            return preimage is None and not revision
+        try:
+            document = json.loads(raw)
+        except (json.JSONDecodeError, UnicodeError):
+            return False
+        if not isinstance(document, dict):
+            return False
+        command = _find_hook_command(path, marker)
+        if revision:
+            prior = _decode_optional(intent.get("previous_artifact_b64"))
+            return prior is not None and command is not None and command.encode() == prior
+        return command is None
+    return False
+
+
+def _find_hook_command(path: Path, marker: str) -> str | None:
+    content = _read_optional(path)
+    return _find_hook_command_bytes(content, marker) if content is not None else None
+
+
+def _find_hook_command_bytes(content: bytes, marker: str) -> str | None:
+    try:
+        document = json.loads(content)
+    except (json.JSONDecodeError, UnicodeError):
+        return None
+    hooks = document.get("hooks") if isinstance(document, dict) else None
+    if not isinstance(hooks, dict):
+        return None
+    matches: list[str] = []
+    for groups in hooks.values():
+        if not isinstance(groups, list):
+            continue
+        for group in groups:
+            if not isinstance(group, dict) or not isinstance(group.get("hooks"), list):
+                continue
+            for entry in group["hooks"]:
+                if isinstance(entry, dict) and isinstance(entry.get("command"), str):
+                    command = entry["command"]
+                    if marker in command:
+                        matches.append(command)
+    if len(matches) > 1:
+        raise GateError(f"managed hook marker {marker!r} is duplicated")
+    return matches[0] if matches else None
+
+
+def _editable_content(payload: Mapping[str, Any]) -> str:
+    remedy_type = payload["remedy_type"]
+    content = payload["remedy_content"]
+    assert isinstance(content, Mapping)
+    if remedy_type == "skill":
+        return (
+            f"---\nname: {content['name']}\ndescription: {content['description']}\n---\n"
+            f"{str(content['body_markdown']).rstrip()}\n"
+        )
+    key = {"claude-md": "text", "hook": "command_sketch", "benchmark-only": "note"}[str(remedy_type)]
+    return str(content[key])
+
+
+def _apply_edited_content(payload: dict[str, Any], edited: str) -> None:
+    remedy_type = payload["remedy_type"]
+    content = payload["remedy_content"]
+    assert isinstance(content, dict)
+    if remedy_type == "skill":
+        frontmatter, body = parse_skill_markdown(edited)
+        content.update(
+            name=frontmatter["name"],
+            description=frontmatter["description"],
+            body_markdown=body,
+        )
+        return
+    key = {"claude-md": "text", "hook": "command_sketch", "benchmark-only": "note"}[str(remedy_type)]
+    if not edited.strip():
+        raise GateError("edited remedy content cannot be empty")
+    content[key] = edited.rstrip("\n")
+
+
+def _proposal_as_json(proposal: Proposal) -> dict[str, Any]:
+    value = asdict(proposal)
+    value["evidence_incident_ids"] = list(proposal.evidence_incident_ids)
+    return value
+
+
+def _title_from_proposal(proposal: object) -> str:
+    if isinstance(proposal, Mapping):
+        drafted = proposal.get("drafted_content")
+        if isinstance(drafted, str):
+            try:
+                payload = json.loads(drafted)
+            except json.JSONDecodeError:
+                payload = None
+            if isinstance(payload, dict):
+                title = payload.get("failure_statement")
+                if isinstance(title, str) and title.strip():
+                    return " ".join(title.split())[:72]
+    return "approved proposal"
+
+
+def _read_optional(path: Path | None) -> bytes | None:
+    if path is None:
+        return None
+    try:
+        return path.read_bytes()
+    except FileNotFoundError:
+        return None
+
+
+def _read_json_object(path: Path) -> dict[str, Any] | None:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return None
+    except (OSError, json.JSONDecodeError) as error:
+        raise GateError(f"cannot read state record {path}: {error}") from error
+    if not isinstance(value, dict):
+        raise GateError(f"state record {path} is not a JSON object")
+    return value
+
+
+def _atomic_remove_file(path: Path, expected: bytes) -> None:
+    """Remove a file only while it still matches the validated snapshot."""
+
+    if path.read_bytes() != expected:
+        raise HandEditedError(f"{path} changed concurrently; file left unchanged")
+    tombstone = path.with_name(f".{path.name}.s2s-remove-{os.getpid()}")
+    os.replace(path, tombstone)
+    tombstone.unlink()
+    _fsync_directory(path.parent)
+
+
+def _atomic_replace_bytes(path: Path, content: bytes, expected: bytes) -> None:
+    """Atomically replace a managed artifact without creating in-surface backups."""
+
+    if path.read_bytes() != expected:
+        raise HandEditedError(f"{path} changed concurrently; file left unchanged")
+    descriptor, raw_temp = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
+    )
+    temp = Path(raw_temp)
+    try:
+        with os.fdopen(descriptor, "wb") as output:
+            output.write(content)
+            output.flush()
+            os.fsync(output.fileno())
+        if path.read_bytes() != expected:
+            raise HandEditedError(f"{path} changed concurrently; file left unchanged")
+        os.replace(temp, path)
+        _fsync_directory(path.parent)
+    finally:
+        temp.unlink(missing_ok=True)
+
+
+def _atomic_create_bytes(path: Path, content: bytes) -> None:
+    """Create one missing managed file by atomically publishing a complete temp file."""
+
+    if path.exists():
+        raise HandEditedError(f"{path} appeared concurrently; file left unchanged")
+    descriptor, raw_temp = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
+    )
+    temp = Path(raw_temp)
+    try:
+        with os.fdopen(descriptor, "wb") as output:
+            output.write(content)
+            output.flush()
+            os.fsync(output.fileno())
+        try:
+            os.link(temp, path)
+        except FileExistsError as error:
+            raise HandEditedError(
+                f"{path} appeared concurrently; file left unchanged"
+            ) from error
+        _fsync_directory(path.parent)
+    finally:
+        temp.unlink(missing_ok=True)
+
+
+def _encode(content: bytes) -> str:
+    return base64.b64encode(content).decode("ascii")
+
+
+def _decode(content: str) -> bytes:
+    try:
+        return base64.b64decode(content, validate=True)
+    except ValueError as error:
+        raise GateError("state record contains invalid base64") from error
+
+
+def _decode_optional(content: object) -> bytes | None:
+    return _decode(content) if isinstance(content, str) else None
+
+
+def _digest(content: bytes) -> str:
+    return hashlib.sha256(content).hexdigest()
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _fsync_directory(path: Path) -> None:
+    try:
+        descriptor = os.open(path, os.O_RDONLY)
+    except OSError:
+        return
+    try:
+        os.fsync(descriptor)
+    except OSError:
+        pass
+    finally:
+        os.close(descriptor)
+
+
+class _StateRepo:
+    """Small git-backed write-ahead journal confined to ``S2S_HOME/state``."""
+
+    def __init__(self, root: Path) -> None:
+        self.root = Path(root)
+        self.root.mkdir(mode=0o700, parents=True, exist_ok=True)
+        if not (self.root / ".git").is_dir():
+            self._git("init", "-q")
+            self._git("config", "user.name", "s2s")
+            self._git("config", "user.email", "s2s@local")
+
+    def write_json(self, relative: Path, payload: Mapping[str, Any]) -> None:
+        self.write_bytes(
+            relative,
+            (json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8"),
+        )
+
+    def write_bytes(self, relative: Path, content: bytes) -> None:
+        path = self.root / relative
+        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        descriptor, raw_temp = tempfile.mkstemp(
+            prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
+        )
+        temp = Path(raw_temp)
+        try:
+            with os.fdopen(descriptor, "wb") as output:
+                output.write(content)
+                output.flush()
+                os.fsync(output.fileno())
+            os.replace(temp, path)
+            _fsync_directory(path.parent)
+        finally:
+            temp.unlink(missing_ok=True)
+
+    def commit(self, message: str) -> None:
+        self._git("add", "--all")
+        self._git("commit", "-q", "-m", message)
+
+    def _git(self, *args: str) -> None:
+        try:
+            result = subprocess.run(
+                ["git", *args],
+                cwd=self.root,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=False,
+            )
+        except OSError as error:
+            raise GateError(f"cannot execute state-dir git: {error}") from error
+        if result.returncode != 0:
+            detail = result.stderr.strip() or result.stdout.strip()
+            raise GateError(f"state-dir git {' '.join(args)} failed: {detail}")
