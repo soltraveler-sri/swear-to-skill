@@ -61,6 +61,7 @@ class DashboardData:
     hit_messages: int
     weeks: tuple[WeeklyRate, ...]
     models: tuple[Rate, ...]
+    sources: tuple[Rate, ...]
     projects: tuple[Rate, ...]
     categories: tuple[tuple[str, int], ...]
     incident_states: tuple[tuple[str, int], ...]
@@ -107,6 +108,7 @@ def collect_dashboard_data(ledger: Ledger) -> DashboardData:
     cost_totals = _cost_totals(ledger)
     weekly: dict[date, list[int]] = defaultdict(lambda: [0, 0])
     models: dict[str, list[int]] = defaultdict(lambda: [0, 0])
+    sources: dict[str, list[int]] = defaultdict(lambda: [0, 0])
     projects: dict[str, list[int]] = defaultdict(lambda: [0, 0])
     dates: list[date] = []
     scan_times: list[tuple[datetime, str]] = []
@@ -122,6 +124,11 @@ def collect_dashboard_data(ledger: Ledger) -> DashboardData:
         model = friendly_model_name(session.dominant_model)
         models[model][0] += messages
         models[model][1] += hits
+        source_label = (
+            "Codex" if session.source == "codex" else "Claude Code" if session.source == "claude-code" else session.source
+        )
+        sources[source_label][0] += messages
+        sources[source_label][1] += hits
         projects[session.project][0] += messages
         projects[session.project][1] += hits
 
@@ -152,6 +159,7 @@ def collect_dashboard_data(ledger: Ledger) -> DashboardData:
             for week_start, counts in sorted(weekly.items())
         ),
         models=_rates_from_counts(models),
+        sources=_rates_from_counts(sources),
         projects=_rates_from_counts(projects),
         categories=tuple(sorted(categories.items(), key=lambda item: (-item[1], item[0]))),
         incident_states=tuple(
@@ -263,6 +271,10 @@ def render_status(data: DashboardData, *, archived_sessions: int) -> str:
                 f"{data.hit_messages} detected message(s)"
             ),
             f"incidents: {incidents or 'none'}",
+            "sources: " + (
+                ", ".join(f"{rate.label}={_percentage(rate.percentage)}" for rate in data.sources)
+                or "none"
+            ),
             f"queue depth: {data.queue_depth}",
             f"singleton ratio: {_percentage(data.singleton_ratio * 100)}",
             f"other share: {_percentage(data.other_share * 100)}",
@@ -390,12 +402,16 @@ def _render_meter(data: DashboardData) -> str:
   <div class="legend"><span><i class="key bar-key"></i>Direct-message volume</span><span><i class="key"></i>Frustration rate</span></div>
 </div>
 <div class="split">
+  {_render_rates_table('By source', data.sources, 'source')}
   {_render_rates_table('By model', data.models, 'model')}
+</div>
+<div class="split">
   {_render_rates_table('By project', data.projects, 'project')}
+  {_render_weekly_table(data.weeks)}
 </div>
 <div class="split">
   {_render_categories(data.categories)}
-  {_render_weekly_table(data.weeks)}
+  <div class="placeholder"><strong>Cross-agent comparison</strong><br>Compare Claude Code and Codex rates above; each rate uses that source's own direct-message denominator.</div>
 </div>
 """
 

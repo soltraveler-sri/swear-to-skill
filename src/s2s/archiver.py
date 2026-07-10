@@ -18,6 +18,7 @@ import traceback
 from typing import Literal, TextIO
 
 from .adapters.claude_code import iter_sessions
+from .config import load_config
 from .ledger import Ledger
 from .paths import resolve_paths
 from .pump import spawn_background_pump
@@ -52,7 +53,7 @@ class BackfillResult:
     failed: int = 0
 
 
-def archive_transcript(path: Path | str) -> ArchiveResult:
+def archive_transcript(path: Path | str, *, source: str = "claude-code") -> ArchiveResult:
     """Atomically archive one transcript and enqueue newly archived content.
 
     Equality is established by size plus a streaming SHA-256 digest. If an
@@ -60,14 +61,16 @@ def archive_transcript(path: Path | str) -> ArchiveResult:
     previous archive (or removes a newly created one) before the error escapes.
     """
 
-    source = Path(path).expanduser()
-    if not source.is_file():
-        raise FileNotFoundError(f"transcript is not a readable file: {source}")
+    source_path = Path(path).expanduser()
+    if not source_path.is_file():
+        raise FileNotFoundError(f"transcript is not a readable file: {source_path}")
 
-    project_slug = source.parent.name
-    session_id = source.stem
+    if source not in {"claude-code", "codex"}:
+        raise ValueError(f"unsupported transcript source: {source}")
+    project_slug = "codex" if source == "codex" else source_path.parent.name
+    session_id = source_path.stem
     if not project_slug or not session_id:
-        raise ValueError(f"cannot derive project and session names from {source}")
+        raise ValueError(f"cannot derive project and session names from {source_path}")
 
     paths = resolve_paths()
     destination = paths.archive_dir / project_slug / f"{session_id}.jsonl"
@@ -76,10 +79,10 @@ def archive_transcript(path: Path | str) -> ArchiveResult:
     _mkdir_private(destination.parent)
 
     with _destination_lock(destination):
-        return _archive_to_destination(source, destination)
+        return _archive_to_destination(source_path, destination, source_name=source)
 
 
-def _archive_to_destination(source: Path, destination: Path) -> ArchiveResult:
+def _archive_to_destination(source: Path, destination: Path, *, source_name: str = "claude-code") -> ArchiveResult:
     """Perform one archive attempt while the destination lock is held."""
 
     if destination.exists():
@@ -103,7 +106,7 @@ def _archive_to_destination(source: Path, destination: Path) -> ArchiveResult:
 
         try:
             with Ledger() as ledger:
-                ledger.enqueue_item(str(destination), "claude-code")
+                ledger.enqueue_item(str(destination), source_name)
         except BaseException:
             _restore_archive_after_queue_failure(destination, rollback_path, status)
             installed = False
@@ -130,16 +133,22 @@ def backfill(
     output: TextIO | None = None,
     error_output: TextIO | None = None,
 ) -> BackfillResult:
-    """Stream over historical Claude Code sessions and archive each one."""
+    """Archive historical Claude Code sessions and enabled Codex rollouts.
+
+    Passing ``base_dir`` remains the focused Claude fixture/API path.  The normal
+    CLI path discovers Codex too when its source switch is enabled.
+    """
 
     output = sys.stdout if output is None else output
     error_output = sys.stderr if error_output is None else error_output
     found = new = skipped = failed = 0
 
-    for transcript_path in iter_sessions(base_dir):
+    discovered: list[tuple[Path, str]] = [(path, "claude-code") for path in iter_sessions(base_dir)]
+
+    for transcript_path, source_name in discovered:
         found += 1
         try:
-            result = archive_transcript(transcript_path)
+            result = archive_transcript(transcript_path, source=source_name)
         except Exception as error:
             failed += 1
             print(f"backfill: failed {transcript_path}: {error}", file=error_output)
@@ -155,6 +164,21 @@ def backfill(
                 f"skipped={skipped} failed={failed}",
                 file=output,
             )
+
+    if base_dir is None and load_config().sources.codex:
+        # Codex's history index is the detection source; it joins and archives
+        # only matched rollouts, rather than parsing every full transcript first.
+        from .scanner import scan_codex_history
+
+        try:
+            with Ledger() as ledger:
+                codex_hits = scan_codex_history(ledger)
+        except Exception as error:
+            failed += 1
+            print(f"backfill: failed Codex history scan: {error}", file=error_output)
+        else:
+            found += codex_hits
+            new += codex_hits
 
     result = BackfillResult(found=found, new=new, skipped=skipped, failed=failed)
     print(
