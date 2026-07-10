@@ -50,6 +50,10 @@ webhook_url = ""
 events = ["proposal_pending", "autonomous_action"]
 
 [models]
+# Prefix an explicit model with "codex:" to opt into the installed, authenticated
+# OpenAI Codex CLI for that stage, for example: triage = "codex:gpt-5.6-luna".
+# Codex calls are ephemeral; usage and cost are logged as unknown, while the bulk
+# confirmation gate uses a rough $0.01-per-call estimate.
 triage = "haiku"
 curate = "sonnet"
 synthesize = "sonnet"

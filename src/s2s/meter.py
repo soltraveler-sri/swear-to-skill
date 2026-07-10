@@ -374,7 +374,9 @@ def _incident_aggregates(
 def _cost_totals(ledger: Ledger) -> tuple[CostTotal, ...]:
     rows = ledger.connection.execute(
         """
-        SELECT stage, model, COUNT(*) AS calls, SUM(tokens) AS tokens, SUM(cost_usd) AS cost_usd
+        SELECT stage, model, COUNT(*) AS calls,
+               COALESCE(SUM(tokens), 0) AS tokens,
+               COALESCE(SUM(cost_usd), 0.0) AS cost_usd
         FROM run_log
         GROUP BY stage, model
         ORDER BY stage, model

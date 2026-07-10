@@ -152,7 +152,11 @@ def _metric_value(scores: Mapping[str, object], name: str) -> float:
 
 
 def _run_cost(record: Mapping[str, object]) -> float:
-    return sum(float(row.get("cost_usd", 0.0)) for row in _rows(record, "llm_run_log"))
+    return sum(
+        float(value)
+        for row in _rows(record, "llm_run_log")
+        if isinstance((value := row.get("cost_usd")), (int, float))
+    )
 
 
 def _run_duration(record: Mapping[str, object]) -> float:
