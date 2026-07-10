@@ -12,6 +12,7 @@ from .adapters.claude_code import (
     extract_session_metadata,
     extract_user_messages,
 )
+from .adapters import codex
 from .config import load_config
 from .ledger import Incident, Ledger
 from .llm import call, estimate_and_confirm, load_prompt
@@ -134,12 +135,26 @@ def context_for_incident(incident: Incident) -> tuple[ContextPack, str]:
     semantics remain centralized in the transcript-owning stage.
     """
 
-    if incident.source != "claude-code":
+    if incident.source not in {"claude-code", "codex"}:
         raise ContextResolutionError(f"no Stage 2 context adapter is available for {incident.source!r}")
     paths = resolve_paths()
-    transcript = _archived_transcript_for(paths.archive_dir, incident)
-    target_uuid = _incident_uuid(transcript, incident)
-    context_pack = build_context_pack(transcript, target_uuid)
+    if incident.source == "codex":
+        transcript = _archived_codex_transcript_for(paths.archive_dir, incident)
+        target_uuid = codex.find_message_uuid(
+            transcript,
+            session_id=incident.session_id,
+            message=incident.message,
+            occurred_at=incident.occurred_at,
+        )
+        if target_uuid is None:
+            raise ContextResolutionError(
+                f"could not find incident {incident.id} in archived Codex rollout {transcript}"
+            )
+        context_pack = codex.build_context_pack(transcript, target_uuid)
+    else:
+        transcript = _archived_transcript_for(paths.archive_dir, incident)
+        target_uuid = _incident_uuid(transcript, incident)
+        context_pack = build_context_pack(transcript, target_uuid)
     try:
         archive_pointer = transcript.relative_to(paths.home)
     except ValueError as error:
@@ -171,6 +186,19 @@ def _archived_transcript_for(archive_dir: Path, incident: Incident) -> Path:
                 return candidate
     raise ContextResolutionError(
         f"no archived transcript for session {incident.session_id!r} under {project_dir}"
+    )
+
+
+def _archived_codex_transcript_for(archive_dir: Path, incident: Incident) -> Path:
+    """Find a Codex rollout by internal thread id inside its durable archive."""
+
+    project_dir = archive_dir / "codex"
+    if project_dir.is_dir():
+        for candidate in sorted(project_dir.glob("*.jsonl")):
+            if codex.extract_session_metadata(candidate).session_id == incident.session_id:
+                return candidate
+    raise ContextResolutionError(
+        f"no archived Codex rollout for session {incident.session_id!r} under {project_dir}"
     )
 
 

@@ -65,6 +65,13 @@ class Curator:
 
 
 @dataclass(frozen=True)
+class Sources:
+    """Transcript sources enabled for scheduled and historical scans."""
+
+    codex: bool = False
+
+
+@dataclass(frozen=True)
 class Config:
     """Complete configuration available before any optional features exist."""
 
@@ -74,6 +81,7 @@ class Config:
     models: Models = Models()
     costs: Costs = Costs()
     curator: Curator = Curator()
+    sources: Sources = Sources()
 
 
 def _section(document: dict[str, object], name: str) -> dict[str, object]:
@@ -124,7 +132,11 @@ def load_config(config_path: Path | None = None) -> Config:
     models = _section(document, "models")
     costs = _section(document, "costs")
     curator = _section(document, "curator")
+    sources = _section(document, "sources")
     defaults = Config()
+    # Codex is opt-out when its normal rollout root exists; otherwise preserve a
+    # quiet default for machines that have never used Codex.
+    codex_default = (Path.home() / ".codex" / "sessions").is_dir()
 
     return Config(
         thresholds=Thresholds(
@@ -208,4 +220,5 @@ def load_config(config_path: Path | None = None) -> Config:
                 defaults.curator.context_char_budget,
             ),
         ),
+        sources=Sources(codex=_bool(sources, "codex", codex_default)),
     )
