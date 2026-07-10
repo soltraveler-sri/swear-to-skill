@@ -16,7 +16,15 @@ from pathlib import Path
 import sqlite3
 from typing import Any, Iterator
 
-from .claude_code import ContextPack, ContextPackMetadata, SessionMetadata, UserMessage
+from .claude_code import (
+    COMMAND_NAME_RE,
+    SKILL_LAUNCH_RE,
+    ContextPack,
+    ContextPackMetadata,
+    SessionMetadata,
+    SkillUsage,
+    UserMessage,
+)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -78,6 +86,42 @@ def extract_user_messages(path: Path, *, root: Path | None = None) -> list[UserM
     if source.name == "history.jsonl":
         return _history_messages(source)
     return _rollout_messages(source)
+
+
+def extract_skill_usages(path: Path, *, root: Path | None = None) -> list[SkillUsage]:
+    """Extract s2s invocations from Codex history or rollout records."""
+
+    source = Path(path)
+    lines = list(_iter_json_lines(source))
+    meta = _session_meta(lines)
+    fallback_session_id = _string(meta.get("thread_id")) or _rollout_id(source)
+    usages: list[SkillUsage] = []
+    seen: set[tuple[str, str, str]] = set()
+    for line in lines:
+        data = line.data
+        session_id = _string(data.get("session_id")) or fallback_session_id
+        used_at = _timestamp(data) or ""
+        names: list[str] = []
+        user_text = _string(data.get("text")) if source.name == "history.jsonl" else None
+        user_text = user_text or _event_user_text(data) or _response_user_text(data)
+        if user_text:
+            names.extend(match.group(1).strip().lstrip("/") for match in COMMAND_NAME_RE.finditer(user_text))
+        payload = _mapping(data.get("payload"))
+        if data.get("type") == "response_item" and payload is not None and payload.get("type") in {
+            "function_call_output",
+            "custom_tool_call_output",
+            "tool_result",
+        }:
+            result_text = _text(payload.get("output")) or _text(payload.get("content")) or ""
+            names.extend(match.group(1).strip() for match in SKILL_LAUNCH_RE.finditer(result_text))
+        for name in names:
+            if name != "s2s" and not name.startswith("s2s-"):
+                continue
+            key = (name, session_id, used_at)
+            if key not in seen:
+                seen.add(key)
+                usages.append(SkillUsage(name, session_id, "codex", used_at))
+    return usages
 
 
 def extract_session_metadata(path: Path, *, root: Path | None = None) -> SessionMetadata:
@@ -387,7 +431,7 @@ def _rollout_id(path: Path) -> str:
 
 
 def _is_scaffold(text: str) -> bool:
-    return text.lstrip().startswith(SCAFFOLD_PREFIXES)
+    return COMMAND_NAME_RE.search(text) is not None or text.lstrip().startswith(SCAFFOLD_PREFIXES)
 
 
 def _dedupe(messages: list[UserMessage]) -> list[UserMessage]:

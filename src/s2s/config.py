@@ -118,8 +118,17 @@ class Auditor:
 
     min_post_install_sessions: int = 20
     min_post_install_days: int = 30
+    min_usage_observation_days: int = 30
+    min_sessions_scanned: int = 20
     silent_days: int = 90
     meaningful_drop_fraction: float = 0.20
+
+
+@dataclass(frozen=True)
+class Visibility:
+    """Human-facing catalog controls from North Star §15.7."""
+
+    library: bool = True
 
 
 @dataclass(frozen=True)
@@ -151,6 +160,7 @@ class Config:
     curator: Curator = Curator()
     sources: Sources = Sources()
     auditor: Auditor = Auditor()
+    visibility: Visibility = Visibility()
     eval: EvalSettings = EvalSettings()
 
 
@@ -210,6 +220,7 @@ def load_config(config_path: Path | None = None) -> Config:
     curator = _section(document, "curator")
     sources = _section(document, "sources")
     auditor = _section(document, "auditor")
+    visibility = _section(document, "visibility")
     eval_section = _section(document, "eval")
     eval_judge = _section(eval_section, "judge")
     defaults = Config()
@@ -332,12 +343,25 @@ def load_config(config_path: Path | None = None) -> Config:
                 "min_post_install_days",
                 defaults.auditor.min_post_install_days,
             ),
+            min_usage_observation_days=_int(
+                auditor,
+                "min_usage_observation_days",
+                defaults.auditor.min_usage_observation_days,
+            ),
+            min_sessions_scanned=_int(
+                auditor,
+                "min_sessions_scanned",
+                defaults.auditor.min_sessions_scanned,
+            ),
             silent_days=_int(auditor, "silent_days", defaults.auditor.silent_days),
             meaningful_drop_fraction=_float(
                 auditor,
                 "meaningful_drop_fraction",
                 defaults.auditor.meaningful_drop_fraction,
             ),
+        ),
+        visibility=Visibility(
+            library=_bool(visibility, "library", defaults.visibility.library),
         ),
         eval=EvalSettings(
             mode=(

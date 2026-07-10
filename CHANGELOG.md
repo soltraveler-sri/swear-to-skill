@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented here.
 
+## 0.4.0 — 2026-07-10
+
+- Skill observability (NORTHSTAR §15.7), hardening against silent failure:
+  mechanical usage tracking of pipeline skills from the transcripts the
+  system already archives (both invocation shapes; usage never becomes an
+  incident), per-skill usage in status/dashboard, and Auditor
+  trigger-description revision proposals for never-used skills.
+- `s2s doctor`: discovery self-check for installed remedies, with an opt-in
+  `--live` probe asking a real Claude session to confirm the installed
+  skills are visible.
+- Generated skills end with a standardized faint attribution line for task
+  summaries; every generated skill is mirrored to a browsable
+  `S2S_HOME/library/` catalog (default on).
+- `evals/RESULTS.md`: full methodology and measured-results reference behind
+  the README table, with a docs-rot test keeping them in agreement.
+
 ## 0.3.0 — 2026-07-10
 
 - Pipeline-generated skills carry an enforced `s2s-` name prefix and a

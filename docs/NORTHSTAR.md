@@ -650,6 +650,40 @@ Synthesist be Opus?" or "does prompt v2 reduce fragmentation?" become
 measurements instead of opinions. Prompt changes re-run the replay baseline
 like code regressions (prompts are second-class code nowhere in this repo).
 
+### 15.7 Skill observability — hardening against silent failure
+
+This system's unique failure mode is silence: the pipeline works, skills are
+installed, and they are never surfaced during real work (a naming/discovery
+issue, a weak trigger description, a CLI change) — with no signal
+distinguishing "never needed" from "never visible." Three layers, cheapest
+signal first:
+
+1. **Mechanical usage tracking (the backbone).** Skill invocations appear
+   identifiably in the transcripts the pipeline already archives and scans
+   (`<command-name>` entries and skill-launch records — verified against real
+   transcripts). The scanner records usage events for `s2s-`-prefixed skills;
+   status and the dashboard show per-skill usage counts; the Auditor treats
+   sustained zero usage after installation as a signal and proposes a
+   trigger-description revision through the standard gate. No model
+   compliance required; works retroactively and under full autonomy.
+2. **Discovery self-check (`s2s doctor`).** Static verification that every
+   installed remedy is where discovery looks (`skills/*/SKILL.md`, parseable
+   frontmatter, sane description), plus an opt-in `--live` probe: one cheap
+   model call asking a real `claude -p` session to confirm the installed
+   skills appear in its available-skill list — a true end-to-end discovery
+   test an operator can run before trusting the system.
+3. **Faint human-visible attribution.** Generated skills end with one gentle,
+   standardized line asking the agent to append "· used skill <name> (from
+   swear-to-skill)" to its task summary when the skill shaped its work. A
+   compliance-dependent signal, deliberately last — it comforts the operator
+   in the moment; the mechanical layers carry the guarantees.
+
+Operator browsing: in addition to the enforced `s2s-` name prefix (§4
+Stage 5), installs mirror a copy of every generated skill into
+`S2S_HOME/library/` — a browsable catalog of everything the pipeline ever
+created, kept in sync by install/revision/rollback. The mirror is for humans;
+discovery still happens only in the real skills directory.
+
 ### 15.6 Honest limits
 
 Evals measure the pipeline on a synthetic corpus; they do not certify

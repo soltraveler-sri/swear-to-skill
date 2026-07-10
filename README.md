@@ -24,6 +24,8 @@ before Claude Code's retention cleanup can remove them; `scan` records local
 detection signals; `meter --open` writes and opens a self-contained `file://`
 dashboard.
 
+Run `s2s doctor` after your first approvals to verify the installed remedies are discoverable.
+
 ## How the pipeline works
 
 Archive → scan → triage → curate → synthesize → gate → audit. Regex scanning is free;
@@ -127,6 +129,8 @@ No API key is needed — evals use your `claude` CLI subscription like everythin
 Full live golden-corpus results (v2 prompts, 2026-07-10) are strong across all
 three triage models: detection recall and dedup-as-revision catch 1.0, stability
 (flip rates) 0.0, pipeline invariants 1.0, and ~0.1–0.2 remedies per incident.
+
+Full methodology, run IDs, and results: [evals/RESULTS.md](evals/RESULTS.md).
 
 | Triage model | Authenticity precision | Authenticity recall | Label agreement | Convergence | Evidence contamination |
 | --- | ---: | ---: | ---: | ---: | --- |

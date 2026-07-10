@@ -22,6 +22,10 @@ context_char_budget = 60000
 # before a non-silent outcome can be judged.
 min_post_install_sessions = 20
 min_post_install_days = 30
+# An installed generated skill with no recorded invocations needs both this
+# observation age and this many completed session scans before trigger revision.
+min_usage_observation_days = 30
+min_sessions_scanned = 20
 # Zero incidents in the remedy's own cluster for this long is a retirement candidate.
 silent_days = 90
 # Post-install rate must drop at least this fraction to be called effective.
@@ -77,6 +81,11 @@ judge_counterfactual = "v1"
 
 [costs]
 confirm_threshold_usd = 1.0
+
+[visibility]
+# Keep a browsable, documentation-only copy of generated skills in
+# S2S_HOME/library. Claude Code discovery reads only its real skills directory.
+library = true
 
 [eval]
 # "auto" selects replay when this corpus/profile has recordings, otherwise mock.
