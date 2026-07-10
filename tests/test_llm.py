@@ -209,12 +209,21 @@ def test_transport_uses_real_user_home_and_private_neutral_cwd(
         model="haiku",
         stage="test",
         timeout_s=5,
-        env={"HOME": str(tmp_path / "fake-home"), "PATH": _os.environ.get("PATH", "")},
+        env={
+            "HOME": str(tmp_path / "fake-home"),
+            "CLAUDE_CONFIG_DIR": str(tmp_path / "fake-home" / ".claude"),
+            "PATH": _os.environ.get("PATH", ""),
+        },
     )
     llm.default_response_provider(request)
 
     real_home = _pwd.getpwuid(_os.getuid()).pw_dir
     assert captured["env"]["HOME"] == real_home
+    # A sandboxed CLAUDE_CONFIG_DIR must never reach the transport (it
+    # relocates claude's credentials); the process-start value wins.
+    assert "CLAUDE_CONFIG_DIR" not in captured["env"] or captured["env"][
+        "CLAUDE_CONFIG_DIR"
+    ] == llm._PROCESS_START_CLAUDE_CONFIG_DIR
     mode = _os.stat(captured["cwd"]).st_mode
     assert _stat.S_IMODE(mode) == 0o700
     assert "s2s-neutral-cwd-" in str(captured["cwd"])
