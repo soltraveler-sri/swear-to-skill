@@ -91,6 +91,19 @@ def test_small_sample_metric_renders_as_info_not_failure() -> None:
     assert "FAIL" not in markdown
 
 
+def test_excluded_metric_renders_its_reason_as_info() -> None:
+    record = {"mode": "replay"}
+    scores = {
+        "status": "pass",
+        "metrics": [{"metric": "dedup_catch_rate", "value": 0.0, "threshold": 1.0, "op": ">=", "pass": False, "excluded": True, "note": "no near-duplicate annotations were fed", "evidence": []}],
+    }
+
+    markdown = evalreport.render_markdown(record, scores, {}, "PASS", (), (), Path("thresholds.toml"), False)
+
+    assert "INFO · no near-duplicate annotations were fed" in markdown
+    assert "FAIL" not in markdown
+
+
 @pytest.mark.parametrize(
     ("verdict", "code"),
     [("PASS", 0), ("FAIL", 1), ("PARTIAL", 2), ("WIRING CHECK ONLY", 0)],

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from s2s.cli import COMMAND_ISSUES, build_parser, main
+from s2s.cli import COMMAND_ISSUES, _metric_terminal_verdict, build_parser, main
 
 
 def test_all_issue_commands_have_left_the_cli_scaffold() -> None:
@@ -36,6 +36,14 @@ def test_autonomy_commands_persist_override_without_rewriting_config(
 def test_proposals_parser_accepts_json_output() -> None:
     args = build_parser().parse_args(["proposals", "--json"])
     assert args.command == "proposals" and args.json is True
+
+
+def test_eval_metric_terminal_verdict_respects_pass_and_exclusion() -> None:
+    assert _metric_terminal_verdict({"pass": True, "flag": "small-sample"}) == "PASS"
+    assert _metric_terminal_verdict({"pass": False}) == "FAIL"
+    assert _metric_terminal_verdict({"pass": False, "excluded": True, "note": "no near-duplicate annotations were fed"}) == (
+        "INFO (no near-duplicate annotations were fed)"
+    )
 
 
 def test_version_comes_from_distribution_metadata_or_source_fallback(

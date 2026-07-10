@@ -480,12 +480,16 @@ def _html_scores(scores: Mapping[str, object], verdict: str) -> str:
 
 
 def _metric_verdict(metric: Mapping[str, object]) -> str:
+    if metric.get("excluded") is True:
+        return f"INFO · {metric.get('note', 'excluded')}"
     if metric.get("flag") == "small-sample":
         return "INFO · small-sample"
     return "PASS" if metric.get("pass") else "FAIL"
 
 
 def _metric_class(metric: Mapping[str, object]) -> str:
+    if metric.get("excluded") is True:
+        return "metric-info"
     if metric.get("flag") == "small-sample":
         return "metric-info"
     return "metric-pass" if metric.get("pass") else "metric-fail"

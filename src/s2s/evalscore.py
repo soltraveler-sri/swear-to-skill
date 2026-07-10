@@ -63,7 +63,10 @@ def score_record(
     if not _is_subset_run(record, manifest):
         _clear_small_sample_flags(metrics)
     validate_evidence_pointers({"record": record, "manifest": manifest}, metrics)
-    passed = all(metric.get("pass") is not False for metric in metrics)
+    passed = all(
+        metric.get("pass") is not False or metric.get("excluded") is True
+        for metric in metrics
+    )
     return {
         "format_version": 1,
         "status": "pass" if passed else "fail",
@@ -117,7 +120,6 @@ def _metric(
 ) -> dict[str, object]:
     passed = value >= threshold if op == ">=" else value <= threshold
     if denominator is not None and denominator < 3:
-        passed = None
         details["flag"] = "small-sample"
     return {"metric": name, "value": round(value, 6), "threshold": threshold, "op": op, "pass": passed, "evidence": evidence, **details}
 
@@ -149,13 +151,17 @@ def _triage_metrics(record: Mapping[str, object], manifest: Mapping[str, object]
     named = [item for item in fed if str(item.get("cluster_id")) not in {"singleton", "decoy"}]
     labels = {str(item.get("corpus_incident_id")): item.get("label") for item in verdicts}
     per_cluster = []
+    subset_run = _is_subset_run(record, manifest)
     for cluster in sorted({str(item["cluster_id"]) for item in named}):
         members = [item for item in named if item["cluster_id"] == cluster]
         if len(members) < 2:
             continue
         assigned = [str(labels.get(str(item["uuid"]))) for item in members if labels.get(str(item["uuid"]))]
+        if subset_run and len(assigned) < 2:
+            continue
         modal, count = _modal(assigned)
-        per_cluster.append({"cluster": cluster, "modal_label": modal, "agreement": _ratio(count, len(members)), "exact": modal == cluster})
+        denominator = len(assigned) if subset_run else len(members)
+        per_cluster.append({"cluster": cluster, "modal_label": modal, "agreement": _ratio(count, denominator), "exact": modal == cluster})
     return [
         _metric("authenticity_precision", _ratio(tp, predicted), limits["authenticity_precision"], ">=", _record_refs("triage_verdicts", verdicts), denominator=predicted, true_positives=tp, predicted_authentic=predicted),
         _metric("authenticity_recall", _ratio(tp, actual), limits["authenticity_recall"], ">=", _record_refs("triage_verdicts", verdicts), denominator=actual, true_positives=tp, authentic=actual),
@@ -249,9 +255,35 @@ def _spam_metrics(record: Mapping[str, object], manifest: Mapping[str, object], 
     return [
         _metric("spam_precision", 1.0 if clean else 0.0, limits["spam_precision"], ">=", refs, prohibited_proposal_incident_ids=sorted(proposal_ids & bad_ids)),
         _metric("remedies_per_authentic_incident", _ratio(len(proposals), len(authentic_worthy)), 1.0, "<=", _record_refs("proposals", proposals), denominator=len(authentic_worthy), proposals=len(proposals), authentic_worthy=len(authentic_worthy)),
-        _metric("dedup_catch_rate", _ratio(dedup_hits, len(near)), limits["dedup_catch_rate"], ">=", refs, denominator=len(near), caught=dedup_hits, expected=len(near)),
+        _dedup_metric(dedup_hits, near, limits["dedup_catch_rate"], refs),
         _metric("claude_md_dominance", _ratio(routed.get("claude-md", 0), len(proposals)), limits["claude_md_share"], ">=", _record_refs("proposals", proposals), denominator=len(proposals), routing_confusion=confusion, expected_shapes=dict(expected_shapes), actual_shapes=dict(routed)),
     ]
+
+
+def _dedup_metric(
+    dedup_hits: int,
+    near: Sequence[Mapping[str, object]],
+    threshold: float,
+    evidence: list[str],
+) -> dict[str, object]:
+    """Score planted dedup cases, excluding runs that were fed none."""
+
+    metric = _metric(
+        "dedup_catch_rate",
+        _ratio(dedup_hits, len(near)),
+        threshold,
+        ">=",
+        evidence,
+        denominator=len(near),
+        caught=dedup_hits,
+        expected=len(near),
+    )
+    if not near:
+        metric.update(
+            excluded=True,
+            note="no near-duplicate annotations were fed",
+        )
+    return metric
 
 
 def _stability_metrics(record: Mapping[str, object], limits: Mapping[str, float]) -> list[dict[str, object]]:
