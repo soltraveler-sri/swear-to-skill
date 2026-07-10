@@ -316,7 +316,8 @@ def render_ledger_digest(ledger: Ledger) -> str:
             f"{state}:{count}" for state, count in sorted(Counter(member.state for member in members).items())
         )
         one_liners = "; ".join(
-            f"#{member.id} {_truncate(member.one_liner or member.message, MEMBER_ONE_LINER_LIMIT)}"
+            f"#{member.id} {_truncate(member.one_liner or member.message, MEMBER_ONE_LINER_LIMIT)} "
+            f"| confidence={_format_confidence(member.confidence)}"
             for member in members
         )
         fast_track = (
@@ -450,7 +451,8 @@ def _build_pack_entry(incident: Incident, origin: str) -> _PackEntry:
     pack, _ = context_for_incident(incident)
     label = incident.label or "other"
     text = (
-        f"BEGIN FULL CONTEXT PACK incident_id={incident.id} label={label} origin={origin}\n"
+        f"BEGIN FULL CONTEXT PACK incident_id={incident.id} label={label} "
+        f"confidence={_format_confidence(incident.confidence)} origin={origin}\n"
         f"Preceding request:\n{pack.preceding_request}\n\n"
         f"Agent activity digest:\n{pack.agent_activity_digest}\n\n"
         f"Frustrated message:\n{pack.frustrated_message}\n\n"
@@ -694,7 +696,8 @@ def _apply_response(
         applied_ids.add(incident_id)
         applied_incident += 1
         suffix = " (singleton provenance)" if singleton else ""
-        records.append(_ReportVerdict("incident", subject, verdict, reason, f"applied{suffix}"))
+        report_subject = f"{subject} -> {reassign_label}" if verdict == "reassign" else subject
+        records.append(_ReportVerdict("incident", report_subject, verdict, reason, f"applied{suffix}"))
 
     for (label, verdict), incident_ids_for_conflict in conflicts.items():
         subjects = ",".join(f"#{incident_id}" for incident_id in sorted(incident_ids_for_conflict))
@@ -798,6 +801,12 @@ def _truncate(value: str, limit: int) -> str:
     return compact[: max(0, limit - 1)].rstrip() + "…"
 
 
+def _format_confidence(confidence: float | None) -> str:
+    """Render triage confidence consistently, including legacy missing values."""
+
+    return "unknown" if confidence is None else f"{confidence:.2f}"
+
+
 def _write_report(
     completed_at: datetime,
     digest: str,
@@ -816,12 +825,22 @@ def _write_report(
         f"- Full context incidents: {', '.join(str(entry.incident.id) for entry in entries)}",
         f"- Verdict records: {len(records)}",
         "",
-        "## Verdicts",
-        "",
     ]
-    if not records:
+    non_reassignment_records = [record for record in records if record.verdict != "reassign"]
+    reassignment_records = [record for record in records if record.verdict == "reassign"]
+    lines.extend(["## Verdicts", ""])
+    if not non_reassignment_records:
         lines.append("- (none)")
-    for record in records:
+    for record in non_reassignment_records:
+        reason = " ".join(record.reason.split())
+        lines.append(
+            f"- {record.kind} `{record.subject}` — **{record.verdict}** — "
+            f"{reason} _[{record.status}]_"
+        )
+    lines.extend(["", "## Reassignments", ""])
+    if not reassignment_records:
+        lines.append("- (none)")
+    for record in reassignment_records:
         reason = " ".join(record.reason.split())
         lines.append(
             f"- {record.kind} `{record.subject}` — **{record.verdict}** — "

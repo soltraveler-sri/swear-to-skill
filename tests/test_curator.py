@@ -37,6 +37,7 @@ def _add_triaged(
     project: str = "project-a",
     dismissed: bool = False,
     index: int = 0,
+    confidence: float = 0.8,
 ) -> int:
     session = f"session-{marker.lower().replace(' ', '-')}-{index}"
     timestamp = f"2026-07-{index + 1:02d}T12:00:00+00:00"
@@ -68,7 +69,7 @@ def _add_triaged(
         label=label,
         one_liner=f"Generalized {marker}",
         severity="2",
-        confidence=0.8,
+        confidence=confidence,
         context_pack_pointer=f"archive/{project}/{session}.jsonl#uuid-{marker}-{index}",
         dismissed=dismissed,
     )
@@ -120,6 +121,63 @@ def test_new_arrival_resurfaces_only_its_parked_cluster(
     # The untouched cluster remains visible only through its one-line digest.
     assert "UNTOUCHED PARKED" in prompt
     assert ledger.get_incident(untouched_old).state == "parked"  # type: ignore[union-attr]
+
+
+def test_curator_prompt_renders_triage_confidence_in_digest_and_context_pack(
+    ledger: Ledger, mock_claude
+) -> None:
+    incident_id = _add_triaged(ledger, "LOW CONFIDENCE EVIDENCE", confidence=0.72)
+    mock_claude.enqueue_response(_envelope([_verdict(incident_id, "park")]))
+
+    run_pass(ledger, assume_yes=True)
+
+    prompt = str(mock_claude.invocations()[0]["stdin"])
+    assert f"#{incident_id} Generalized LOW CONFIDENCE EVIDENCE | confidence=0.72" in prompt
+    assert (
+        f"BEGIN FULL CONTEXT PACK incident_id={incident_id} label=ignored-instruction "
+        "confidence=0.72 origin=new"
+    ) in prompt
+
+
+def test_reassign_into_active_cluster_has_dedicated_report_subsection(
+    ledger: Ledger, mock_claude
+) -> None:
+    established_id = _add_triaged(ledger, "ESTABLISHED CLUSTER", label="ignored-instruction")
+    ledger.apply_curator_incident_verdict(
+        established_id,
+        "reassign",
+        reason="Already correctly clustered.",
+        reassign_label="ignored-instruction",
+    )
+    incident_id = _add_triaged(
+        ledger,
+        "LOW CONFIDENCE NEAR DUPLICATE",
+        label="tool-misuse",
+        index=1,
+        confidence=0.72,
+    )
+    mock_claude.enqueue_response(
+        _envelope(
+            [
+                _verdict(
+                    incident_id,
+                    "reassign",
+                    "Evidence belongs with the active ignored-instruction cluster.",
+                    reassign_label="ignored-instruction",
+                )
+            ]
+        )
+    )
+
+    result = run_pass(ledger, assume_yes=True)
+
+    incident = ledger.get_incident(incident_id)
+    assert incident is not None and incident.label == "ignored-instruction"
+    assert result.report_path is not None
+    report = result.report_path.read_text(encoding="utf-8")
+    assert "## Reassignments" in report
+    assert f"incident `{incident_id} -> ignored-instruction` — **reassign**" in report
+    assert "## Verdicts\n\n- (none)\n\n## Reassignments" in report
 
 
 def test_singleton_promotion_records_provenance_and_report(

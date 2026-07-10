@@ -10,6 +10,8 @@ Taxonomy labels are fixed in this pass. `reassign` may target only one label in 
 
 Return exactly one incident verdict for every full context pack below. One verdict per incident is law; never emit duplicate incident IDs or combine `reassign` with another verdict. For a regular or resurfaced incident use `promote`, `park`, `dismiss`, or `reassign`. `reassign` requires `reassign_label`. For a QC incident use only `dismiss` (uphold triage dismissal) or `resurrect`; `resurrect` may include `reassign_label` when triage also chose the wrong existing label.
 
+A low-confidence label (< 0.8) on an incident whose evidence reads like a neighboring active cluster is a reassignment candidate — reassign rather than promote a separate near-duplicate remedy.
+
 Return cluster verdicts only for the regular cluster labels listed under CHUNK CLUSTERS, not for digest-only clusters or QC-only labels. `synthesize` sends currently open members forward, `hold` waits, and `unworthy` records a reason without automatically dismissing members. Incident verdicts apply before cluster verdicts, so a reassigned incident no longer belongs to its old cluster.
 
 If you give a cluster the synthesize verdict, do NOT also park or dismiss its members; member-level verdicts are for incidents you are NOT fast-tracking.
