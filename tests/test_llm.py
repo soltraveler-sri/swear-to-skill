@@ -159,7 +159,10 @@ def test_only_llm_module_may_construct_a_claude_subprocess() -> None:
 
 @pytest.mark.real_llm
 @pytest.mark.skipif(os.environ.get("S2S_REAL_LLM") != "1", reason="set S2S_REAL_LLM=1 to opt in")
-def test_real_claude_smoke_is_explicitly_opt_in() -> None:
+def test_real_claude_smoke_is_explicitly_opt_in(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    monkeypatch.setenv("S2S_HOME", str(tmp_path / "home"))
     text, schema = load_prompt("echo", 1)
     response = call(
         f"{text}\n\nMessage: smoke",
