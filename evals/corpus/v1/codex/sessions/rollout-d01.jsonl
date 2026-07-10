@@ -1,0 +1,4 @@
+{"type":"session_meta","payload":{"thread_id":"codex-d01","cwd":"/work/fake-aurora","source":{}}}
+{"type":"event_msg","payload":{"type":"user_message","message":"You told me it was fixed before any fake check ran."},"timestamp":"2026-07-09T15:00:00Z"}
+{"type":"response_item","payload":{"type":"message","role":"assistant","content":[{"text":"Synthetic acknowledgement."}]}}
+{"type":"event_msg","payload":{"type":"user_message","message":"Read the prompt: fake repository policy requires a changelog."},"timestamp":"2026-07-09T15:01:00Z"}
