@@ -23,6 +23,7 @@ from typing import Literal
 from unittest.mock import patch
 
 from . import llm
+from . import config as _config_module
 from . import evaljudge
 from .adapters import claude_code, codex
 from .archiver import archive_transcript, backfill
@@ -1378,7 +1379,11 @@ def _fabricate_sandbox(
                 "[prompts]",
                 f'triage = {json.dumps(str(config.triage.prompt_version))}',
                 f'curate = {json.dumps(str(config.curate.prompt_version))}',
-                f'garden = {json.dumps(str(config.curate.prompt_version))}',
+                # Gardening is part of the curate pass but has its own prompt
+                # lineage; pinning it to curate's version breaks the moment the
+                # versions diverge (live finding: curate v2 exists, garden v2
+                # does not, and the miss only fires when gardening runs).
+                f'garden = {json.dumps(str(_config_module.Config().prompts.garden))}',
                 f'synthesize = {json.dumps(str(config.synthesize.prompt_version))}',
                 f'judge_remedy = {json.dumps(str(config.judge.prompt_version))}',
                 f'judge_counterfactual = {json.dumps(str(config.judge.prompt_version))}',
