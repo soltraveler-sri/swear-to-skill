@@ -86,6 +86,10 @@ confirm_threshold_usd = 1.0
 # Keep a browsable, documentation-only copy of generated skills in
 # S2S_HOME/library. Claude Code discovery reads only its real skills directory.
 library = true
+# Generated skills ask the agent to append a small "used skill …" note to its
+# task summaries — a guard against silently-invisible skills. Set false to
+# keep summaries clean (applies to future installs and revisions).
+attribution = true
 
 [eval]
 # "auto" selects replay when this corpus/profile has recordings, otherwise mock.
