@@ -848,13 +848,18 @@ def _normalize_skill_install_content(payload: dict[str, Any]) -> None:
     if not description.endswith(GENERATED_DESCRIPTION_SUFFIX):
         content["description"] = f"{description}{GENERATED_DESCRIPTION_SUFFIX}"
     body = str(content.get("body_markdown", "")).strip()
+    # Stripping any existing attribution first keeps both directions of the
+    # [visibility] attribution toggle idempotent across revisions.
     body_lines = [line for line in body.splitlines() if not ATTRIBUTION_LINE_RE.fullmatch(line)]
     canonical_body = "\n".join(body_lines).rstrip()
-    content["body_markdown"] = (
-        f"{canonical_body}\n\n{ATTRIBUTION_LINE.format(name=content['name'])}"
-        if canonical_body
-        else ATTRIBUTION_LINE.format(name=content["name"])
-    )
+    if load_config().visibility.attribution:
+        content["body_markdown"] = (
+            f"{canonical_body}\n\n{ATTRIBUTION_LINE.format(name=content['name'])}"
+            if canonical_body
+            else ATTRIBUTION_LINE.format(name=content["name"])
+        )
+    else:
+        content["body_markdown"] = canonical_body
 
 
 def _render_artifact(
