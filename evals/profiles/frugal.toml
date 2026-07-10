@@ -7,7 +7,7 @@ prompt_version = "v1"
 
 [curate]
 model = "haiku"
-prompt_version = "v1"
+prompt_version = "v2"
 
 [synthesize]
 model = "haiku"

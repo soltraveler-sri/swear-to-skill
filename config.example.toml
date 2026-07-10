@@ -49,6 +49,8 @@ synthesize = "sonnet"
 parallelism = 2
 
 [prompts]
+# Cluster synthesis takes precedence over conflicting member park/dismiss verdicts.
+curate = "v2"
 # Stable R-ids make the default synthesis dedup contract round-trip reliably.
 synthesize = "v2"
 
