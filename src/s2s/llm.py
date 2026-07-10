@@ -420,6 +420,30 @@ def claude_response_provider(request: LLMRequest) -> dict[str, object]:
     return parsed
 
 
+def _openai_strict_schema(schema: dict[str, object]) -> dict[str, object]:
+    """Transform a schema to OpenAI structured-output strict form.
+
+    Strict mode requires ``additionalProperties: false`` on every object and
+    every property listed in ``required``. Anthropic's validation is looser,
+    so schemas written for the claude transport fail codex verbatim
+    (live finding: invalid_json_schema).
+    """
+
+    def walk(node: object) -> object:
+        if isinstance(node, dict):
+            out = {key: walk(value) for key, value in node.items()}
+            if out.get("type") == "object":
+                out.setdefault("properties", {})
+                out["additionalProperties"] = False
+                out["required"] = sorted(out["properties"].keys())
+            return out
+        if isinstance(node, list):
+            return [walk(item) for item in node]
+        return node
+
+    return walk(schema)  # type: ignore[return-value]
+
+
 def codex_response_provider(request: LLMRequest) -> dict[str, object]:
     """Execute an opt-in Codex transport and normalize its final JSON result.
 
@@ -441,7 +465,8 @@ def codex_response_provider(request: LLMRequest) -> dict[str, object]:
         schema_path = temporary_dir / "output.schema.json"
         output_path = temporary_dir / "last-message.json"
         schema_path.write_text(
-            json.dumps(dict(request.schema), separators=(",", ":")), encoding="utf-8"
+            json.dumps(_openai_strict_schema(dict(request.schema)), separators=(",", ":")),
+            encoding="utf-8",
         )
         argv = list(request.argv)
         stdin_marker = argv.pop() if argv and argv[-1] == "-" else None

@@ -95,3 +95,30 @@ def test_default_live_provider_routes_codex_requests_for_eval_wrappers(mock_code
 
     assert default_response_provider(request) == {"result": {"message": "wrapped"}}
     assert mock_codex.invocations()[0]["stdin"] == "echo wrapped"
+
+
+def test_openai_strict_schema_transform() -> None:
+    """Live finding: codex --output-schema enforces OpenAI strict mode."""
+    from s2s.llm import _openai_strict_schema
+
+    loose = {
+        "type": "object",
+        "properties": {
+            "label": {"type": "string", "enum": ["a", "b"]},
+            "nested": {
+                "type": "object",
+                "properties": {"x": {"type": "integer"}},
+                "required": ["x"],
+            },
+            "items": {"type": "array", "items": {"type": "object", "properties": {"q": {"type": "string"}}}},
+        },
+        "required": ["label"],
+    }
+    strict = _openai_strict_schema(loose)
+    assert strict["additionalProperties"] is False
+    assert strict["required"] == ["items", "label", "nested"]
+    assert strict["properties"]["nested"]["additionalProperties"] is False
+    assert strict["properties"]["items"]["items"]["additionalProperties"] is False
+    assert strict["properties"]["items"]["items"]["required"] == ["q"]
+    # the original is untouched
+    assert "additionalProperties" not in loose
