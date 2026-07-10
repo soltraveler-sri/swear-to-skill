@@ -49,10 +49,22 @@ def test_eval_metric_terminal_verdict_respects_pass_and_exclusion() -> None:
 def test_version_comes_from_distribution_metadata_or_source_fallback(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    """Release-proof: expected value mirrors the CLI's own resolution order.
+
+    A hardcoded literal here breaks on every release — and hides locally
+    whenever a stale wheel sits in the venv (live CI finding)."""
+    from importlib import metadata
+
+    from s2s import __version__
+
+    try:
+        expected = metadata.version("swear-to-skill")
+    except metadata.PackageNotFoundError:
+        expected = __version__
     with pytest.raises(SystemExit) as exit_status:
         main(["--version"])
     assert exit_status.value.code == 0
-    assert capsys.readouterr().out.strip() == "s2s 0.1.0"
+    assert capsys.readouterr().out.strip() == f"s2s {expected}"
 
 
 def test_approve_parser_accepts_edit() -> None:

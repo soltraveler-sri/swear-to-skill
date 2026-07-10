@@ -7,7 +7,6 @@ import pytest
 
 from s2s.ledger import Ledger
 from s2s.synthesist import (
-    SynthesisValidationError,
     collect_remedy_surface,
     parse_skill_markdown,
     synthesize_pending,
