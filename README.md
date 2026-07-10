@@ -103,9 +103,24 @@ status`: a high singleton ratio means incidents are not yet converging, while a 
 No. Claude-backed stages call your existing authenticated `claude` CLI. The scanner,
 meter, dashboard, and status view do not need Claude calls.
 
-## Evals (coming)
+## Evals — try it before you trust it
 
-The synthetic-corpus eval harness in [NORTHSTAR §15](docs/NORTHSTAR.md#15-eval-harness--proving-quality-not-just-function) is designed but not built in v0.1.0.
+Before integrating (and especially before enabling autonomy), you can watch the whole
+pipeline work on a safe, fully synthetic corpus — with Claude genuinely in the loop —
+inside a sandbox that never touches your real transcripts, `~/.claude`, or `~/.s2s`:
+
+```bash
+s2s eval --mode mock          # free wiring check (no model calls)
+s2s eval --mode live --quick  # small real-Claude run, cost-estimated & confirmed
+s2s eval --mode live --record # full run; records responses for free replays
+s2s eval --mode replay        # deterministic re-run from recordings (free)
+```
+
+Each run produces a greenlight report (`report.html`) with PASS/FAIL against
+thresholds and narrative excerpts tracing real incidents through detection → triage →
+clustering → remedy → judge verdicts. `s2s eval --matrix baseline,premium` compares
+model/prompt configurations side by side. Design details: [NORTHSTAR §15](docs/NORTHSTAR.md#15-eval-harness--proving-quality-not-just-function).
+No API key is needed — evals use your `claude` CLI subscription like everything else.
 
 ## License and attribution
 
