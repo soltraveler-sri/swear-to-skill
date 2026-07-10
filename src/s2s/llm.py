@@ -271,6 +271,7 @@ def _call_once(
         )
 
 
+@lru_cache(maxsize=1)
 def _neutral_cwd() -> str:
     """An empty directory for claude subprocesses.
 
@@ -280,14 +281,32 @@ def _neutral_cwd() -> str:
     also skip subscription credentials.
     """
 
-    path = Path(tempfile.gettempdir()) / "s2s-neutral-cwd"
-    path.mkdir(parents=True, exist_ok=True)
-    return str(path)
+    # mkdtemp gives a per-process, 0o700, uniquely named directory. A fixed
+    # predictable path in shared /tmp would let another local user pre-create
+    # it and plant a CLAUDE.md that `claude -p` would ingest as project
+    # context — prompt injection into every pipeline call.
+    return tempfile.mkdtemp(prefix="s2s-neutral-cwd-")
+
+
+def _real_user_home() -> str:
+    """The invoking OS user's actual home, independent of $HOME overrides.
+
+    Claude CLI authentication (OAuth/credentials under the user's real
+    ~/.claude) must follow the OS user. Sandboxed eval runs override $HOME so
+    the PIPELINE writes to fake targets — but the model transport still needs
+    the real credentials, or every live call fails "Not logged in".
+    """
+
+    import pwd
+
+    return pwd.getpwuid(os.getuid()).pw_dir
 
 
 def default_response_provider(request: LLMRequest) -> dict[str, object]:
     """Execute the real Claude transport and return its parsed JSON envelope."""
 
+    env = dict(request.env)
+    env["HOME"] = _real_user_home()
     completed = subprocess.run(
         list(request.argv),
         input=request.prompt,
@@ -295,7 +314,7 @@ def default_response_provider(request: LLMRequest) -> dict[str, object]:
         text=True,
         timeout=request.timeout_s,
         check=False,
-        env=dict(request.env),
+        env=env,
         cwd=_neutral_cwd(),
     )
     if completed.returncode != 0:
