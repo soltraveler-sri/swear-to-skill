@@ -40,8 +40,9 @@ def build_parser() -> argparse.ArgumentParser:
         "action", nargs="?", choices=("install", "remove", "status"), default="status"
     )
     subparsers.choices["autonomy"].add_argument(
-        "mode", nargs="?", choices=("on", "off")
+        "mode", nargs="?", choices=("on", "off", "status"), default="status"
     )
+    subparsers.choices["log"].add_argument("--limit", type=int, default=20)
     subparsers.choices["approve"].add_argument("proposal_id", type=int)
     subparsers.choices["approve"].add_argument("--edit", action="store_true")
     subparsers.choices["reject"].add_argument("proposal_id", type=int)
@@ -110,6 +111,19 @@ def _run_status() -> int:
     with Ledger() as ledger:
         print(render_status(collect_dashboard_data(ledger), archived_sessions=count_archived_sessions()))
         print(f"pending proposals: {ledger.pending_proposal_count()}")
+        remedy_counts = {
+            str(row["provenance"]): int(row["count"])
+            for row in ledger.connection.execute(
+                "SELECT provenance, COUNT(*) AS count FROM remedy "
+                "WHERE state = 'installed' GROUP BY provenance"
+            ).fetchall()
+        }
+        auto_count = remedy_counts.get("auto", 0)
+        human_count = remedy_counts.get("human", 0)
+        print(
+            f"installed remedies: {auto_count + human_count} "
+            f"(auto={auto_count}, human={human_count})"
+        )
     return 0
 
 
@@ -260,6 +274,59 @@ def _run_rollback(args: argparse.Namespace) -> int:
     return 0
 
 
+def _autonomy_caps_text(config: object) -> str:
+    from .config import Config
+
+    assert isinstance(config, Config)
+    policy = config.autonomy
+    return (
+        f"caps: {policy.max_auto_remedies_per_week} installs per rolling 7 days; "
+        f"{policy.max_active_auto_skills} total active auto remedies; "
+        f"confidence claude-md>={policy.claude_md_confidence_bar:g}, "
+        f"skill/singleton>={policy.skill_confidence_bar:g}"
+    )
+
+
+def _run_autonomy(args: argparse.Namespace) -> int:
+    from .config import effective_autonomy_state, load_config, set_autonomy_state
+
+    config = load_config()
+    if args.mode == "on":
+        set_autonomy_state("autonomous")
+        print(
+            "autonomy: on — unattended pumps may synthesize and install eligible "
+            "CLAUDE.md and skill remedies; guarded proposals stay queued for a human"
+        )
+        print(_autonomy_caps_text(config))
+        return 0
+    if args.mode == "off":
+        set_autonomy_state("review")
+        print(
+            "autonomy: off — the kill switch is active; existing remedies stay installed "
+            "until explicitly rolled back"
+        )
+        return 0
+    state = effective_autonomy_state(config)
+    suffix = f"; paused reason: {state.paused_reason}" if state.paused_reason else ""
+    print(f"autonomy: {state.mode} (source: {state.source}){suffix}")
+    print(_autonomy_caps_text(config))
+    print("override precedence: S2S_HOME/autonomy-state.json overrides [autonomy].mode")
+    return 0
+
+
+def _run_log(args: argparse.Namespace) -> int:
+    from .gate import read_autonomy_log
+
+    entries = read_autonomy_log(limit=max(0, args.limit))
+    if not entries:
+        print("No autonomous actions recorded.")
+        return 0
+    print("Recent autonomous actions (oldest to newest):")
+    for entry in entries:
+        print(entry)
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Dispatch implemented commands and retain labelled future stubs."""
     parser = build_parser()
@@ -296,6 +363,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "rollback":
         return _run_rollback(args)
 
+    if args.command == "autonomy":
+        return _run_autonomy(args)
+
+    if args.command == "log":
+        return _run_log(args)
+
     if args.command in {"run", "pump"}:
         from .pump import run_pump
 
@@ -307,7 +380,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         else:
             print(
                 f"pump: scanned {result.scanned}; triaged {result.triaged}; "
-                f"curator calls {result.curator_calls}"
+                f"curator calls {result.curator_calls}; synthesized {result.synthesized}; "
+                f"auto-installed {result.auto_installed}; queued {result.auto_queued}"
             )
         return 0
 

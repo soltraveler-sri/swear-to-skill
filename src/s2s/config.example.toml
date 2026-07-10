@@ -29,9 +29,16 @@ meaningful_drop_fraction = 0.20
 
 [autonomy]
 # Human review is the default gate policy. "autonomous" is opt-in.
+# `s2s autonomy on|off` writes S2S_HOME/autonomy-state.json, which overrides
+# this value without rewriting this commented file. `on` after a pause resumes.
 mode = "review"
-# North Star §8 guardrails for autonomous installations.
+# Lowering either confidence bar increases the chance of installing a weak rule.
+claude_md_confidence_bar = 0.8
+skill_confidence_bar = 0.9
+# Raising the weekly cap increases how quickly unattended changes can accumulate.
 max_auto_remedies_per_week = 3
+# Kept under its original config name for compatibility; this caps all active
+# auto-installed remedies, not only skills. Raising it increases persistent scope.
 max_active_auto_skills = 15
 
 [notifications]

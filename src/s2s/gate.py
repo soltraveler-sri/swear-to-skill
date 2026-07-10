@@ -8,7 +8,7 @@ intent, and rollback operates only on provenance-tagged content.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import base64
 import hashlib
 import json
@@ -19,9 +19,11 @@ import shlex
 import shutil
 import subprocess
 import tempfile
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 
 from . import initcmd
+from . import notify
+from .config import Config, effective_autonomy_state, load_config
 from .ledger import Ledger, LedgerError, Proposal, Remedy
 from .paths import resolve_paths
 from .synthesist import SKILL_NAME_RE, SynthesisValidationError, parse_skill_markdown
@@ -71,6 +73,42 @@ class RollbackResult:
     forced: bool
 
 
+@dataclass(frozen=True)
+class AutonomyDecision:
+    """One append-only autonomous Gate decision."""
+
+    action: str
+    proposal_id: int | None
+    remedy_id: int | None
+    remedy_type: str | None
+    evidence_incident_ids: tuple[int, ...]
+    confidence: float | None
+    reason: str
+    timestamp: str
+
+
+@dataclass(frozen=True)
+class AutonomyResult:
+    """Observable result of one FIFO autonomous adjudication pass."""
+
+    decisions: tuple[AutonomyDecision, ...]
+
+    @property
+    def installed(self) -> int:
+        return sum(decision.action == "installed" for decision in self.decisions)
+
+    @property
+    def queued_for_human(self) -> int:
+        return sum(
+            decision.action in {"fallback-to-human", "cap-hit"}
+            for decision in self.decisions
+        )
+
+    @property
+    def paused(self) -> bool:
+        return any(decision.action == "pause" for decision in self.decisions)
+
+
 def default_targets() -> GateTargets:
     """Resolve real user defaults without creating or modifying them."""
 
@@ -81,6 +119,183 @@ def default_targets() -> GateTargets:
         settings_path=claude_home / "settings.json",
         state_dir=resolve_paths().state_dir,
     )
+
+
+def adjudicate_pending_autonomously(
+    ledger: Ledger | None = None,
+    *,
+    targets: GateTargets | Mapping[str, Path] | None = None,
+    config: Config | None = None,
+    clock: Callable[[], datetime] | None = None,
+) -> AutonomyResult:
+    """Apply autonomous policy to pending proposals in FIFO order.
+
+    Guardrail fallbacks leave proposals pending for a human.  This policy layer
+    never writes remedy targets itself; eligible proposals are approved and passed
+    to :func:`install`, the same transactional path used by review mode.
+    """
+
+    if ledger is None:
+        with Ledger() as owned:
+            return adjudicate_pending_autonomously(
+                owned, targets=targets, config=config, clock=clock
+            )
+    configured = config or load_config()
+    if not effective_autonomy_state(configured).enabled:
+        return AutonomyResult(())
+    resolved_targets = _coerce_targets(targets)
+    now_fn = clock or (lambda: datetime.now(timezone.utc))
+    decisions: list[AutonomyDecision] = []
+    started = True
+
+    for proposal in ledger.autonomy_pending_proposals():
+        if not effective_autonomy_state(configured).enabled:
+            if started:
+                decisions.append(
+                    record_autonomy_pause(
+                        "kill switch or pause observed mid-queue",
+                        proposal_id=proposal.id,
+                        targets=resolved_targets,
+                        clock=now_fn,
+                    )
+                )
+            break
+        now = _aware_utc(now_fn())
+        payload, confidence = _autonomy_payload(proposal)
+        fallback_reason = _ineligible_reason(ledger, proposal, payload, confidence, configured)
+        if fallback_reason is not None:
+            decision = _make_autonomy_decision(
+                "fallback-to-human",
+                proposal,
+                reason=fallback_reason,
+                confidence=confidence,
+                timestamp=now,
+            )
+            _persist_autonomy_decision(decision, resolved_targets.state_dir)
+            ledger.mark_proposal_autonomy_deferred(
+                proposal.id, decision.action, timestamp=now
+            )
+            decisions.append(decision)
+            continue
+
+        weekly_count = _rolling_auto_install_count(ledger, now - timedelta(days=7))
+        if weekly_count >= max(0, configured.autonomy.max_auto_remedies_per_week):
+            decision = _make_autonomy_decision(
+                "cap-hit",
+                proposal,
+                reason=(
+                    "rolling 7-day auto-install cap reached "
+                    f"({configured.autonomy.max_auto_remedies_per_week})"
+                ),
+                confidence=confidence,
+                timestamp=now,
+            )
+            _persist_autonomy_decision(decision, resolved_targets.state_dir)
+            ledger.mark_proposal_autonomy_deferred(
+                proposal.id, decision.action, timestamp=now
+            )
+            decisions.append(decision)
+            continue
+        active_count = int(
+            ledger.connection.execute(
+                "SELECT COUNT(*) FROM remedy AS current "
+                "WHERE current.state = 'installed' AND current.provenance = 'auto' "
+                "AND NOT EXISTS ("
+                "SELECT 1 FROM remedy AS revision "
+                "WHERE revision.revises_remedy_id = current.id "
+                "AND revision.state = 'installed'"
+                ")"
+            ).fetchone()[0]
+        )
+        if active_count >= max(0, configured.autonomy.max_active_auto_skills):
+            decision = _make_autonomy_decision(
+                "cap-hit",
+                proposal,
+                reason=(
+                    "total active auto-remedy cap reached "
+                    f"({configured.autonomy.max_active_auto_skills})"
+                ),
+                confidence=confidence,
+                timestamp=now,
+            )
+            _persist_autonomy_decision(decision, resolved_targets.state_dir)
+            ledger.mark_proposal_autonomy_deferred(
+                proposal.id, decision.action, timestamp=now
+            )
+            decisions.append(decision)
+            continue
+
+        # Re-read immediately before the irreversible caller path so ``off`` is
+        # observed between every queued proposal, including after cap checks.
+        if not effective_autonomy_state(configured).enabled:
+            decisions.append(
+                record_autonomy_pause(
+                    "kill switch or pause observed before install",
+                    proposal_id=proposal.id,
+                    targets=resolved_targets,
+                    clock=now_fn,
+                )
+            )
+            break
+        approved = ledger.approve_proposal(proposal.id, timestamp=now)
+        result = install(
+            approved,
+            targets=resolved_targets,
+            provenance="auto",
+            timestamp=now,
+        )
+        decision = _make_autonomy_decision(
+            "installed",
+            proposal,
+            reason="confidence and guardrails satisfied",
+            confidence=confidence,
+            timestamp=now,
+            remedy_id=result.remedy_id,
+        )
+        _persist_autonomy_decision(decision, resolved_targets.state_dir)
+        decisions.append(decision)
+    return AutonomyResult(tuple(decisions))
+
+
+# Short public spelling for callers and integrations.
+auto_adjudicate = adjudicate_pending_autonomously
+
+
+def record_autonomy_pause(
+    reason: str,
+    *,
+    proposal_id: int | None = None,
+    targets: GateTargets | Mapping[str, Path] | None = None,
+    clock: Callable[[], datetime] | None = None,
+) -> AutonomyDecision:
+    """Durably log and notify one autonomy pause decision."""
+
+    now = _aware_utc((clock or (lambda: datetime.now(timezone.utc)))())
+    decision = AutonomyDecision(
+        action="pause",
+        proposal_id=proposal_id,
+        remedy_id=None,
+        remedy_type=None,
+        evidence_incident_ids=(),
+        confidence=None,
+        reason=_one_line(reason),
+        timestamp=now.isoformat(),
+    )
+    _persist_autonomy_decision(decision, _coerce_targets(targets).state_dir)
+    return decision
+
+
+def read_autonomy_log(
+    *, limit: int = 20, targets: GateTargets | Mapping[str, Path] | None = None
+) -> list[str]:
+    """Return recent human-readable autonomy entries, newest last."""
+
+    path = _coerce_targets(targets).state_dir / "autonomy-log.md"
+    try:
+        lines = [line for line in path.read_text(encoding="utf-8").splitlines() if line.startswith("- ")]
+    except OSError:
+        return []
+    return lines[-max(0, limit) :] if limit else []
 
 
 def _coerce_targets(
@@ -120,10 +335,14 @@ def install(
     proposal: Proposal,
     *,
     targets: GateTargets | Mapping[str, Path] | None = None,
+    provenance: str = "human",
+    timestamp: str | datetime | None = None,
 ) -> InstallResult:
     """Install an approved proposal through the shared review/autonomy path."""
 
     resolved_targets = _coerce_targets(targets)
+    if provenance not in {"human", "auto"}:
+        raise GateError(f"unknown install provenance {provenance!r}")
     if proposal.gate_status != "approved":
         raise GateError(f"proposal {proposal.id} is {proposal.gate_status!r}, not approved")
     payload = _proposal_payload(proposal)
@@ -139,12 +358,18 @@ def install(
                 state="approved",
                 managed_remedy_id=revision.managed_remedy_id if revision else None,
                 revises_remedy_id=revision.id if revision else None,
+                provenance=provenance,
+                installed_at=timestamp,
             )
             reserved = ledger.get_remedy(remedy_id)
             assert reserved is not None
         elif reserved.state != "approved":
             raise GateError(
                 f"proposal {proposal.id} already owns remedy {reserved.id} in state {reserved.state!r}"
+            )
+        elif reserved.provenance != provenance:
+            raise GateError(
+                f"proposal {proposal.id} is already reserved with {reserved.provenance!r} provenance"
             )
         committed_record = resolved_targets.state_dir / "installs" / f"remedy-{reserved.id}.json"
         if committed_record.is_file():
@@ -157,6 +382,7 @@ def install(
                 reserved.id,
                 artifact_digest=str(record["intent"]["rendered_digest"]),
                 state_record_ref=str(Path("installs") / f"remedy-{reserved.id}.json"),
+                timestamp=timestamp,
             )
             return InstallResult(
                 remedy_id=reserved.id,
@@ -167,7 +393,7 @@ def install(
             )
         managed_id = reserved.managed_remedy_id
         try:
-            rendered = _render_artifact(payload, managed_id)
+            rendered = _render_artifact(payload, managed_id, provenance=provenance)
         except (KeyError, SynthesisValidationError) as error:
             raise GateError(f"proposal {proposal.id} remedy content is invalid: {error}") from error
         intent = _build_intent(
@@ -200,6 +426,7 @@ def install(
             reserved.id,
             artifact_digest=_digest(rendered),
             state_record_ref=install_ref,
+            timestamp=timestamp,
         )
         return InstallResult(
             remedy_id=reserved.id,
@@ -374,6 +601,148 @@ def edit_proposal_content(proposal: Proposal, editor: str) -> str:
         path.unlink(missing_ok=True)
 
 
+def _autonomy_payload(proposal: Proposal) -> tuple[dict[str, Any], float | None]:
+    try:
+        value = json.loads(proposal.drafted_content)
+    except json.JSONDecodeError:
+        return {}, None
+    if not isinstance(value, dict):
+        return {}, None
+    confidence = value.get("confidence")
+    if isinstance(confidence, bool) or not isinstance(confidence, (int, float)):
+        return value, None
+    return value, float(confidence)
+
+
+def _ineligible_reason(
+    ledger: Ledger,
+    proposal: Proposal,
+    payload: Mapping[str, Any],
+    confidence: float | None,
+    config: Config,
+) -> str | None:
+    action_fields = (
+        payload.get("proposal_kind"),
+        payload.get("action"),
+        payload.get("audit_action"),
+        payload.get("remedy_action"),
+    )
+    actions = {str(value).strip().lower() for value in action_fields if isinstance(value, str)}
+    if proposal.remedy_type in {"retirement", "rollback"} or actions.intersection(
+        {"retire", "retirement", "rollback", "roll-back"}
+    ):
+        return "retirement and rollback proposals always require human review in v1"
+    if proposal.remedy_type in {"hook", "setting"}:
+        return f"{proposal.remedy_type} proposals always require human review in v1"
+    if proposal.remedy_type not in {"claude-md", "skill"}:
+        return f"{proposal.remedy_type} proposals are not auto-installable in v1"
+    if proposal.revises:
+        try:
+            prior = _resolve_revision(ledger, proposal)
+        except GateError as error:
+            return f"revision requires human review: {error}"
+        if prior is None or prior.provenance != "auto":
+            return "revision of a human-approved remedy requires human review"
+    if confidence is None or not 0 <= confidence <= 1:
+        return "proposal has no valid confidence score"
+    bar = (
+        config.autonomy.skill_confidence_bar
+        if proposal.remedy_type == "skill" or proposal.singleton
+        else config.autonomy.claude_md_confidence_bar
+    )
+    if confidence < bar:
+        qualifier = "singleton/skill" if proposal.singleton or proposal.remedy_type == "skill" else "claude-md"
+        return f"confidence {confidence:.3f} is below the {qualifier} bar {bar:.3f}"
+    return None
+
+
+def _rolling_auto_install_count(ledger: Ledger, cutoff: datetime) -> int:
+    count = 0
+    rows = ledger.connection.execute(
+        "SELECT installed_at FROM remedy WHERE provenance = 'auto' AND state = 'installed'"
+    ).fetchall()
+    for row in rows:
+        try:
+            installed_at = datetime.fromisoformat(str(row["installed_at"]).replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        installed_at = _aware_utc(installed_at)
+        if installed_at >= cutoff:
+            count += 1
+    return count
+
+
+def _make_autonomy_decision(
+    action: str,
+    proposal: Proposal,
+    *,
+    reason: str,
+    confidence: float | None,
+    timestamp: datetime,
+    remedy_id: int | None = None,
+) -> AutonomyDecision:
+    return AutonomyDecision(
+        action=action,
+        proposal_id=proposal.id,
+        remedy_id=remedy_id,
+        remedy_type=proposal.remedy_type,
+        evidence_incident_ids=proposal.evidence_incident_ids,
+        confidence=confidence,
+        reason=_one_line(reason),
+        timestamp=_aware_utc(timestamp).isoformat(),
+    )
+
+
+def _persist_autonomy_decision(decision: AutonomyDecision, state_dir: Path) -> None:
+    evidence = ",".join(str(item) for item in decision.evidence_incident_ids) or "-"
+    confidence = "-" if decision.confidence is None else f"{decision.confidence:.3f}"
+    line = (
+        f"- {decision.timestamp} | action={decision.action} | provenance=auto | "
+        f"proposal={decision.proposal_id or '-'} | remedy={decision.remedy_id or '-'} | "
+        f"type={decision.remedy_type or '-'} | confidence={confidence} | "
+        f"evidence={evidence} | reason={decision.reason}\n"
+    )
+    state = _StateRepo(state_dir)
+    path = state_dir / "autonomy-log.md"
+    try:
+        current = path.read_bytes()
+    except FileNotFoundError:
+        current = b"# s2s autonomy log\n\n"
+    state.write_bytes(Path("autonomy-log.md"), current + line.encode("utf-8"))
+    subject = f"proposal {decision.proposal_id}" if decision.proposal_id else "pump"
+    state.commit(f"autonomy: {decision.action} {subject}")
+    notify.emit(
+        "autonomous_action",
+        action=decision.action,
+        provenance="auto",
+        proposal_id=decision.proposal_id,
+        remedy_id=decision.remedy_id,
+        remedy_type=decision.remedy_type,
+        evidence_ids=evidence,
+        confidence=decision.confidence,
+        reason=decision.reason,
+    )
+
+
+def _marker(template: str, remedy_id: int, provenance: str) -> str:
+    base = template.format(remedy_id=remedy_id)
+    if provenance != "auto":
+        return base
+    if base.startswith("<!--"):
+        return f"{base} <!-- s2s:provenance auto -->"
+    return f"{base} auto"
+
+
+def _aware_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def _one_line(value: str) -> str:
+    return " ".join(value.replace("|", "/").split())
+
+
 def _proposal_payload(proposal: Proposal) -> dict[str, Any]:
     try:
         payload = json.loads(proposal.drafted_content)
@@ -433,7 +802,9 @@ def _artifact_path(
     raise GateError(f"unsupported remedy type {remedy_type!r}")
 
 
-def _render_artifact(payload: Mapping[str, Any], managed_id: int) -> bytes:
+def _render_artifact(
+    payload: Mapping[str, Any], managed_id: int, *, provenance: str = "human"
+) -> bytes:
     remedy_type = str(payload["remedy_type"])
     content = payload["remedy_content"]
     assert isinstance(content, Mapping)
@@ -443,7 +814,7 @@ def _render_artifact(payload: Mapping[str, Any], managed_id: int) -> bytes:
         body = str(content["body_markdown"]).strip()
         rendered = (
             "---\n"
-            f"{SKILL_MARKER.format(remedy_id=managed_id)}\n"
+            f"{_marker(SKILL_MARKER, managed_id, provenance)}\n"
             f"name: {name}\n"
             f"description: {description}\n"
             "---\n"
@@ -454,13 +825,13 @@ def _render_artifact(payload: Mapping[str, Any], managed_id: int) -> bytes:
     if remedy_type == "claude-md":
         text = str(content["text"]).strip()
         return (
-            f"{CLAUDE_BEGIN.format(remedy_id=managed_id)}\n"
+            f"{_marker(CLAUDE_BEGIN, managed_id, provenance)}\n"
             f"{text}\n"
             f"{CLAUDE_END.format(remedy_id=managed_id)}\n"
         ).encode("utf-8")
     if remedy_type == "hook":
         command = str(content["command_sketch"]).strip()
-        marker = HOOK_MARKER.format(remedy_id=managed_id)
+        marker = _marker(HOOK_MARKER, managed_id, provenance)
         return f"{command} # {marker}".encode("utf-8")
     if remedy_type == "benchmark-only":
         return str(content["note"]).strip().encode("utf-8")
@@ -491,6 +862,7 @@ def _build_intent(
         "remedy_id": remedy.id,
         "managed_remedy_id": remedy.managed_remedy_id,
         "revision_of": revision.id if revision else None,
+        "provenance": remedy.provenance,
         "proposal": _proposal_as_json(proposal),
         "artifact_type": proposal.remedy_type,
         "artifact_path": str(artifact_path),

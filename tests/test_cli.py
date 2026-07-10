@@ -7,27 +7,30 @@ import pytest
 from s2s.cli import COMMAND_ISSUES, build_parser, main
 
 
-@pytest.mark.parametrize(
-    "command, issue",
-    [
-        (c, i)
-        for c, i in COMMAND_ISSUES.items()
-        if c not in {
-            "scan", "meter", "status", "triage", "run", "pump", "schedule",
-            "proposals", "approve", "reject", "rollback",
-        }
-    ],
-)
-def test_each_stub_exits_successfully(command: str, issue: int, capsys: pytest.CaptureFixture[str]) -> None:
-    assert main([command]) == 0
-    assert capsys.readouterr().out == f"{command}: not implemented yet (issue #{issue})\n"
+def test_all_issue_commands_have_left_the_cli_scaffold() -> None:
+    assert set(COMMAND_ISSUES) == {
+        "scan", "meter", "status", "triage", "run", "pump", "schedule",
+        "proposals", "approve", "reject", "rollback", "log", "autonomy",
+    }
 
 
-def test_remaining_stub_commands_accept_their_documented_scaffold_options(
-    capsys: pytest.CaptureFixture[str],
+def test_autonomy_commands_persist_override_without_rewriting_config(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str],
 ) -> None:
+    home = tmp_path / "home"
+    monkeypatch.setenv("S2S_HOME", str(home))
+    home.mkdir()
+    config = home / "config.toml"
+    original = "# keep me\n[autonomy]\nmode = 'review'\n"
+    config.write_text(original, encoding="utf-8")
+
     assert main(["autonomy", "on"]) == 0
-    assert "not implemented yet" in capsys.readouterr().out
+    assert "unattended pumps" in capsys.readouterr().out
+    assert config.read_text(encoding="utf-8") == original
+    assert main(["autonomy", "status"]) == 0
+    assert "autonomy: autonomous" in capsys.readouterr().out
+    assert main(["autonomy", "off"]) == 0
+    assert "kill switch is active" in capsys.readouterr().out
 
 
 def test_proposals_parser_accepts_json_output() -> None:
