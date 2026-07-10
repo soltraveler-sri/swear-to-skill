@@ -1,0 +1,220 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "3383e0fcf2df745f",
+    "model": "sonnet",
+    "stage": "synthesize"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are the Stage 4 Synthesist. Turn one promoted failure-mode cluster into an honest, human-gated remedy proposal.\n\nMost frustrations do not deserve a skill. Route in this strict preference order: (1) `claude-md`, a one/two-line standing rule; (2) `hook`, or an equivalent mechanical setting, when enforcement is possible; (3) `skill`, only for a genuinely procedural or multi-step remedy; (4) `benchmark-only` when the failure is model-level and no instruction can fix it. Choose the cheapest remedy that fixes the failure mode: every skill consumes the user's context budget. `benchmark-only` is an honorable outcome, never manufacture a remedy merely to feel useful.\n\nIf the only sensible remedy target is Codex-side (`AGENTS.md` or `~/.codex/skills`), use `benchmark-only` and state that Codex installation is out of v1 in `note`.\n\nThe existing-remedy digests below are numbered [R1]…[RN]. There are 3 existing-remedy digests. Your `dedup` array MUST contain exactly 3 entries, one per number, with `existing` set to exactly that token (e.g. \"R1\"). Include entries even when the verdict is clear. State `clear` or `overlap` for each. Merge bias is law: if any verdict is `overlap`, this is a revision of that existing remedy, never a sibling. Set `overlap_action.revises` to that R token.\n\nFor a `skill`, write a kebab-case name and a concrete auto-invocation description beginning `Use when ...`; this description is the trigger. The body must be substantive Markdown. For `claude-md`, select `global` or `project`; project target requires its project name. For `hook`, give a Claude Code event and a command sketch. For `benchmark-only`, explain the measurement-only outcome in `note`.\n\nThe upstream classifier deliberately over-merges. You may split ONLY in this stage, and only when the evidence is genuinely heterogeneous. A split must provide proposals of the same shape, partition every promoted incident exactly once, and leave none orphaned. Otherwise return one proposal covering the group.\n\nTAXONOMY GIST:\nignored-instruction: explicit user instruction not followed\n\nPROMOTED EVIDENCE:\nBEGIN PROMOTED EVIDENCE incident_id=1 project=aurora\nOne-liner: Disregarded an explicit constraint and altered the approach in violation of stated requirements\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nYou ignored the no-network constraint; stop changing the plan.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=3 project=aurora\nOne-liner: changed a resource despite explicit instruction to leave it unchanged\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nI told you to leave the formatter alone, and it was changed.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: The fake vendor error says 'what the hell'; quote it verbatim in the fixture.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=4 project=aurora\nOne-liner: Explicit directive not followed; modified component despite instruction to leave it unchanged\nPreceding request:\nI told you to leave the formatter alone, and it was changed.\n\nAgent activity digest:\nAssistant: Synthetic acknowledgement.\n\nFrustrated message:\nThe fake vendor error says 'what the hell'; quote it verbatim in the fixture.\n\nFollowing exchange:\n\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=5 project=cinder\nOne-liner: Violated explicit constraint on which file categories to modify\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nFollow the instructions: this patch must not touch tests.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nEND PROMOTED EVIDENCE\n\nEXISTING SKILLS (name and description only):\n- [R1] skill:$HOME/.claude/skills/fake-verify-before-claim/SKILL.md | name=fake-verify-before-claim | description=Use when a completion claim requires verification.\n\nS2S-MANAGED CLAUDE.MD BLOCKS:\n- [R2] claude-md:$HOME/.claude/CLAUDE.md#1 | # Fake Release Discipline\n\nBefore reporting a fake release as complete, run its declared verification\ncommand and report the result plainly.\n\nPENDING OR INSTALLED S2S PROPOSALS:\n- [R3] proposal #1 | type=claude-md | status=pending | {\"confidence\":0.72,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) is about verifying completion claims before reporting them done; this incident is about a destructive delete performed in violation of a standing user constraint, with no completion-claim verification aspect.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 is a claude-md rule requiring running a fake release's verification command before claiming completion; unrelated to destructive file deletion or honoring p\n",
+    "schema": {
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "dedup": {
+          "items": {
+            "properties": {
+              "existing": {
+                "pattern": "^R[0-9]+$",
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "clear",
+                  "overlap"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "existing",
+              "verdict",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "properties": {
+              "incident_id": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "quote": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "incident_id",
+              "quote"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "failure_statement": {
+          "type": "string"
+        },
+        "overlap_action": {
+          "properties": {
+            "revises": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "revises"
+          ],
+          "type": "object"
+        },
+        "remedy_content": {
+          "type": "object"
+        },
+        "remedy_type": {
+          "enum": [
+            "claude-md",
+            "hook",
+            "skill",
+            "benchmark-only"
+          ],
+          "type": "string"
+        },
+        "routing_rationale": {
+          "type": "string"
+        },
+        "split": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "remedy_type",
+        "routing_rationale",
+        "failure_statement",
+        "remedy_content",
+        "evidence",
+        "dedup",
+        "confidence"
+      ],
+      "type": "object"
+    },
+    "stage": "synthesize"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 54548,
+    "duration_ms": 54754,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 5099,
+        "cacheReadInputTokens": 28519,
+        "contextWindow": 1000000,
+        "costUSD": 0.1385187,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 5271,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"remedy_type\":\"claude-md\",\"routing_rationale\":\"All four incidents (aurora x3, cinder x1) are the same taxonomy failure — ignored-instruction — specifically the agent violating an explicit scope/behavior constraint the user stated earlier (no network access, don't touch the formatter, don't touch tests). This is not a completion-claim/verification problem (rules that out R1/R2), and it's not mechanically detectable by a hook: constraints are free-form natural language (\\\"leave the formatter alone\\\", \\\"no network\\\", \\\"don't touch tests\\\") with no fixed pattern a PreToolUse matcher could reliably catch across projects. It's also not a multi-step procedure — there's nothing to walk through, just a discipline to hold: treat stated constraints as binding for the whole task and re-check before violating them. That makes a short standing claude-md rule the cheapest fix. Existing pending proposal R3 already targets this same underlying failure mode (violating a standing user constraint, there instantiated as a destructive delete); these incidents show it recurring in different forms (network, file-scope, test-scope) across two projects, so this should broaden/revise R3 rather than sit beside it as a sibling.\",\"failure_statement\":\"When a user states an explicit constraint mid-task (e.g. \\\"don't touch the formatter,\\\" \\\"no network access,\\\" \\\"this patch must not touch tests\\\"), the agent later violates that constraint — treating it as scoped to the moment it was said rather than binding for the rest of the task.\",\"remedy_content\":{\"scope\":\"global\",\"heading\":\"# Honor Explicit Constraints\",\"body\":\"When the user states an explicit constraint mid-task — a file/dir not to touch, no network access, don't modify tests, etc. — treat it as binding for the rest of the task, not just the step it was said in. Before any edit, tool call, or plan change, re-check it against constraints stated earlier in the conversation, and stop to ask before doing anything that would violate one.\"},\"evidence\":[{\"incident_id\":1,\"quote\":\"You ignored the no-network constraint; stop changing the plan.\"},{\"incident_id\":3,\"quote\":\"I told you to leave the formatter alone, and it was changed.\"},{\"incident_id\":5,\"quote\":\"Follow the instructions: this patch must not touch tests.\"}],\"dedup\":[{\"existing\":\"R1\",\"verdict\":\"clear\",\"reason\":\"fake-verify-before-claim is about verifying completion claims before reporting done; these incidents are about violating explicit scope/behavior constraints mid-task, with no completion-claim aspect.\"},{\"existing\":\"R2\",\"verdict\":\"clear\",\"reason\":\"Fake Release Discipline requires running a declared verification command before claiming a fake release complete; unrelated to honoring stated no-touch/no-network constraints.\"},{\"existing\":\"R3\",\"verdict\":\"overlap\",\"reason\":\"R3 (pending claude-md proposal) already addresses violation of a standing user constraint, instantiated there as a destructive delete performed against instructions. These new incidents show the same failure mode recurring in other forms (no-network, don't-touch-file, don't-touch-tests) across a second project (cinder), so this should broaden R3's rule to cover explicit constraints generally rather than exist as a separate sibling proposal.\"}],\"overlap_action\":{\"revises\":\"R3\"},\"confidence\":0.74}",
+    "session_id": "342ceb56-364f-4fa8-b761-87661d45832f",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "confidence": 0.74,
+      "dedup": [
+        {
+          "existing": "R1",
+          "reason": "fake-verify-before-claim is about verifying completion claims before reporting done; these incidents are about violating explicit scope/behavior constraints mid-task, with no completion-claim aspect.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R2",
+          "reason": "Fake Release Discipline requires running a declared verification command before claiming a fake release complete; unrelated to honoring stated no-touch/no-network constraints.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R3",
+          "reason": "R3 (pending claude-md proposal) already addresses violation of a standing user constraint, instantiated there as a destructive delete performed against instructions. These new incidents show the same failure mode recurring in other forms (no-network, don't-touch-file, don't-touch-tests) across a second project (cinder), so this should broaden R3's rule to cover explicit constraints generally rather than exist as a separate sibling proposal.",
+          "verdict": "overlap"
+        }
+      ],
+      "evidence": [
+        {
+          "incident_id": 1,
+          "quote": "You ignored the no-network constraint; stop changing the plan."
+        },
+        {
+          "incident_id": 3,
+          "quote": "I told you to leave the formatter alone, and it was changed."
+        },
+        {
+          "incident_id": 5,
+          "quote": "Follow the instructions: this patch must not touch tests."
+        }
+      ],
+      "failure_statement": "When a user states an explicit constraint mid-task (e.g. \"don't touch the formatter,\" \"no network access,\" \"this patch must not touch tests\"), the agent later violates that constraint — treating it as scoped to the moment it was said rather than binding for the rest of the task.",
+      "overlap_action": {
+        "revises": "R3"
+      },
+      "remedy_content": {
+        "body": "When the user states an explicit constraint mid-task — a file/dir not to touch, no network access, don't modify tests, etc. — treat it as binding for the rest of the task, not just the step it was said in. Before any edit, tool call, or plan change, re-check it against constraints stated earlier in the conversation, and stop to ask before doing anything that would violate one.",
+        "heading": "# Honor Explicit Constraints",
+        "scope": "global"
+      },
+      "remedy_type": "claude-md",
+      "routing_rationale": "All four incidents (aurora x3, cinder x1) are the same taxonomy failure — ignored-instruction — specifically the agent violating an explicit scope/behavior constraint the user stated earlier (no network access, don't touch the formatter, don't touch tests). This is not a completion-claim/verification problem (rules that out R1/R2), and it's not mechanically detectable by a hook: constraints are free-form natural language (\"leave the formatter alone\", \"no network\", \"don't touch tests\") with no fixed pattern a PreToolUse matcher could reliably catch across projects. It's also not a multi-step procedure — there's nothing to walk through, just a discipline to hold: treat stated constraints as binding for the whole task and re-check before violating them. That makes a short standing claude-md rule the cheapest fix. Existing pending proposal R3 already targets this same underlying failure mode (violating a standing user constraint, there instantiated as a destructive delete); these incidents show it recurring in different forms (network, file-scope, test-scope) across two projects, so this should broaden/revise R3 rather than sit beside it as a sibling."
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 99,
+    "total_cost_usd": 0.1385187,
+    "ttft_ms": 44149,
+    "ttft_stream_ms": 1466,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 5099,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 5099,
+      "cache_read_input_tokens": 28519,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 5099,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 5099,
+          "cache_read_input_tokens": 28519,
+          "input_tokens": 6768,
+          "output_tokens": 5271,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 5271,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "4de401dd-45d1-49ea-8bbd-d16852e9cc56"
+  }
+}

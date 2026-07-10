@@ -1,0 +1,219 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "bbc957a26b294207",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Grade the proposed remedy, not the\nwriting style of this prompt. A good remedy changes a concrete future behavior,\nis broad enough to cover the failure mode without becoming a platitude, uses a\nreal `Use when ...` trigger when it is a skill, leaks no evidence-specific\nproject nouns into the remedy text, and uses the cheapest adequate remedy type.\n\nScore every dimension from 1 (poor) to 5 (excellent). Give exactly one concise\nsentence of justification for each score. Do not infer facts that are absent.\n\nPROPOSAL:\n{\n  \"confidence\": 0.68,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"R1 governs verifying a completion claim (e.g. running a declared test) before reporting work done — a post-hoc verification issue, unrelated to matching delivered scope to the request as originally asked.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"R2 requires running a declared verification command before reporting a release complete — a post-hoc reporting-accuracy rule, not about over-delivering scope relative to what was requested.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R3\",\n      \"reason\": \"R3 is a hook proposal gating confirmation before destructive deletions — a pre-execution safety gate for irreversible operations, unrelated to doing a broader rewrite than requested.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R4\",\n      \"reason\": \"R4 addresses acting in the wrong branch/environment/workspace, not the size or breadth of the change performed relative to what was asked.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R5\",\n      \"reason\": \"R5's own dedup reasoning states it governs 'matching output scope/content to the request as originally asked' — that is precisely this cluster's failure mode (rewrite/extra-scope delivered instead of the targeted change requested). This proposal revises R5 rather than standing beside it.\",\n      \"verdict\": \"overlap\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 9,\n      \"quote\": \"That's not what I asked; the request was a one-file note.\"\n    },\n    {\n      \"incident_id\": 22,\n      \"quote\": \"This is not what I asked; a rewrite was not requested.\"\n    },\n    {\n      \"incident_id\": 24,\n      \"quote\": \"Why did you rebuild the fake UI when I asked for one switch?\"\n    },\n    {\n      \"incident_id\": 25,\n      \"quote\": \"Implemented a large refactor instead of the single requested change\"\n    }\n  ],\n  \"failure_statement\": \"When the user requests a narrow, targeted change (a single file, a single switch/setting, a small fix), the agent instead performs a much broader rewrite, refactor, or adds unrequested extra artifacts (e.g. a demo) — delivering a different and larger scope of output than was asked for.\",\n  \"overlap_action\": {\n    \"revises\": \"proposal #3\"\n  },\n  \"remedy_content\": {\n    \"heading\": \"Match Scope to the Request\",\n    \"target\": \"global\",\n    \"text\": \"When the user asks for a targeted, minimal change (one file, one switch, one setting), implement exactly that scope. Do not perform a broader rewrite, refactor, or add extra unrequested artifacts (demos, new files, restructuring) — if you believe wider changes are genuinely needed, say so and ask before doing them.\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"All four incidents are the same taxonomy failure — scope-deviation via over-delivery: the agent implemented a broader rewrite/refactor/extra-artifact instead of the narrow, targeted change or single-file output the user asked for. This is a judgment-call discipline problem (recognizing and respecting requested scope), not something a mechanical hook can verify (unlike e.g. checking a file count or running a test command), and it doesn't require a multi-step procedure, so a skill would be over-cost. A short standing claude-md rule is the cheapest fix. Existing proposal R5 is already a claude-md rule whose own dedup reasoning describes it as governing 'matching output scope/content to the request as originally asked' — that is exactly this failure mode, so per merge-bias-is-law this is a revision of R5, not a new sibling.\",\n  \"singleton\": false\n}\n",
+    "schema": {
+      "properties": {
+        "actionability": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "generality_without_vagueness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "leakage": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "routing_fitness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "trigger_quality": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "actionability",
+        "generality_without_vagueness",
+        "trigger_quality",
+        "leakage",
+        "routing_fitness"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 20599,
+    "duration_ms": 20809,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 4784,
+        "cacheReadInputTokens": 28513,
+        "contextWindow": 1000000,
+        "costUSD": 0.08966189999999999,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 2140,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"actionability\":{\"score\":5,\"justification\":\"The rule tells the agent exactly what to do (implement only the requested scope) and what to do instead of over-delivering (ask before adding rewrites/extras), which is a concrete, checkable behavioral change.\"},\"generality_without_vagueness\":{\"score\":4,\"justification\":\"It covers the whole failure class (rewrites, refactors, extra unrequested artifacts) via concrete examples rather than a single narrow case, while staying short of an empty platitude like 'be careful with scope.'\"},\"trigger_quality\":{\"score\":4,\"justification\":\"Not a skill so a formal 'Use when...' header isn't required, but the text opens with a clear conditional ('When the user asks for a targeted, minimal change...') that functions as an effective trigger.\"},\"leakage\":{\"score\":5,\"justification\":\"The remedy text is fully generic (no mention of specific files, UIs, or incidents from the evidence quotes) and would read naturally in any project's CLAUDE.md.\"},\"routing_fitness\":{\"score\":5,\"justification\":\"This is a judgment-call discipline issue that a hook can't mechanically verify and doesn't need a multi-step skill procedure, so a short standing claude-md rule is the cheapest adequate remedy, and the proposal correctly treats it as a revision of the pre-existing overlapping R5 rather than a duplicate addition.\"}}",
+    "session_id": "149ee2dd-94d4-4a25-9b02-92a86fcc6d0d",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "actionability": {
+        "justification": "The rule tells the agent exactly what to do (implement only the requested scope) and what to do instead of over-delivering (ask before adding rewrites/extras), which is a concrete, checkable behavioral change.",
+        "score": 5
+      },
+      "generality_without_vagueness": {
+        "justification": "It covers the whole failure class (rewrites, refactors, extra unrequested artifacts) via concrete examples rather than a single narrow case, while staying short of an empty platitude like 'be careful with scope.'",
+        "score": 4
+      },
+      "leakage": {
+        "justification": "The remedy text is fully generic (no mention of specific files, UIs, or incidents from the evidence quotes) and would read naturally in any project's CLAUDE.md.",
+        "score": 5
+      },
+      "routing_fitness": {
+        "justification": "This is a judgment-call discipline issue that a hook can't mechanically verify and doesn't need a multi-step skill procedure, so a short standing claude-md rule is the cheapest adequate remedy, and the proposal correctly treats it as a revision of the pre-existing overlapping R5 rather than a duplicate addition.",
+        "score": 5
+      },
+      "trigger_quality": {
+        "justification": "Not a skill so a formal 'Use when...' header isn't required, but the text opens with a clear conditional ('When the user asks for a targeted, minimal change...') that functions as an effective trigger.",
+        "score": 4
+      }
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 107,
+    "total_cost_usd": 0.08966189999999999,
+    "ttft_ms": 16245,
+    "ttft_stream_ms": 1327,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 4784,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 4784,
+      "cache_read_input_tokens": 28513,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 4784,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 4784,
+          "cache_read_input_tokens": 28513,
+          "input_tokens": 6768,
+          "output_tokens": 2140,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 2140,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "a0c4d556-fa01-415a-a19a-cf133cc98a24"
+  }
+}

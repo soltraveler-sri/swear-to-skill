@@ -1,0 +1,218 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "b78b35bbeba877a6",
+    "model": "sonnet",
+    "stage": "synthesize"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are the Stage 4 Synthesist. Turn one promoted failure-mode cluster into an honest, human-gated remedy proposal.\n\nMost frustrations do not deserve a skill. Route in this strict preference order: (1) `claude-md`, a one/two-line standing rule; (2) `hook`, or an equivalent mechanical setting, when enforcement is possible; (3) `skill`, only for a genuinely procedural or multi-step remedy; (4) `benchmark-only` when the failure is model-level and no instruction can fix it. Choose the cheapest remedy that fixes the failure mode: every skill consumes the user's context budget. `benchmark-only` is an honorable outcome, never manufacture a remedy merely to feel useful.\n\nIf the only sensible remedy target is Codex-side (`AGENTS.md` or `~/.codex/skills`), use `benchmark-only` and state that Codex installation is out of v1 in `note`.\n\nThe existing-remedy digests below are numbered [R1]…[RN]. There are 4 existing-remedy digests. Your `dedup` array MUST contain exactly 4 entries, one per number, with `existing` set to exactly that token (e.g. \"R1\"). Include entries even when the verdict is clear. State `clear` or `overlap` for each. Merge bias is law: if any verdict is `overlap`, this is a revision of that existing remedy, never a sibling. Set `overlap_action.revises` to that R token.\n\nFor a `skill`, write a kebab-case name and a concrete auto-invocation description beginning `Use when ...`; this description is the trigger. The body must be substantive Markdown. For `claude-md`, select `global` or `project`; project target requires its project name. For `hook`, give a Claude Code event and a command sketch. For `benchmark-only`, explain the measurement-only outcome in `note`.\n\nThe upstream classifier deliberately over-merges. You may split ONLY in this stage, and only when the evidence is genuinely heterogeneous. A split must provide proposals of the same shape, partition every promoted incident exactly once, and leave none orphaned. Otherwise return one proposal covering the group.\n\nTAXONOMY GIST:\nmisread-request: solved the wrong problem\n\nPROMOTED EVIDENCE:\nBEGIN PROMOTED EVIDENCE incident_id=19 project=harbor\nOne-liner: Agent solved a different problem than requested\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nYou solved a different problem; I asked for the export only.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: The fake training card asks, 'Why did you stop?' Do not treat it as feedback.\nEND PROMOTED EVIDENCE\n\nBEGIN PROMOTED EVIDENCE incident_id=26 project=lantern\nOne-liner: Failed to include a specified field when generating or returning a payload\nPreceding request:\n\n\nAgent activity digest:\n\n\nFrustrated message:\nYou missed the only requested field in the payload.\n\nFollowing exchange:\nAssistant: Synthetic acknowledgement.\nUser: Write a playful banner: 'this is a mess' for the fake festival page.\nEND PROMOTED EVIDENCE\n\nEXISTING SKILLS (name and description only):\n- [R1] skill:$HOME/.claude/skills/fake-verify-before-claim/SKILL.md | name=fake-verify-before-claim | description=Use when a completion claim requires verification.\n\nS2S-MANAGED CLAUDE.MD BLOCKS:\n- [R2] claude-md:$HOME/.claude/CLAUDE.md#1 | # Fake Release Discipline\n\nBefore reporting a fake release as complete, run its declared verification\ncommand and report the result plainly.\n\nPENDING OR INSTALLED S2S PROPOSALS:\n- [R3] proposal #1 | type=hook | status=pending | {\"confidence\":0.62,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) governs verifying completion claims before reporting them done - unrelated to gating destructive deletions pre-execution.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline claude-md) requires running a declared verification command before reporting a fake release complete - a post-hoc reporting-accuracy rule, not a pre-execution confirmation gate for deletions.\",\"verdict\":\"clear\"}],\"evid\n- [R4] proposal #2 | type=claude-md | status=pending | {\"confidence\":0.72,\"dedup\":[{\"existing\":\"R1\",\"reason\":\"R1 (fake-verify-before-claim) governs verifying a completion claim (e.g. running a declared test/verification command) before reporting work done. These incidents are about acting in the wrong branch/environment, not unverified completion claims.\",\"verdict\":\"clear\"},{\"existing\":\"R2\",\"reason\":\"R2 (Fake Release Discipline) is a post-hoc reporting-accuracy rule requiring a verification command be run before declaring a release complete. It does\n",
+    "schema": {
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "dedup": {
+          "items": {
+            "properties": {
+              "existing": {
+                "pattern": "^R[0-9]+$",
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "clear",
+                  "overlap"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "existing",
+              "verdict",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "properties": {
+              "incident_id": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "quote": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "incident_id",
+              "quote"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "failure_statement": {
+          "type": "string"
+        },
+        "overlap_action": {
+          "properties": {
+            "revises": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "revises"
+          ],
+          "type": "object"
+        },
+        "remedy_content": {
+          "type": "object"
+        },
+        "remedy_type": {
+          "enum": [
+            "claude-md",
+            "hook",
+            "skill",
+            "benchmark-only"
+          ],
+          "type": "string"
+        },
+        "routing_rationale": {
+          "type": "string"
+        },
+        "split": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "remedy_type",
+        "routing_rationale",
+        "failure_statement",
+        "remedy_content",
+        "evidence",
+        "dedup",
+        "confidence"
+      ],
+      "type": "object"
+    },
+    "stage": "synthesize"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 39097,
+    "duration_ms": 39312,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 5001,
+        "cacheReadInputTokens": 28519,
+        "contextWindow": 1000000,
+        "costUSD": 0.1099857,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 3408,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"remedy_type\":\"claude-md\",\"routing_rationale\":\"Both incidents are the same underlying lapse: the agent didn't hold the literal scope of a narrow request steady while producing the final output — in one case (harbor #19) it substituted a different/broader task for the one requested (\\\"the export only\\\"), in the other (lantern #26) it produced a payload but dropped the single specifically-named field. Both are \\\"checked the output against the ask\\\" failures, not multi-step procedures, and nothing about them is mechanically checkable by a hook (there's no fixed command/lint that can verify \\\"matches literal requested scope\\\" across arbitrary tasks) or complex enough to warrant a skill's context cost. A one/two-line standing reminder to re-verify scope-of-delivery before responding is the cheapest fix that addresses the actual lapse, so claude-md wins over hook/skill/benchmark-only. Kept as a single proposal rather than splitting: with only two thin incidents (no preceding request or activity digest available) and a genuinely shared mechanism (output scope drift from the literal ask), fragmenting into two single-incident proposals would weaken rather than sharpen the signal.\",\"failure_statement\":\"When a user asks for a narrow, specific deliverable — a single named field in a payload, or \\\"just the export\\\" and nothing else — the agent's final output drifts from that literal scope: it either substitutes a different/broader task than what was asked, or it produces the right kind of output but omits the one specific item that was actually requested.\",\"remedy_content\":{\"scope\":\"global\",\"heading\":\"# Match Requested Scope Before Delivering\",\"body\":\"Before sending a response, re-check it against the literal scope of the request. If the user named one specific thing (a single field, \\\"the export only\\\", a narrow deliverable), confirm that exact thing is present in the output — and that you have not substituted a different or broader task in its place, or delivered everything else while dropping the one thing actually asked for.\"},\"evidence\":[{\"incident_id\":19,\"quote\":\"You solved a different problem than requested / I asked for the export only.\"},{\"incident_id\":26,\"quote\":\"You missed the only requested field in the payload.\"}],\"dedup\":[{\"existing\":\"R1\",\"verdict\":\"clear\",\"reason\":\"R1 (fake-verify-before-claim) governs verifying that a completion claim is actually true (e.g. running a declared check before saying 'done'). These incidents are about mismatched output scope versus the literal request, not unverified completion claims.\"},{\"existing\":\"R2\",\"verdict\":\"clear\",\"reason\":\"R2 (Fake Release Discipline) requires running a declared verification command before reporting a release complete — a release-verification rule, unrelated to matching a narrow request's literal scope.\"},{\"existing\":\"R3\",\"verdict\":\"clear\",\"reason\":\"R3 is a pre-execution confirmation gate for destructive deletions; these incidents involve no deletion or destructive action, just scope mismatch in delivered output.\"},{\"existing\":\"R4\",\"verdict\":\"clear\",\"reason\":\"R4 addresses acting in the wrong branch/environment; these incidents are about output/content scope drift within a single task, not environment targeting.\"}],\"confidence\":0.55}",
+    "session_id": "e029a903-c6f0-4b08-94d6-7a6d186e6a80",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "confidence": 0.55,
+      "dedup": [
+        {
+          "existing": "R1",
+          "reason": "R1 (fake-verify-before-claim) governs verifying that a completion claim is actually true (e.g. running a declared check before saying 'done'). These incidents are about mismatched output scope versus the literal request, not unverified completion claims.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R2",
+          "reason": "R2 (Fake Release Discipline) requires running a declared verification command before reporting a release complete — a release-verification rule, unrelated to matching a narrow request's literal scope.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R3",
+          "reason": "R3 is a pre-execution confirmation gate for destructive deletions; these incidents involve no deletion or destructive action, just scope mismatch in delivered output.",
+          "verdict": "clear"
+        },
+        {
+          "existing": "R4",
+          "reason": "R4 addresses acting in the wrong branch/environment; these incidents are about output/content scope drift within a single task, not environment targeting.",
+          "verdict": "clear"
+        }
+      ],
+      "evidence": [
+        {
+          "incident_id": 19,
+          "quote": "You solved a different problem than requested / I asked for the export only."
+        },
+        {
+          "incident_id": 26,
+          "quote": "You missed the only requested field in the payload."
+        }
+      ],
+      "failure_statement": "When a user asks for a narrow, specific deliverable — a single named field in a payload, or \"just the export\" and nothing else — the agent's final output drifts from that literal scope: it either substitutes a different/broader task than what was asked, or it produces the right kind of output but omits the one specific item that was actually requested.",
+      "remedy_content": {
+        "body": "Before sending a response, re-check it against the literal scope of the request. If the user named one specific thing (a single field, \"the export only\", a narrow deliverable), confirm that exact thing is present in the output — and that you have not substituted a different or broader task in its place, or delivered everything else while dropping the one thing actually asked for.",
+        "heading": "# Match Requested Scope Before Delivering",
+        "scope": "global"
+      },
+      "remedy_type": "claude-md",
+      "routing_rationale": "Both incidents are the same underlying lapse: the agent didn't hold the literal scope of a narrow request steady while producing the final output — in one case (harbor #19) it substituted a different/broader task for the one requested (\"the export only\"), in the other (lantern #26) it produced a payload but dropped the single specifically-named field. Both are \"checked the output against the ask\" failures, not multi-step procedures, and nothing about them is mechanically checkable by a hook (there's no fixed command/lint that can verify \"matches literal requested scope\" across arbitrary tasks) or complex enough to warrant a skill's context cost. A one/two-line standing reminder to re-verify scope-of-delivery before responding is the cheapest fix that addresses the actual lapse, so claude-md wins over hook/skill/benchmark-only. Kept as a single proposal rather than splitting: with only two thin incidents (no preceding request or activity digest available) and a genuinely shared mechanism (output scope drift from the literal ask), fragmenting into two single-incident proposals would weaken rather than sharpen the signal."
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 100,
+    "total_cost_usd": 0.1099857,
+    "ttft_ms": 28328,
+    "ttft_stream_ms": 1622,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 5001,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 5001,
+      "cache_read_input_tokens": 28519,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 5001,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 5001,
+          "cache_read_input_tokens": 28519,
+          "input_tokens": 6768,
+          "output_tokens": 3408,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 3408,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "59e906b6-ed88-47d0-a73b-58971febca95"
+  }
+}

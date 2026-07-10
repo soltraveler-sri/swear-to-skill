@@ -1,0 +1,219 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "05b353390413e177",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Grade the proposed remedy, not the\nwriting style of this prompt. A good remedy changes a concrete future behavior,\nis broad enough to cover the failure mode without becoming a platitude, uses a\nreal `Use when ...` trigger when it is a skill, leaks no evidence-specific\nproject nouns into the remedy text, and uses the cheapest adequate remedy type.\n\nScore every dimension from 1 (poor) to 5 (excellent). Give exactly one concise\nsentence of justification for each score. Do not infer facts that are absent.\n\nPROPOSAL:\n{\n  \"confidence\": 0.72,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"R1 (fake-verify-before-claim) governs verifying a completion claim (e.g. running a declared test before reporting done) — a post-hoc verification-of-completion issue, unrelated to matching output scope/content to the request as originally asked.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"R2 (Fake Release Discipline) requires running a declared verification command before reporting a release complete — again a post-hoc verification rule, not about whether the delivered output matches the request's scope or named requirements.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R3\",\n      \"reason\": \"R3 is a pending hook proposal gating confirmation before destructive deletions — an execution-safety gate, unrelated to misreading request scope/content.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R4\",\n      \"reason\": \"R4 is a pending claude-md proposal about acting in the wrong branch/environment — an environment-targeting issue, not a request-comprehension/scope-matching issue.\",\n      \"verdict\": \"clear\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 19,\n      \"quote\": \"You solved a different problem; I asked for the export only.\"\n    },\n    {\n      \"incident_id\": 26,\n      \"quote\": \"You missed the only requested field in the payload.\"\n    }\n  ],\n  \"failure_statement\": \"The agent delivers a result without checking it against the exact scope and explicit requirements of the request, causing it to solve a substituted/different problem or omit a specifically named element (e.g., a required field) from the output.\",\n  \"remedy_content\": {\n    \"heading\": \"# Scope-Match Before Delivering\",\n    \"target\": \"global\",\n    \"text\": \"Before delivering a result, re-read the original request and check the output against it: solve the problem actually asked (don't substitute or expand it), and confirm every explicitly named element (a specific field, artifact, or item) is present.\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"Both incidents are semantic misreads of request scope (one substituted a different task for the one asked, the other silently dropped a specifically named field) — not a pattern a deterministic hook can detect, since there's no fixed tool-call/file signature to gate on. Nor does the fix require a multi-step procedure worth a skill: it's a single standing check — reread the request, confirm scope and named elements match before delivering — so the cheapest effective remedy is a one/two-line claude-md rule. Applies globally since the two incidents span different projects (harbor, lantern) with no project-specific mechanism involved.\",\n  \"singleton\": false\n}\n",
+    "schema": {
+      "properties": {
+        "actionability": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "generality_without_vagueness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "leakage": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "routing_fitness": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        },
+        "trigger_quality": {
+          "properties": {
+            "justification": {
+              "type": "string"
+            },
+            "score": {
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "type": "integer"
+            }
+          },
+          "required": [
+            "score",
+            "justification"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "actionability",
+        "generality_without_vagueness",
+        "trigger_quality",
+        "leakage",
+        "routing_fitness"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 21390,
+    "duration_ms": 21604,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 4426,
+        "cacheReadInputTokens": 28513,
+        "contextWindow": 1000000,
+        "costUSD": 0.08488890000000002,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 1965,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"actionability\":{\"score\":4,\"justification\":\"The text gives a concrete two-part check (re-read request, confirm no substitution, confirm every named element present) rather than a vague exhortation to 'be careful.'\"},\"generality_without_vagueness\":{\"score\":4,\"justification\":\"It unifies both evidenced failure modes (task substitution and dropped named field) under one checkable rule without collapsing into an empty platitude like 'be thorough.'\"},\"trigger_quality\":{\"score\":3,\"justification\":\"As a claude-md rule rather than a skill it has no 'Use when...' trigger; its scope is simply 'before delivering a result,' which is broad and always-on rather than narrowly targeted to the failure context.\"},\"leakage\":{\"score\":5,\"justification\":\"The remedy text is fully generic ('a specific field, artifact, or item') with no project names, tool names, or other evidence-specific nouns leaking in from the harbor/lantern incidents.\"},\"routing_fitness\":{\"score\":4,\"justification\":\"The rationale correctly argues this is a semantic, non-deterministic judgment call unsuited to a hook and too simple (single standing check) to warrant a multi-step skill, making a short global claude-md rule the cheapest adequate fit.\"}}",
+    "session_id": "52111b10-1f35-4850-ba28-741328fd1c68",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "actionability": {
+        "justification": "The text gives a concrete two-part check (re-read request, confirm no substitution, confirm every named element present) rather than a vague exhortation to 'be careful.'",
+        "score": 4
+      },
+      "generality_without_vagueness": {
+        "justification": "It unifies both evidenced failure modes (task substitution and dropped named field) under one checkable rule without collapsing into an empty platitude like 'be thorough.'",
+        "score": 4
+      },
+      "leakage": {
+        "justification": "The remedy text is fully generic ('a specific field, artifact, or item') with no project names, tool names, or other evidence-specific nouns leaking in from the harbor/lantern incidents.",
+        "score": 5
+      },
+      "routing_fitness": {
+        "justification": "The rationale correctly argues this is a semantic, non-deterministic judgment call unsuited to a hook and too simple (single standing check) to warrant a multi-step skill, making a short global claude-md rule the cheapest adequate fit.",
+        "score": 4
+      },
+      "trigger_quality": {
+        "justification": "As a claude-md rule rather than a skill it has no 'Use when...' trigger; its scope is simply 'before delivering a result,' which is broad and always-on rather than narrowly targeted to the failure context.",
+        "score": 3
+      }
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 103,
+    "total_cost_usd": 0.08488890000000002,
+    "ttft_ms": 16780,
+    "ttft_stream_ms": 1149,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 4426,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 4426,
+      "cache_read_input_tokens": 28513,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 4426,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 4426,
+          "cache_read_input_tokens": 28513,
+          "input_tokens": 6768,
+          "output_tokens": 1965,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 1965,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "03432d30-9963-4c34-8214-1558d8f8176b"
+  }
+}

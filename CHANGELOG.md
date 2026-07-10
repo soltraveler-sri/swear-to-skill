@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented here.
 
+## 0.2.1 — 2026-07-10
+
+- Live-eval hardening: subscription-auth transport fixes (claude subprocess now
+  always sees the user's real credentials regardless of sandbox overrides),
+  synthesize v2 dedup contract with stable reference ids and validation-aware
+  retries, curator cluster-synthesize precedence (anti-convergence fix, curate
+  v2 prompt), duplicate-evidence normalization, per-group synthesis failure
+  isolation, subset-aware eval scoring with small-sample honesty, and richer
+  CLI error diagnostics. First full-corpus live eval runs end to end.
+
 ## 0.2.0 — 2026-07-10
 
 - Added the end-to-end eval harness (NORTHSTAR §15): a fully synthetic, ground-truth

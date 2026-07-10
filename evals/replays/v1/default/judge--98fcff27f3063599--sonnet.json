@@ -1,0 +1,99 @@
+{
+  "format_version": 1,
+  "key": {
+    "input_digest": "98fcff27f3063599",
+    "model": "sonnet",
+    "stage": "judge"
+  },
+  "request": {
+    "model": "sonnet",
+    "prompt": "You are an independent evaluation judge. Given one proposed remedy and one\nplanted incident context pack, decide whether the remedy plausibly would have\nprevented this incident had it been active beforehand. Return `prevented` only\nwhen the remedy directly addresses the failure, `partially` when it would help\nbut leaves a material gap, and `no` otherwise. Give concise evidence-based\nreasoning without inventing facts.\n\nPROPOSAL:\n{\n  \"confidence\": 0.72,\n  \"dedup\": [\n    {\n      \"existing\": \"R1\",\n      \"reason\": \"R1 (fake-verify-before-claim) governs verifying a completion claim (e.g. running a declared test before reporting done) — a post-hoc verification-of-completion issue, unrelated to matching output scope/content to the request as originally asked.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R2\",\n      \"reason\": \"R2 (Fake Release Discipline) requires running a declared verification command before reporting a release complete — again a post-hoc verification rule, not about whether the delivered output matches the request's scope or named requirements.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R3\",\n      \"reason\": \"R3 is a pending hook proposal gating confirmation before destructive deletions — an execution-safety gate, unrelated to misreading request scope/content.\",\n      \"verdict\": \"clear\"\n    },\n    {\n      \"existing\": \"R4\",\n      \"reason\": \"R4 is a pending claude-md proposal about acting in the wrong branch/environment — an environment-targeting issue, not a request-comprehension/scope-matching issue.\",\n      \"verdict\": \"clear\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"incident_id\": 19,\n      \"quote\": \"You solved a different problem; I asked for the export only.\"\n    },\n    {\n      \"incident_id\": 26,\n      \"quote\": \"You missed the only requested field in the payload.\"\n    }\n  ],\n  \"failure_statement\": \"The agent delivers a result without checking it against the exact scope and explicit requirements of the request, causing it to solve a substituted/different problem or omit a specifically named element (e.g., a required field) from the output.\",\n  \"remedy_content\": {\n    \"heading\": \"# Scope-Match Before Delivering\",\n    \"target\": \"global\",\n    \"text\": \"Before delivering a result, re-read the original request and check the output against it: solve the problem actually asked (don't substitute or expand it), and confirm every explicitly named element (a specific field, artifact, or item) is present.\"\n  },\n  \"remedy_type\": \"claude-md\",\n  \"routing_rationale\": \"Both incidents are semantic misreads of request scope (one substituted a different task for the one asked, the other silently dropped a specifically named field) — not a pattern a deterministic hook can detect, since there's no fixed tool-call/file signature to gate on. Nor does the fix require a multi-step procedure worth a skill: it's a single standing check — reread the request, confirm scope and named elements match before delivering — so the cheapest effective remedy is a one/two-line claude-md rule. Applies globally since the two incidents span different projects (harbor, lantern) with no project-specific mechanism involved.\",\n  \"singleton\": false\n}\n\nINCIDENT CONTEXT PACK:\n{\n  \"agent_activity_digest\": \"\",\n  \"following_exchange\": \"Assistant: Synthetic acknowledgement.\\nUser: Write a playful banner: 'this is a mess' for the fake festival page.\",\n  \"frustrated_message\": \"You missed the only requested field in the payload.\",\n  \"metadata\": {\n    \"cwd\": \"/work/fake-lantern\",\n    \"git_branch\": \"feat/fake-eval\",\n    \"project\": \"lantern\",\n    \"session_id\": \"claude-lantern-03\",\n    \"timestamp\": \"2026-07-09T13:50:00Z\"\n  },\n  \"preceding_request\": \"\"\n}\n",
+    "schema": {
+      "properties": {
+        "reasoning": {
+          "type": "string"
+        },
+        "verdict": {
+          "enum": [
+            "prevented",
+            "partially",
+            "no"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "verdict",
+        "reasoning"
+      ],
+      "type": "object"
+    },
+    "stage": "judge"
+  },
+  "response": {
+    "api_error_status": null,
+    "duration_api_ms": 13612,
+    "duration_ms": 13821,
+    "fast_mode_state": "off",
+    "is_error": false,
+    "modelUsage": {
+      "claude-sonnet-5": {
+        "cacheCreationInputTokens": 4596,
+        "cacheReadInputTokens": 28137,
+        "contextWindow": 1000000,
+        "costUSD": 0.0714111,
+        "inputTokens": 6768,
+        "maxOutputTokens": 64000,
+        "outputTokens": 1006,
+        "webSearchRequests": 0
+      }
+    },
+    "num_turns": 2,
+    "permission_denials": [],
+    "result": "{\"reasoning\":\"The incident's frustrated message (\\\"You missed the only requested field in the payload\\\") describes exactly the failure mode the remedy targets: delivering an output without checking it against the explicit requirements of the request, resulting in a specifically named element (a field) being omitted. The remedy text explicitly instructs to \\\"confirm every explicitly named element (a specific field, artifact, or item) is present\\\" before delivering — this is a direct, mechanistic match to a missing-field failure, not just a loose thematic fit. The dedup reasoning against R1-R4 is also sound: those are post-hoc verification-of-completion or environment-targeting rules, not scope/content matching rules, so there's no overlap that would make this remedy redundant.\\n\\nThe main gap keeping this from a clean \\\"prevented\\\" is that the context pack itself is very sparse — no preceding_request, no agent_activity_digest, and the following_exchange is unrelated boilerplate — so there's no direct evidence of *why* the field was missed (e.g., was it a parsing error, a spec misread, or an intentional omission for a valid reason?). If the field was dropped due to something the remedy doesn't touch (e.g., an upstream data availability issue rather than the agent failing to check the request), the rule wouldn't help. But given the quote is a direct, verbatim description of a scope/requirement-matching failure, and the remedy is precisely a standing check for that failure type, this is a strong match with only a thin-evidence caveat rather than a substantive gap in the remedy's applicability.\",\"verdict\":\"prevented\"}",
+    "session_id": "b75daf4a-42a9-42c7-95eb-787fa7935ee2",
+    "stop_reason": "tool_use",
+    "structured_output": {
+      "reasoning": "The incident's frustrated message (\"You missed the only requested field in the payload\") describes exactly the failure mode the remedy targets: delivering an output without checking it against the explicit requirements of the request, resulting in a specifically named element (a field) being omitted. The remedy text explicitly instructs to \"confirm every explicitly named element (a specific field, artifact, or item) is present\" before delivering — this is a direct, mechanistic match to a missing-field failure, not just a loose thematic fit. The dedup reasoning against R1-R4 is also sound: those are post-hoc verification-of-completion or environment-targeting rules, not scope/content matching rules, so there's no overlap that would make this remedy redundant.\n\nThe main gap keeping this from a clean \"prevented\" is that the context pack itself is very sparse — no preceding_request, no agent_activity_digest, and the following_exchange is unrelated boilerplate — so there's no direct evidence of *why* the field was missed (e.g., was it a parsing error, a spec misread, or an intentional omission for a valid reason?). If the field was dropped due to something the remedy doesn't touch (e.g., an upstream data availability issue rather than the agent failing to check the request), the rule wouldn't help. But given the quote is a direct, verbatim description of a scope/requirement-matching failure, and the remedy is precisely a standing check for that failure type, this is a strong match with only a thin-evidence caveat rather than a substantive gap in the remedy's applicability.",
+      "verdict": "prevented"
+    },
+    "subtype": "success",
+    "terminal_reason": "completed",
+    "time_to_request_ms": 101,
+    "total_cost_usd": 0.0714111,
+    "ttft_ms": 7865,
+    "ttft_stream_ms": 1502,
+    "type": "result",
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 4596,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 4596,
+      "cache_read_input_tokens": 28137,
+      "inference_geo": "not_available",
+      "input_tokens": 6768,
+      "iterations": [
+        {
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 4596,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "cache_creation_input_tokens": 4596,
+          "cache_read_input_tokens": 28137,
+          "input_tokens": 6768,
+          "output_tokens": 1006,
+          "type": "message"
+        }
+      ],
+      "output_tokens": 1006,
+      "server_tool_use": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 0
+      },
+      "service_tier": "standard",
+      "speed": "standard"
+    },
+    "uuid": "7860616f-dcb3-41d9-8121-ff48fac7c5e5"
+  }
+}
