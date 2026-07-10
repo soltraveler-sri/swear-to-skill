@@ -27,7 +27,7 @@ COMMAND_ISSUES = {
     "autonomy": 17,
 }
 
-IMPLEMENTED_COMMANDS = ("init", "backfill", "review", "eval")
+IMPLEMENTED_COMMANDS = ("init", "backfill", "review", "eval", "doctor")
 
 
 def _distribution_version() -> str:
@@ -71,6 +71,13 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.choices["triage"].add_argument("--yes", action="store_true")
     subparsers.choices["review"].add_argument("--yes", action="store_true")
     subparsers.choices["init"].add_argument("--uninstall", action="store_true")
+    doctor_parser = subparsers.choices["doctor"]
+    doctor_parser.description = "Verify generated remedy discovery surfaces without changing them."
+    doctor_parser.add_argument(
+        "--live",
+        action="store_true",
+        help="make one approximately $0.003 Haiku call to verify installed s2s-* skills are visible",
+    )
     eval_parser = subparsers.choices["eval"]
     eval_parser.description = "Run the synthetic eval and write a local greenlight report."
     eval_parser.epilog = (
@@ -435,6 +442,13 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         result = backfill()
         return 1 if result.failed else 0
+
+    if args.command == "doctor":
+        from .doctor import render_report, run_doctor
+
+        report = run_doctor(live=args.live)
+        print(render_report(report))
+        return report.exit_code
 
     if args.command == "eval":
         from .evalrun import DEFAULT_CORPUS, EvalRunConfig, EvalRunError, load_profile, parse_matrix_profiles, parse_stages, run_eval, run_matrix

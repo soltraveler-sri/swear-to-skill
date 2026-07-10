@@ -24,6 +24,8 @@ before Claude Code's retention cleanup can remove them; `scan` records local
 detection signals; `meter --open` writes and opens a self-contained `file://`
 dashboard.
 
+Run `s2s doctor` after your first approvals to verify the installed remedies are discoverable.
+
 ## How the pipeline works
 
 Archive → scan → triage → curate → synthesize → gate → audit. Regex scanning is free;
