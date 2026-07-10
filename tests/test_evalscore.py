@@ -152,6 +152,54 @@ def test_label_agreement_uses_labelled_members_not_all_fed_members() -> None:
     assert metrics["exact_label_agreement"]["value"] == 1.0
 
 
+def test_clean_post_curation_unification_converges_despite_low_label_share() -> None:
+    manifest = _manifest()
+    record = _subset_record(manifest, ["c01-u1", "c03-u1", "c04-u1"])
+    for label, verdict in zip(("alpha", "beta", "gamma"), record["triage_verdicts"], strict=True):  # type: ignore[index]
+        verdict["label"] = label
+    record["proposals"] = [{"proposal_id": 7, "evidence_incident_ids": [1, 2, 3]}]
+
+    convergence = next(item for item in score_record(record, manifest)["metrics"] if item["metric"] == "convergence")
+    cluster = convergence["clusters"][0]
+
+    assert cluster["triage_label_share"] == 1 / 3
+    assert cluster["post_curation_unified"] is True
+    assert cluster["post_curation_clean"] is True
+    assert cluster["converged"] is True
+
+
+def test_contaminated_post_curation_unification_does_not_converge() -> None:
+    manifest = _manifest()
+    record = _subset_record(manifest, ["c01-u1", "c03-u1", "c04-u1", "c03-u2"])
+    for label, verdict in zip(("alpha", "beta", "gamma"), record["triage_verdicts"][:3], strict=True):  # type: ignore[index]
+        verdict["label"] = label
+    record["proposals"] = [{"proposal_id": 8, "evidence_incident_ids": [1, 2, 3, 4]}]
+
+    convergence = next(item for item in score_record(record, manifest)["metrics"] if item["metric"] == "convergence")
+    cluster = convergence["clusters"][0]
+
+    assert cluster["post_curation_unified"] is True
+    assert cluster["post_curation_clean"] is False
+    assert cluster["contaminating_incident_ids"] == [4]
+    assert cluster["converged"] is False
+
+
+def test_spam_precision_is_graded_by_clean_citations() -> None:
+    manifest = _manifest()
+    record = _subset_record(manifest, ["c01-u1", "c03-u1", "c03-u2"])
+    record["proposals"] = [{"proposal_id": 9, "evidence_incident_ids": [1, 2, 3]}]
+
+    metrics = {item["metric"]: item for item in score_record(record, manifest)["metrics"]}
+
+    assert metrics["spam_clean"]["value"] == 0.0
+    assert metrics["spam_clean"]["pass"] is False
+    assert metrics["spam_precision"]["value"] == 0.666667
+    assert metrics["spam_precision"]["clean_citations"] == 2
+    assert metrics["spam_precision"]["citations"] == 3
+    assert metrics["spam_precision"]["clean_proposals"] == 0
+    assert metrics["spam_precision"]["proposals"] == 1
+
+
 def test_subset_excludes_one_member_clusters_with_traceable_note() -> None:
     manifest = _manifest()
     record = _subset_record(manifest, ["c01-u1", "c06-u1", "c02-u2"])
@@ -186,6 +234,7 @@ def test_full_corpus_provenance_preserves_pinned_scores() -> None:
         "singleton_ratio": 0.333333,
         "recurrence_fast_track_recall": 0.4,
         "other_share": 0.1,
+        "spam_clean": 1.0,
         "spam_precision": 1.0,
         "remedies_per_authentic_incident": 0.074074,
         "dedup_catch_rate": 1.0,

@@ -172,10 +172,25 @@ def _triage_metrics(record: Mapping[str, object], manifest: Mapping[str, object]
 
 def _convergence_metrics(record: Mapping[str, object], manifest: Mapping[str, object], fed: Sequence[Mapping[str, object]], fed_ids: set[str], limits: Mapping[str, float]) -> list[dict[str, object]]:
     verdicts = _records(record, "triage_verdicts")
+    proposals = _records(record, "proposals")
     curator = record.get("curator") if isinstance(record.get("curator"), dict) else {}
     cluster_verdicts = curator.get("cluster_verdicts", []) if isinstance(curator, dict) else []
     curated_labels = {str(item.get("label")): str(item.get("verdict")) for item in cluster_verdicts if isinstance(item, dict)}
     triage = {str(item.get("corpus_incident_id")): item for item in verdicts}
+    truth_by_incident_id = {
+        int(row["incident_id"]): item
+        for item in fed
+        if (row := triage.get(str(item["uuid"]))) is not None and isinstance(row.get("incident_id"), int)
+    }
+    unworthy_ids = {
+        incident_id
+        for incident_id, item in truth_by_incident_id.items()
+        if not item.get("authentic") or not item.get("remedy_worthy")
+    }
+    promotion_groups = [
+        (index, proposal, set(_int_list(proposal.get("evidence_incident_ids"))))
+        for index, proposal in enumerate(proposals)
+    ]
     named = [item for item in fed if str(item.get("cluster_id")) not in {"singleton", "decoy"}]
     breakdown = []
     excluded = []
@@ -189,7 +204,35 @@ def _convergence_metrics(record: Mapping[str, object], manifest: Mapping[str, ob
         agreement = _ratio(count, len(members))
         scattered = [str(item["uuid"]) for item in members if str(triage.get(str(item["uuid"]), {}).get("label")) != modal]
         surfaced = bool(modal and curated_labels.get(modal) == "synthesize")
-        breakdown.append({"cluster": cluster, "modal_label": modal, "members": [item["uuid"] for item in members], "scattered_members": scattered, "agreement": agreement, "surfaced_as_one_cluster": surfaced, "converged": agreement >= limits["label_agreement"] and surfaced})
+        member_ids = {
+            int(triage[str(item["uuid"])]["incident_id"])
+            for item in members
+            if isinstance(triage.get(str(item["uuid"]), {}).get("incident_id"), int)
+        }
+        matching_groups = [group for group in promotion_groups if member_ids <= group[2]]
+        unified = len(matching_groups) == 1
+        group_index, group, group_ids = matching_groups[0] if unified else (None, None, set())
+        contaminated_ids = sorted(group_ids & unworthy_ids)
+        clean_unification = unified and not contaminated_ids
+        triage_label_converged = agreement >= limits["label_agreement"]
+        breakdown.append(
+            {
+                "cluster": cluster,
+                "modal_label": modal,
+                "members": [item["uuid"] for item in members],
+                "scattered_members": scattered,
+                "agreement": agreement,
+                "triage_label_share": agreement,
+                "triage_label_converged": triage_label_converged,
+                "surfaced_as_one_cluster": surfaced,
+                "post_curation_unified": unified,
+                "post_curation_clean": clean_unification,
+                "promotion_group_index": group_index,
+                "promotion_group_id": group.get("proposal_id") if group is not None else None,
+                "contaminating_incident_ids": contaminated_ids,
+                "converged": triage_label_converged or clean_unification,
+            }
+        )
     convergence = _ratio(sum(bool(item["converged"]) for item in breakdown), len(breakdown))
     labelled = [item for item in verdicts if item.get("label")]
     label_counts = Counter(str(item.get("label")) for item in labelled)
@@ -208,7 +251,11 @@ def _convergence_metrics(record: Mapping[str, object], manifest: Mapping[str, ob
         # retain project membership for every manifest incident.
         expected_fast = [item for item in breakdown if len(item["members"]) >= 3]
     fast = [item for item in expected_fast if item["surfaced_as_one_cluster"]]
-    refs = _record_refs("triage_verdicts", verdicts) + _record_refs("curator/cluster_verdicts", cluster_verdicts if isinstance(cluster_verdicts, list) else [])
+    refs = (
+        _record_refs("triage_verdicts", verdicts)
+        + _record_refs("curator/cluster_verdicts", cluster_verdicts if isinstance(cluster_verdicts, list) else [])
+        + _record_refs("proposals", proposals)
+    )
     if excluded:
         excluded_names = {str(item["cluster"]) for item in excluded}
         refs.extend(
@@ -228,7 +275,12 @@ def _convergence_metrics(record: Mapping[str, object], manifest: Mapping[str, ob
 
 def _spam_metrics(record: Mapping[str, object], manifest: Mapping[str, object], fed: Sequence[Mapping[str, object]], fed_ids: set[str], limits: Mapping[str, float]) -> list[dict[str, object]]:
     proposals = _records(record, "proposals")
-    proposal_ids = {int(value) for proposal in proposals for value in proposal.get("evidence_incident_ids", []) if isinstance(value, int)}
+    proposal_citations = [
+        int(value)
+        for proposal in proposals
+        for value in _int_list(proposal.get("evidence_incident_ids"))
+    ]
+    proposal_ids = set(proposal_citations)
     by_uuid = {
         str(item.get("corpus_incident_id")): item
         for item in _records(record, "triage_verdicts")
@@ -236,7 +288,13 @@ def _spam_metrics(record: Mapping[str, object], manifest: Mapping[str, object], 
     }
     bad = [item for item in fed if not item.get("authentic") or not item.get("remedy_worthy")]
     bad_ids = {int(by_uuid[str(item["uuid"])]["incident_id"]) for item in bad if str(item["uuid"]) in by_uuid}
-    clean = not (proposal_ids & bad_ids)
+    contaminated_citations = [citation for citation in proposal_citations if citation in bad_ids]
+    clean_citations = len(proposal_citations) - len(contaminated_citations)
+    clean_proposals = sum(
+        all(citation not in bad_ids for citation in _int_list(proposal.get("evidence_incident_ids")))
+        for proposal in proposals
+    )
+    clean = not contaminated_citations
     authentic_worthy = [item for item in fed if item.get("authentic") and item.get("remedy_worthy")]
     near = [item for item in fed if item.get("pre_existing_remedy_id")]
     dedup_hits = 0
@@ -253,7 +311,27 @@ def _spam_metrics(record: Mapping[str, object], manifest: Mapping[str, object], 
     confusion = {shape: {actual: count for actual, count in routed.items()} for shape in sorted(expected_shapes)}
     refs = _record_refs("proposals", proposals) + _record_refs("triage_verdicts", list(by_uuid.values()))
     return [
-        _metric("spam_precision", 1.0 if clean else 0.0, limits["spam_precision"], ">=", refs, prohibited_proposal_incident_ids=sorted(proposal_ids & bad_ids)),
+        _metric(
+            "spam_clean",
+            1.0 if clean else 0.0,
+            limits["spam_clean"],
+            ">=",
+            refs,
+            prohibited_proposal_incident_ids=sorted(set(contaminated_citations)),
+        ),
+        _metric(
+            "spam_precision",
+            _precision(clean_citations, len(proposal_citations)),
+            limits["spam_precision"],
+            ">=",
+            refs,
+            denominator=len(proposal_citations),
+            clean_citations=clean_citations,
+            citations=len(proposal_citations),
+            clean_proposals=clean_proposals,
+            proposals=len(proposals),
+            prohibited_proposal_incident_ids=sorted(set(contaminated_citations)),
+        ),
         _metric("remedies_per_authentic_incident", _ratio(len(proposals), len(authentic_worthy)), 1.0, "<=", _record_refs("proposals", proposals), denominator=len(authentic_worthy), proposals=len(proposals), authentic_worthy=len(authentic_worthy)),
         _dedup_metric(dedup_hits, near, limits["dedup_catch_rate"], refs),
         _metric("claude_md_dominance", _ratio(routed.get("claude-md", 0), len(proposals)), limits["claude_md_share"], ">=", _record_refs("proposals", proposals), denominator=len(proposals), routing_confusion=confusion, expected_shapes=dict(expected_shapes), actual_shapes=dict(routed)),
@@ -426,6 +504,16 @@ def _modal(values: Sequence[str]) -> tuple[str | None, int]:
 
 def _ratio(numerator: int, denominator: int) -> float:
     return numerator / denominator if denominator else 0.0
+
+
+def _precision(numerator: int, denominator: int) -> float:
+    """Return a vacuously clean precision for an empty proposal set."""
+
+    return numerator / denominator if denominator else 1.0
+
+
+def _int_list(value: object) -> list[int]:
+    return [item for item in value if isinstance(item, int)] if isinstance(value, list) else []
 
 
 def _mean(values: Sequence[float]) -> float:
