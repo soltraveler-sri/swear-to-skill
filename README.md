@@ -28,7 +28,9 @@ strict preference order, and installs it:
 Every installed remedy, whatever its shape, is provenance-tagged, tracked for
 real-world effectiveness, and reversible with `s2s rollback`.
 
-<!-- Screenshot placeholder: local meter dashboard -->
+![The local meter dashboard: weekly frustration rate with per-source, per-model, and per-project breakdowns](docs/assets/dashboard.png)
+
+*The local `s2s meter` dashboard, rendered here from synthetic demo data — your own stays on your machine.*
 
 ## Quickstart
 
@@ -78,8 +80,10 @@ Its guardrails are on by default:
 
 ## Codex support
 
-Codex session logs are supported for detection and the local meter. Remedy installation
-targets Claude Code in v0.1.0.
+Codex session logs are supported for detection and the local meter, and every
+Claude-backed stage can run on a Codex CLI model instead (for example
+`triage = "codex:gpt-5.6-luna"` in config). Remedy installation currently
+targets Claude Code; `AGENTS.md`/Codex-side installs are a planned extension.
 
 ## Privacy
 

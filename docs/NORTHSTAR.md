@@ -650,6 +650,14 @@ Synthesist be Opus?" or "does prompt v2 reduce fragmentation?" become
 measurements instead of opinions. Prompt changes re-run the replay baseline
 like code regressions (prompts are second-class code nowhere in this repo).
 
+### 15.6 Honest limits
+
+Evals measure the pipeline on a synthetic corpus; they do not certify
+performance on any individual's real transcripts, and live-mode scores vary
+with model versions. The report says so. The corpus is also a public target —
+overfitting prompts to the corpus is a known hazard; the A/B runner's held-out
+flag (`--corpus <alt>`) and corpus versioning exist to keep us honest.
+
 ### 15.7 Skill observability — hardening against silent failure
 
 This system's unique failure mode is silence: the pipeline works, skills are
@@ -683,14 +691,6 @@ Stage 5), installs mirror a copy of every generated skill into
 `S2S_HOME/library/` — a browsable catalog of everything the pipeline ever
 created, kept in sync by install/revision/rollback. The mirror is for humans;
 discovery still happens only in the real skills directory.
-
-### 15.6 Honest limits
-
-Evals measure the pipeline on a synthetic corpus; they do not certify
-performance on any individual's real transcripts, and live-mode scores vary
-with model versions. The report says so. The corpus is also a public target —
-overfitting prompts to the corpus is a known hazard; the A/B runner's held-out
-flag (`--corpus <alt>`) and corpus versioning exist to keep us honest.
 
 ## 16. Build order
 
