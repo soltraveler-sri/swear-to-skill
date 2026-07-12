@@ -29,6 +29,7 @@ from .llm import LLMError
 from .paths import resolve_paths
 from .scanner import scan_pending_queue
 from .synthesist import synthesize_pending
+from .timeutils import parse_timestamp, utc_now_iso
 from .triager import triage_pending
 
 
@@ -76,7 +77,7 @@ def run_pump(*, background: bool = False) -> PumpResult:
             with Ledger() as ledger:
                 scan_results = scan_pending_queue(ledger)
                 scanned = len(scan_results)
-                now = _utc_now()
+                now = utc_now_iso()
                 ledger.set_meta(LAST_SCAN_META_KEY, now)
 
                 if _triage_due(ledger, config):
@@ -84,7 +85,7 @@ def run_pump(*, background: bool = False) -> PumpResult:
                     cap = max(0, config.thresholds.triage_per_run_cap)
                     triage_results = triage_pending(ledger, limit=cap, assume_yes=True)
                     triaged = len(triage_results)
-                    ledger.set_meta(LAST_TRIAGE_META_KEY, _utc_now())
+                    ledger.set_meta(LAST_TRIAGE_META_KEY, utc_now_iso())
                     deferred = max(0, pending - cap)
                     if deferred:
                         notes.append(f"{deferred} triage items deferred by cost cap")
@@ -117,7 +118,7 @@ def run_pump(*, background: bool = False) -> PumpResult:
                             f"autonomous action queued {auto_queued} proposal(s) for human review"
                         )
 
-                ledger.set_meta(LAST_PUMP_META_KEY, _utc_now())
+                ledger.set_meta(LAST_PUMP_META_KEY, utc_now_iso())
         except LLMError as error:
             if not effective_autonomy_state(config).enabled:
                 raise
@@ -240,10 +241,10 @@ def _triage_due(ledger: Ledger, config: Config) -> bool:
         return True
     now = datetime.now(timezone.utc)
     age = timedelta(hours=max(0, config.thresholds.triage_max_age_hours))
-    last_run = _parse_timestamp(ledger.get_meta(LAST_TRIAGE_META_KEY))
+    last_run = parse_timestamp(ledger.get_meta(LAST_TRIAGE_META_KEY))
     if last_run is not None:
         return now - last_run >= age
-    oldest = min((_parse_timestamp(item.created_at) or now for item in pending), default=now)
+    oldest = min((parse_timestamp(item.created_at) or now for item in pending), default=now)
     return now - oldest >= age
 
 
@@ -302,7 +303,7 @@ def _write_status(notes: list[str]) -> None:
     try:
         with Ledger() as ledger:
             payload = {
-                "generated_at": _utc_now(),
+                "generated_at": utc_now_iso(),
                 "queue_depth": len(ledger.pending_queue_items()),
                 "untriaged": len(ledger.untriaged_incidents()),
                 "unreviewed": len(ledger.curator_unreviewed_incidents()),
@@ -316,17 +317,3 @@ def _write_status(notes: list[str]) -> None:
         paths.status_file.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
     except Exception:
         LOGGER.exception("Unable to write pump status file")
-
-
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def _parse_timestamp(value: str | None) -> datetime | None:
-    if not value:
-        return None
-    try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed.astimezone(timezone.utc)

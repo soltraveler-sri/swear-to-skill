@@ -16,6 +16,7 @@ from pathlib import Path
 import sqlite3
 
 from .paths import resolve_paths
+from .timeutils import utc_now_iso
 
 
 SCHEMA_VERSION = 9
@@ -228,13 +229,9 @@ class Remedy:
     provenance: str
 
 
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
 def _timestamp(value: str | datetime | None) -> str:
     if value is None:
-        return _utc_now()
+        return utc_now_iso()
     if isinstance(value, datetime):
         if value.tzinfo is None:
             value = value.replace(tzinfo=timezone.utc)
@@ -1706,7 +1703,7 @@ class Ledger:
                         proposal["dedup_verdict"],
                         proposal.get("revises"),
                         int(bool(proposal.get("singleton", False))),
-                        _utc_now(),
+                        utc_now_iso(),
                     ),
                 )
                 proposal_id = int(cursor.lastrowid)
