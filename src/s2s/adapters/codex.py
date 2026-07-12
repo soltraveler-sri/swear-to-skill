@@ -153,10 +153,6 @@ def extract_session_metadata(path: Path, *, root: Path | None = None) -> Session
     )
 
 
-def session_metadata(path: Path, *, root: Path | None = None) -> SessionMetadata:
-    return extract_session_metadata(path, root=root)
-
-
 def build_context_pack(path: Path, target_uuid: str, max_chars: int = 16_000) -> ContextPack:
     """Build the standard four-section context pack from a Codex rollout."""
 

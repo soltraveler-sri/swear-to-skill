@@ -283,12 +283,6 @@ def extract_session_metadata(path: Path) -> SessionMetadata:
     )
 
 
-def session_metadata(path: Path) -> SessionMetadata:
-    """Compatibility-friendly name for :func:`extract_session_metadata`."""
-
-    return extract_session_metadata(path)
-
-
 def build_context_pack(path: Path, target_uuid: str, max_chars: int = 16_000) -> ContextPack:
     """Build a bounded Stage 2 context pack for ``target_uuid``.
 

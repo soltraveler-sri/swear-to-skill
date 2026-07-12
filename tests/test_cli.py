@@ -4,14 +4,15 @@ from pathlib import Path
 
 import pytest
 
-from s2s.cli import COMMAND_ISSUES, _metric_terminal_verdict, build_parser, main
+from s2s.cli import SUBCOMMANDS, _metric_terminal_verdict, build_parser, main
 
 
-def test_all_issue_commands_have_left_the_cli_scaffold() -> None:
-    assert set(COMMAND_ISSUES) == {
-        "scan", "meter", "status", "triage", "run", "pump", "schedule",
-        "proposals", "approve", "reject", "rollback", "log", "autonomy",
-    }
+def test_parser_registers_every_documented_subcommand() -> None:
+    parser = build_parser()
+    subparsers = next(
+        action for action in parser._actions if action.dest == "command"
+    )
+    assert tuple(subparsers.choices) == SUBCOMMANDS
 
 
 def test_autonomy_commands_persist_override_without_rewriting_config(

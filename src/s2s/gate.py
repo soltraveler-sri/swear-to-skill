@@ -165,19 +165,16 @@ def adjudicate_pending_autonomously(
     resolved_targets = _coerce_targets(targets)
     now_fn = clock or (lambda: datetime.now(timezone.utc))
     decisions: list[AutonomyDecision] = []
-    started = True
-
     for proposal in ledger.autonomy_pending_proposals():
         if not effective_autonomy_state(configured).enabled:
-            if started:
-                decisions.append(
-                    record_autonomy_pause(
-                        "kill switch or pause observed mid-queue",
-                        proposal_id=proposal.id,
-                        targets=resolved_targets,
-                        clock=now_fn,
-                    )
+            decisions.append(
+                record_autonomy_pause(
+                    "kill switch or pause observed mid-queue",
+                    proposal_id=proposal.id,
+                    targets=resolved_targets,
+                    clock=now_fn,
                 )
+            )
             break
         now = _aware_utc(now_fn())
         payload, confidence = _autonomy_payload(proposal)
@@ -274,10 +271,6 @@ def adjudicate_pending_autonomously(
         _persist_autonomy_decision(decision, resolved_targets.state_dir)
         decisions.append(decision)
     return AutonomyResult(tuple(decisions))
-
-
-# Short public spelling for callers and integrations.
-auto_adjudicate = adjudicate_pending_autonomously
 
 
 def record_autonomy_pause(

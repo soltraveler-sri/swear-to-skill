@@ -755,9 +755,6 @@ class Ledger:
         with self._write_transaction():
             self._transition_in_transaction(incident_id, to_state, reason, timestamp)
 
-    # A short alias keeps stage-writer call sites readable without weakening checks.
-    transition = transition_incident
-
     def _transition_in_transaction(
         self,
         incident_id: int,
@@ -1216,8 +1213,6 @@ class Ledger:
             )
             return int(cursor.lastrowid)
 
-    enqueue = enqueue_item
-
     def pending_queue_items(self) -> list[QueueItem]:
         """Return unprocessed queue work in durable FIFO order."""
 
@@ -1225,8 +1220,6 @@ class Ledger:
             "SELECT * FROM queue WHERE processed_at IS NULL ORDER BY id"
         ).fetchall()
         return [self._queue_item_from_row(row) for row in rows]
-
-    unprocessed_queue_items = pending_queue_items
 
     def mark_queue_item_processed(
         self, item_id: int, *, processed_at: str | datetime | None = None
@@ -1289,8 +1282,6 @@ class Ledger:
                     _timestamp(scanned_at),
                 ),
             )
-
-    record_session_stats = upsert_session_stats
 
     def session_stats(self, session_id: str | None = None) -> list[SessionStats]:
         """Return deterministic scan totals, optionally for one source session id."""
@@ -2024,8 +2015,6 @@ class Ledger:
             for row in rows
         ]
 
-    clusters = cluster_stats
-
     def singleton_ratio(self) -> float:
         """Return the fraction of labelled clusters containing exactly one incident."""
 
@@ -2156,9 +2145,3 @@ class Ledger:
             last_timestamp=row["last_timestamp"],
             scanned_at=str(row["scanned_at"]),
         )
-
-
-def open_ledger(path: Path | str | None = None) -> Ledger:
-    """Create a :class:`Ledger` at ``resolve_paths().ledger_path`` by default."""
-
-    return Ledger(path)
