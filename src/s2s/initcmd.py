@@ -591,9 +591,7 @@ def _install_default_config(destination: Path, template_path: Path | None) -> bo
 
 
 def _default_config_template() -> Path:
-    source_tree_template = Path(__file__).resolve().parents[2] / "config.example.toml"
-    if source_tree_template.is_file():
-        return source_tree_template
+    # The canonical default config ships inside the s2s package.
     return Path(__file__).with_name("config.example.toml")
 
 
