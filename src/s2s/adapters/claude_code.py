@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from dataclasses import dataclass
-from datetime import datetime
 import json
 import logging
 from pathlib import Path
@@ -18,6 +17,7 @@ import re
 from typing import Any, Iterator
 
 from s2s.paths import claude_projects_dir, resolve_paths
+from s2s.timeutils import parse_timestamp
 
 
 LOGGER = logging.getLogger(__name__)
@@ -281,12 +281,6 @@ def extract_session_metadata(path: Path) -> SessionMetadata:
         duration_seconds=_duration_seconds(first_timestamp, last_timestamp),
         malformed_line_count=malformed_line_count[0],
     )
-
-
-def session_metadata(path: Path) -> SessionMetadata:
-    """Compatibility-friendly name for :func:`extract_session_metadata`."""
-
-    return extract_session_metadata(path)
 
 
 def build_context_pack(path: Path, target_uuid: str, max_chars: int = 16_000) -> ContextPack:
@@ -619,7 +613,7 @@ def _dominant_model(models: Counter[str]) -> str | None:
 def _timestamp_bounds(timestamps: list[str]) -> tuple[str | None, str | None]:
     if not timestamps:
         return None, None
-    parsed = [(timestamp, _parse_timestamp(timestamp)) for timestamp in timestamps]
+    parsed = [(timestamp, parse_timestamp(timestamp)) for timestamp in timestamps]
     valid = [(timestamp, value) for timestamp, value in parsed if value is not None]
     if not valid:
         return timestamps[0], timestamps[-1]
@@ -629,15 +623,8 @@ def _timestamp_bounds(timestamps: list[str]) -> tuple[str | None, str | None]:
 def _duration_seconds(first: str | None, last: str | None) -> float | None:
     if first is None or last is None:
         return None
-    first_datetime = _parse_timestamp(first)
-    last_datetime = _parse_timestamp(last)
+    first_datetime = parse_timestamp(first)
+    last_datetime = parse_timestamp(last)
     if first_datetime is None or last_datetime is None:
         return None
     return max(0.0, (last_datetime - first_datetime).total_seconds())
-
-
-def _parse_timestamp(timestamp: str) -> datetime | None:
-    try:
-        return datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-    except ValueError:
-        return None

@@ -15,4 +15,6 @@ paths. Before adding a ledger migration, check `SCHEMA_VERSION` and the numbered
 Run the applicable tests and lint locally, document any environment limitation, and
 keep generated output and dependency directories out of commits.
 
-- Release bumps must update BOTH `pyproject.toml` and `src/s2s/__init__.py.__version__` (the source fallback); the version test mirrors the CLI's resolution so CI catches a miss.
+Release bumps must update both `pyproject.toml` and `__version__` in
+`src/s2s/__init__.py` (the source-tree fallback); the version test mirrors the CLI's
+resolution so CI catches a miss.

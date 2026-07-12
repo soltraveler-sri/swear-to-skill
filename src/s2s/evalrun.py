@@ -32,6 +32,7 @@ from .curator import render_ledger_digest, run_pass
 from .ledger import Ledger, Proposal
 from .scanner import ScanResult, scan_pending_queue
 from .synthesist import synthesize_pending
+from .timeutils import utc_now_iso
 from .triager import context_for_incident, triage_pending
 
 
@@ -799,7 +800,7 @@ def _run_eval_once(
     output_dir = Path(config.output_root) / _run_id()
     output_dir.mkdir(parents=True, exist_ok=False)
     record_path = output_dir / "record.json"
-    started_at = _utc_now()
+    started_at = utc_now_iso()
     record: dict[str, object] = {
         "format_version": 1,
         "corpus_version": corpus_version,
@@ -904,11 +905,11 @@ def _run_eval_once(
                 "retries": dict(tracked_provider.retries),
             }
             record["status"] = "complete"
-            record["completed_at"] = _utc_now()
+            record["completed_at"] = utc_now_iso()
             _write_record(record_path, record)
     except BaseException as error:
         record["status"] = "failed"
-        record["completed_at"] = _utc_now()
+        record["completed_at"] = utc_now_iso()
         record["error"] = {"type": type(error).__name__, "message": str(error)}
         _write_record(record_path, record)
         raise
@@ -1483,14 +1484,14 @@ def _annotation_project(annotation: _Annotation) -> str:
 def _timed(
     timings: dict[str, object], name: str, *, deterministic: bool
 ) -> Iterator[None]:
-    started_at = _utc_now()
+    started_at = utc_now_iso()
     started = perf_counter()
     entry: dict[str, object] = {"started_at": started_at}
     timings[name] = entry
     try:
         yield
     finally:
-        entry["completed_at"] = _utc_now()
+        entry["completed_at"] = utc_now_iso()
         entry["duration_ms"] = (
             0 if deterministic else round((perf_counter() - started) * 1000)
         )
@@ -1625,10 +1626,6 @@ def _repeat_snapshot(record: Mapping[str, object]) -> dict[str, object]:
 
 def _run_id() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
-
-
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 def _restore_env(name: str, value: str | None) -> None:

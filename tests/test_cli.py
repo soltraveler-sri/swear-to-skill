@@ -4,14 +4,18 @@ from pathlib import Path
 
 import pytest
 
-from s2s.cli import COMMAND_ISSUES, _metric_terminal_verdict, build_parser, main
+from s2s.cli import SUBCOMMANDS, _metric_terminal_verdict, build_parser, main
 
 
-def test_all_issue_commands_have_left_the_cli_scaffold() -> None:
-    assert set(COMMAND_ISSUES) == {
-        "scan", "meter", "status", "triage", "run", "pump", "schedule",
-        "proposals", "approve", "reject", "rollback", "log", "autonomy",
-    }
+def test_parser_registers_every_documented_subcommand(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    for name in SUBCOMMANDS:
+        # `<command> --help` exits 0 only for a registered subparser.
+        with pytest.raises(SystemExit) as excinfo:
+            build_parser().parse_args([name, "--help"])
+        assert excinfo.value.code == 0
+        assert name in capsys.readouterr().out
 
 
 def test_autonomy_commands_persist_override_without_rewriting_config(

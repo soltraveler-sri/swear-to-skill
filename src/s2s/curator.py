@@ -17,6 +17,7 @@ from .ledger import Incident, Ledger, LedgerError
 from .llm import call, estimate_and_confirm, load_prompt
 from .paths import resolve_paths
 from .taxonomy import apply_merge, apply_new_label, label_names, list_labels
+from .timeutils import parse_timestamp
 from .triager import context_for_incident
 
 
@@ -79,7 +80,7 @@ def pass_due(ledger: Ledger, config: Config) -> bool:
         return True
 
     max_age = timedelta(days=max(0, config.thresholds.curator_max_age_days))
-    last_pass = _parse_timestamp(ledger.get_meta(LAST_PASS_META_KEY))
+    last_pass = parse_timestamp(ledger.get_meta(LAST_PASS_META_KEY))
     now = datetime.now(timezone.utc)
     if last_pass is not None:
         return now - last_pass >= max_age
@@ -87,7 +88,7 @@ def pass_due(ledger: Ledger, config: Config) -> bool:
     # A fresh ledger has no pass timestamp yet. Treat the oldest waiting item as
     # the start of its first age window instead of running immediately at count 1.
     oldest = min(
-        (_parse_timestamp(item.created_at) or now for item in (*unreviewed, *qc_candidates)),
+        (parse_timestamp(item.created_at) or now for item in (*unreviewed, *qc_candidates)),
         default=now,
     )
     return now - oldest >= max_age
@@ -780,18 +781,6 @@ def _array_item_properties(
     if not isinstance(item_properties, dict):
         raise ValueError(f"curator schema must define {name} item properties")
     return item_properties
-
-
-def _parse_timestamp(value: str | None) -> datetime | None:
-    if not value:
-        return None
-    try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
 
 
 def _truncate(value: str, limit: int) -> str:

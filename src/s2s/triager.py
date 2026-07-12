@@ -164,10 +164,6 @@ def context_for_incident(incident: Incident) -> tuple[ContextPack, str]:
     return context_pack, f"{archive_pointer}#{target_uuid}"
 
 
-# Kept for compatibility with any callers that used the original private helper.
-_context_for_incident = context_for_incident
-
-
 def _archived_transcript_for(archive_dir: Path, incident: Incident) -> Path:
     """Locate the archived transcript holding this incident's session.
 

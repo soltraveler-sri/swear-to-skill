@@ -413,51 +413,6 @@ def _atomic_replace_skill_directory(source: Path, target: Path) -> None:
             _fsync_directory(target.parent)
 
 
-def _validated_session_end(
-    document: dict[str, object],
-) -> tuple[dict[str, object], list[dict[str, object]]]:
-    raw_hooks = document.get("hooks")
-    if raw_hooks is None:
-        hooks: dict[str, object] = {}
-    elif isinstance(raw_hooks, dict):
-        hooks = raw_hooks
-    else:
-        raise SettingsError("settings key 'hooks' must be a JSON object; file left unchanged")
-
-    raw_session_end = hooks.get("SessionEnd")
-    if raw_session_end is None:
-        return hooks, []
-    if not isinstance(raw_session_end, list):
-        raise SettingsError(
-            "settings key 'hooks.SessionEnd' must be a JSON array; file left unchanged"
-        )
-
-    groups: list[dict[str, object]] = []
-    for group_index, raw_group in enumerate(raw_session_end):
-        if not isinstance(raw_group, dict):
-            raise SettingsError(
-                f"hooks.SessionEnd[{group_index}] must be a JSON object; file left unchanged"
-            )
-        raw_entries = raw_group.get("hooks")
-        if not isinstance(raw_entries, list):
-            raise SettingsError(
-                f"hooks.SessionEnd[{group_index}].hooks must be a JSON array; "
-                "file left unchanged"
-            )
-        entries: list[dict[str, object]] = []
-        for entry_index, entry in enumerate(raw_entries):
-            if not isinstance(entry, dict):
-                raise SettingsError(
-                    f"hooks.SessionEnd[{group_index}].hooks[{entry_index}] must be "
-                    "a JSON object; file left unchanged"
-                )
-            entries.append(entry)
-        raw_group["hooks"] = entries
-        groups.append(raw_group)
-
-    return hooks, groups
-
-
 def _validated_hook_event(
     document: dict[str, object], event: str
 ) -> tuple[dict[str, object], list[dict[str, object]]]:
@@ -499,11 +454,6 @@ def _validated_hook_event(
         raw_group["hooks"] = entries
         groups.append(raw_group)
     return hooks, groups
-
-
-def _is_s2s_hook(entry: dict[str, object]) -> bool:
-    command = entry.get("command")
-    return isinstance(command, str) and HOOK_MARKER in command
 
 
 def _entry_has_marker(entry: dict[str, object], marker: str) -> bool:
@@ -641,9 +591,7 @@ def _install_default_config(destination: Path, template_path: Path | None) -> bo
 
 
 def _default_config_template() -> Path:
-    source_tree_template = Path(__file__).resolve().parents[2] / "config.example.toml"
-    if source_tree_template.is_file():
-        return source_tree_template
+    # The canonical default config ships inside the s2s package.
     return Path(__file__).with_name("config.example.toml")
 
 

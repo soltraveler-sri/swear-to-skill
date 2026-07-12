@@ -51,9 +51,11 @@ max_active_auto_skills = 15
 session_start_digest = true
 desktop = false
 webhook_url = ""
+# Only these event names are eligible when either Layer 2 notifier is enabled.
 events = ["proposal_pending", "autonomous_action"]
 
 [models]
+# Model aliases resolved by the user's Claude Code CLI. Keep policy here, not at call sites.
 # Prefix an explicit model with "codex:" to opt into the installed, authenticated
 # OpenAI Codex CLI for that stage, for example: triage = "codex:gpt-5.6-luna".
 # Codex calls are ephemeral; usage and cost are logged as unknown, while the bulk
@@ -62,6 +64,7 @@ events = ["proposal_pending", "autonomous_action"]
 triage = "sonnet"
 curate = "sonnet"
 synthesize = "sonnet"
+# Subprocess calls are independent; bounded threads keep bulk work pleasant.
 parallelism = 2
 # The installed Claude CLI's --effort flag is passed through when set.
 # triage_effort = "low"
@@ -73,13 +76,16 @@ parallelism = 2
 # means adding its .md and .schema.json files; callers read these pins directly.
 # v1 remains available as an explicit A/B arm.
 triage = "v2"
+# Cluster synthesis takes precedence over conflicting member park/dismiss verdicts.
 curate = "v2"
 garden = "v1"
+# Stable R-ids make the default synthesis dedup contract round-trip reliably.
 synthesize = "v2"
 judge_remedy = "v1"
 judge_counterfactual = "v1"
 
 [costs]
+# Bulk work above this estimated amount requires --yes or an interactive confirmation.
 confirm_threshold_usd = 1.0
 
 [visibility]

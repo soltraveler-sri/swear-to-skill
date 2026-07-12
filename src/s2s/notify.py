@@ -14,6 +14,7 @@ import urllib.request
 
 from .config import load_config
 from .paths import resolve_paths
+from .timeutils import parse_timestamp
 
 
 STATUS_MAX_AGE_SECONDS = 7 * 24 * 60 * 60
@@ -40,7 +41,7 @@ def sessionstart_digest() -> str:
         payload = json.loads(resolve_paths().status_file.read_text(encoding="utf-8"))
         if not isinstance(payload, dict):
             return ""
-        generated_at = _parse_timestamp(payload.get("generated_at"))
+        generated_at = parse_timestamp(payload.get("generated_at"))
         if generated_at is None:
             return ""
         if (datetime.now(timezone.utc) - generated_at).total_seconds() > STATUS_MAX_AGE_SECONDS:
@@ -193,16 +194,6 @@ def _autonomous_note(notes: object) -> str | None:
 def _one_line(value: str, *, limit: int = MAX_FIELD_CHARS) -> str:
     compact = " ".join(value.split())
     return compact if len(compact) <= limit else compact[:limit]
-
-
-def _parse_timestamp(value: object) -> datetime | None:
-    if not isinstance(value, str) or not value:
-        return None
-    try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed.astimezone(timezone.utc)
 
 
 def _apple_quote(value: str) -> str:

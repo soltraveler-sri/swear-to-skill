@@ -12,6 +12,7 @@ import re
 
 from .ledger import INCIDENT_STATES, Ledger, SessionStats
 from .paths import resolve_paths
+from .timeutils import parse_timestamp
 
 
 MODEL_ID_RE = re.compile(
@@ -195,8 +196,8 @@ def collect_dashboard_data(ledger: Ledger) -> DashboardData:
         projects[session.project][0] += messages
         projects[session.project][1] += hits
 
-        first = _parse_timestamp(session.first_timestamp)
-        last = _parse_timestamp(session.last_timestamp)
+        first = parse_timestamp(session.first_timestamp)
+        last = parse_timestamp(session.last_timestamp)
         if first is not None:
             week_start = first.date() - timedelta(days=_days_since_monday(first.date()))
             weekly[week_start][0] += messages
@@ -204,7 +205,7 @@ def collect_dashboard_data(ledger: Ledger) -> DashboardData:
             dates.append(first.date())
         if last is not None:
             dates.append(last.date())
-        scanned = _parse_timestamp(session.scanned_at)
+        scanned = parse_timestamp(session.scanned_at)
         if scanned is not None:
             scan_times.append((scanned, session.scanned_at))
 
@@ -450,15 +451,6 @@ def _rates_from_counts(counts: dict[str, list[int]]) -> tuple[Rate, ...]:
     )
 
 
-def _parse_timestamp(value: str | None) -> datetime | None:
-    if not value:
-        return None
-    try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-
-
 def _days_since_monday(value: date) -> int:
     return value.weekday()
 
@@ -663,7 +655,7 @@ def _render_skill_usage(usages: tuple[SkillUsageSummary, ...]) -> str:
 
 
 def _usage_date(value: str) -> str:
-    parsed = _parse_timestamp(value)
+    parsed = parse_timestamp(value)
     return parsed.date().isoformat() if parsed is not None else (value[:10] or "unknown")
 
 

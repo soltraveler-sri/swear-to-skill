@@ -33,6 +33,7 @@ from .synthesist import (
     installed_skill_name,
     parse_skill_markdown,
 )
+from .timeutils import as_utc, parse_timestamp, utc_now_iso
 
 
 SKILL_MARKER = "# s2s:managed remedy={remedy_id}"
@@ -165,21 +166,18 @@ def adjudicate_pending_autonomously(
     resolved_targets = _coerce_targets(targets)
     now_fn = clock or (lambda: datetime.now(timezone.utc))
     decisions: list[AutonomyDecision] = []
-    started = True
-
     for proposal in ledger.autonomy_pending_proposals():
         if not effective_autonomy_state(configured).enabled:
-            if started:
-                decisions.append(
-                    record_autonomy_pause(
-                        "kill switch or pause observed mid-queue",
-                        proposal_id=proposal.id,
-                        targets=resolved_targets,
-                        clock=now_fn,
-                    )
+            decisions.append(
+                record_autonomy_pause(
+                    "kill switch or pause observed mid-queue",
+                    proposal_id=proposal.id,
+                    targets=resolved_targets,
+                    clock=now_fn,
                 )
+            )
             break
-        now = _aware_utc(now_fn())
+        now = as_utc(now_fn())
         payload, confidence = _autonomy_payload(proposal)
         fallback_reason = _ineligible_reason(ledger, proposal, payload, confidence, configured)
         if fallback_reason is not None:
@@ -276,10 +274,6 @@ def adjudicate_pending_autonomously(
     return AutonomyResult(tuple(decisions))
 
 
-# Short public spelling for callers and integrations.
-auto_adjudicate = adjudicate_pending_autonomously
-
-
 def record_autonomy_pause(
     reason: str,
     *,
@@ -289,7 +283,7 @@ def record_autonomy_pause(
 ) -> AutonomyDecision:
     """Durably log and notify one autonomy pause decision."""
 
-    now = _aware_utc((clock or (lambda: datetime.now(timezone.utc)))())
+    now = as_utc((clock or (lambda: datetime.now(timezone.utc)))())
     decision = AutonomyDecision(
         action="pause",
         proposal_id=proposal_id,
@@ -485,7 +479,7 @@ def write_install_intent(
         "artifact_type": proposal.remedy_type,
         "artifact_path": None,
         "rendered_b64": None,
-        "created_at": _utc_now(),
+        "created_at": utc_now_iso(),
         "simulated": True,
     }
     state = _StateRepo(resolved.state_dir)
@@ -576,7 +570,7 @@ def rollback(
             "artifact_type": remedy.artifact_type,
             "artifact_path": remedy.artifact_path,
             "force": force,
-            "created_at": _utc_now(),
+            "created_at": utc_now_iso(),
             "restores_revision": remedy.revises_remedy_id,
         }
         state = _StateRepo(resolved.state_dir)
@@ -691,12 +685,8 @@ def _rolling_auto_install_count(ledger: Ledger, cutoff: datetime) -> int:
         "SELECT installed_at FROM remedy WHERE provenance = 'auto' AND state = 'installed'"
     ).fetchall()
     for row in rows:
-        try:
-            installed_at = datetime.fromisoformat(str(row["installed_at"]).replace("Z", "+00:00"))
-        except ValueError:
-            continue
-        installed_at = _aware_utc(installed_at)
-        if installed_at >= cutoff:
+        installed_at = parse_timestamp(row["installed_at"])
+        if installed_at is not None and installed_at >= cutoff:
             count += 1
     return count
 
@@ -718,7 +708,7 @@ def _make_autonomy_decision(
         evidence_incident_ids=proposal.evidence_incident_ids,
         confidence=confidence,
         reason=_one_line(reason),
-        timestamp=_aware_utc(timestamp).isoformat(),
+        timestamp=as_utc(timestamp).isoformat(),
     )
 
 
@@ -760,12 +750,6 @@ def _marker(template: str, remedy_id: int, provenance: str) -> str:
     if base.startswith("<!--"):
         return f"{base} <!-- s2s:provenance auto -->"
     return f"{base} auto"
-
-
-def _aware_utc(value: datetime) -> datetime:
-    if value.tzinfo is None:
-        value = value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
 
 
 def _one_line(value: str) -> str:
@@ -944,7 +928,7 @@ def _build_intent(
             "settings_path": str(targets.settings_path),
             "state_dir": str(targets.state_dir),
         },
-        "created_at": _utc_now(),
+        "created_at": utc_now_iso(),
     }
 
 
@@ -1133,7 +1117,7 @@ def _record_install(
         "intent_ref": intent_ref,
         "intent": dict(intent),
         "target_digest": after_digest,
-        "completed_at": _utc_now(),
+        "completed_at": utc_now_iso(),
     }
     state = _StateRepo(state_dir)
     relative = Path("installs") / f"remedy-{remedy_id}.json"
@@ -1552,10 +1536,6 @@ def _decode_optional(content: object) -> bytes | None:
 
 def _digest(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
-
-
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 def _fsync_directory(path: Path) -> None:

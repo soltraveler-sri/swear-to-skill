@@ -14,6 +14,7 @@ from pathlib import Path
 from .config import Auditor as AuditorConfig
 from .config import load_config
 from .ledger import Ledger, Remedy, SessionStats
+from .timeutils import as_utc, parse_timestamp
 
 
 @dataclass(frozen=True)
@@ -46,7 +47,7 @@ def audit_remedies(
     cannot establish that one specific remedy worked, so it is never consulted.
     """
 
-    current = _as_utc(now or datetime.now(timezone.utc))
+    current = as_utc(now or datetime.now(timezone.utc))
     settings = config or load_config().auditor
     outcomes: list[AuditOutcome] = []
     for remedy in ledger.installed_remedies():
@@ -85,7 +86,7 @@ def _unused_skill_outcome(
 
     if remedy.artifact_type != "skill":
         return None
-    installed = _parse_timestamp(remedy.installed_at)
+    installed = parse_timestamp(remedy.installed_at)
     if installed is None:
         return None
     age = now - installed
@@ -179,7 +180,7 @@ def _measure(
     now: datetime,
     config: AuditorConfig,
 ) -> AuditOutcome:
-    installed = _parse_timestamp(remedy.installed_at)
+    installed = parse_timestamp(remedy.installed_at)
     if installed is None:
         # Install timestamps are ledger-owned, but preserve uncertainty if a user
         # has manually damaged one rather than inventing a result.
@@ -264,7 +265,7 @@ def _sessions_in_window(
 
     selected: list[SessionStats] = []
     for session in sessions:
-        timestamp = _parse_timestamp(session.last_timestamp or session.first_timestamp)
+        timestamp = parse_timestamp(session.last_timestamp or session.first_timestamp)
         if timestamp is None or session.direct_message_count <= 0:
             continue
         if after is not None and timestamp < after:
@@ -281,19 +282,3 @@ def _rate(incidents: int, sessions: int) -> float | None:
 
 def _bounded_fraction(value: float) -> float:
     return min(1.0, max(0.0, value))
-
-
-def _parse_timestamp(value: str | None) -> datetime | None:
-    if not value:
-        return None
-    try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    return _as_utc(parsed)
-
-
-def _as_utc(value: datetime) -> datetime:
-    if value.tzinfo is None:
-        value = value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
