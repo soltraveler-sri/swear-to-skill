@@ -33,7 +33,7 @@ from .synthesist import (
     installed_skill_name,
     parse_skill_markdown,
 )
-from .timeutils import as_utc, utc_now_iso
+from .timeutils import as_utc, parse_timestamp, utc_now_iso
 
 
 SKILL_MARKER = "# s2s:managed remedy={remedy_id}"
@@ -685,12 +685,8 @@ def _rolling_auto_install_count(ledger: Ledger, cutoff: datetime) -> int:
         "SELECT installed_at FROM remedy WHERE provenance = 'auto' AND state = 'installed'"
     ).fetchall()
     for row in rows:
-        try:
-            installed_at = datetime.fromisoformat(str(row["installed_at"]).replace("Z", "+00:00"))
-        except ValueError:
-            continue
-        installed_at = as_utc(installed_at)
-        if installed_at >= cutoff:
+        installed_at = parse_timestamp(row["installed_at"])
+        if installed_at is not None and installed_at >= cutoff:
             count += 1
     return count
 

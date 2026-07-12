@@ -9,12 +9,13 @@ therefore every reader is deliberately tolerant of bad and unknown JSONL lines.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
 import json
 import logging
 from pathlib import Path
 import sqlite3
 from typing import Any, Iterator
+
+from s2s.timeutils import parse_timestamp
 
 from .claude_code import (
     COMMAND_NAME_RE,
@@ -465,9 +466,8 @@ def _timestamp_bounds(values: list[str]) -> tuple[str | None, str | None]:
 
 
 def _duration_seconds(first: str | None, last: str | None) -> float | None:
-    if not first or not last:
+    first_datetime = parse_timestamp(first)
+    last_datetime = parse_timestamp(last)
+    if first_datetime is None or last_datetime is None:
         return None
-    try:
-        return max(0.0, (datetime.fromisoformat(last.replace("Z", "+00:00")) - datetime.fromisoformat(first.replace("Z", "+00:00"))).total_seconds())
-    except ValueError:
-        return None
+    return max(0.0, (last_datetime - first_datetime).total_seconds())

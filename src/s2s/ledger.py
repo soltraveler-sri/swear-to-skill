@@ -10,13 +10,13 @@ from __future__ import annotations
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 import json
 from pathlib import Path
 import sqlite3
 
 from .paths import resolve_paths
-from .timeutils import utc_now_iso
+from .timeutils import as_utc, utc_now_iso
 
 
 SCHEMA_VERSION = 9
@@ -233,9 +233,7 @@ def _timestamp(value: str | datetime | None) -> str:
     if value is None:
         return utc_now_iso()
     if isinstance(value, datetime):
-        if value.tzinfo is None:
-            value = value.replace(tzinfo=timezone.utc)
-        return value.astimezone(timezone.utc).isoformat()
+        return as_utc(value).isoformat()
     return value
 
 
