@@ -1,0 +1,35 @@
+{
+  "_origin": {
+    "project": "swear-to-skill",
+    "license": "MIT",
+    "copyright": "Copyright (c) 2026 swear-to-skill contributors",
+    "note": "original"
+  },
+  "version": 1,
+  "notes": [
+    "Every other lexicon in this directory indexes on dissatisfaction. This one is deliberately different:",
+    "it looks for neutral-to-positive task-type words that, independent of any frustration signal, tend to",
+    "mark a bounded, well-defined, and often-repeated request (the kind of turn that is usually followed by",
+    "the user's own explanation of scope and a clear agent summary once the work is done).",
+    "'audit' is the prototype: when a user asks for one, the surrounding prompt and the follow-on summary",
+    "are frequently specific enough to justify packaging the request as a reusable skill.",
+    "The weight is intentionally the lowest in this lexicon set: a bare match here is a much weaker lead",
+    "than a frustration signal, but still worth a review pass.",
+    "The audit reports matches as leads for review, not as a claim that every matched turn is skill-worthy."
+  ],
+  "categories": {
+    "structured_task_request": {
+      "description": "Neutral-or-positive task-type words that name a bounded, well-defined, often-repeated kind of request, similar in kind to 'audit'.",
+      "signal": "skill_candidate",
+      "weight": 1,
+      "terms": [
+        "audit",
+        "runbook",
+        "playbook",
+        "postmortem",
+        "post-mortem",
+        "root cause analysis"
+      ]
+    }
+  }
+}
