@@ -145,13 +145,26 @@ def test_pending_queue_items_are_marked_only_after_scanning(ledger: Ledger, tmp_
     assert ledger.pending_queue_items() == []
 
 
-def test_every_vendored_lexicon_declares_its_origin() -> None:
-    expected_origin = {
+def test_every_lexicon_declares_its_origin() -> None:
+    vendored_origin = {
         "project": "petergpt/codex-swear-meter",
         "license": "MIT",
         "copyright": "Copyright (c) 2026 Peter",
         "url": "https://github.com/petergpt/codex-swear-meter",
         "note": "adapted",
+    }
+    original_origin = {
+        "project": "swear-to-skill",
+        "license": "MIT",
+        "copyright": "Copyright (c) 2026 swear-to-skill contributors",
+        "note": "original",
+    }
+    # Every seed lexicon is either adapted from the vendored upstream project or
+    # original to this repo; either way it must say so honestly.
+    expected_origin_by_name = {
+        "negative_terms.json": vendored_origin,
+        "spice_terms.json": vendored_origin,
+        "positive_signal_terms.json": original_origin,
     }
 
     files = sorted(
@@ -160,8 +173,12 @@ def test_every_vendored_lexicon_declares_its_origin() -> None:
         if path.is_file() and not path.name.startswith("taxonomy.")
     )
     assert files
+    assert {path.name for path in files} == set(expected_origin_by_name)
     assert all(path.suffix == ".json" for path in files)
-    assert all(json.loads(path.read_text(encoding="utf-8")).get("_origin") == expected_origin for path in files)
+    assert all(
+        json.loads(path.read_text(encoding="utf-8")).get("_origin") == expected_origin_by_name[path.name]
+        for path in files
+    )
 
 
 def test_candidate_phrase_mining_is_specific_and_never_auto_applies(tmp_path: Path) -> None:
